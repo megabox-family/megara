@@ -8,15 +8,17 @@ bot.on('ready', () => {
   console.log(`Logged in as ${bot.user.tag}!`)
 })
 
-bot.on('message', msg => {
-  const messageText = msg.content
+bot.on('message', message => {
+  const messageText = message.content
   if (messageText.substring(0, 1) === '!') {
-    const command = messageText.substring(1, messageText.indexOf(' '))
+    const command = messageText.includes(' ')
+      ? messageText.substring(1, messageText.indexOf(' '))
+      : messageText.substring(1)
     const args = messageText.substring(messageText.indexOf(' ') + 1)
 
     switch (command.toLowerCase()) {
-      case 'nickname':
-        changeNickname(args, msg)
+      case 'name':
+        changeNickname(args, message)
         break
     }
   }
