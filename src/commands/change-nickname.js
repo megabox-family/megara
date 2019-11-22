@@ -7,7 +7,7 @@ const isNicknameValid = nickname => {
 
 module.exports = (nickname, message) => {
   if (isNicknameValid(nickname)) {
-    const allowedSymbols = [' ', '-', "'"]
+    const allowedSymbols = [' ', '-', "'", '.']
     let newNickname = nickname.toLowerCase()
 
     allowedSymbols.forEach(symbol => {
