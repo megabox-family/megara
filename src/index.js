@@ -1,5 +1,6 @@
 const config = require('../config')
 const changeNickname = require('./commands/change-nickname')
+const joinChannel = require('./commands/join-channel')
 
 const Discord = require('discord.js')
 const bot = new Discord.Client()
@@ -19,6 +20,9 @@ bot.on('message', message => {
     switch (command.toLowerCase()) {
       case 'name':
         changeNickname(args, message)
+        break
+      case 'join':
+        joinChannel(args, message)
         break
     }
   }
