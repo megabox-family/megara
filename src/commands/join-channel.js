@@ -6,7 +6,7 @@ const isChannelValid = channel => {
 
 module.exports = (channel, message) => {
   const lowerCaseChannel = channel.toLowerCase()
-  if (isChannelValid()) {
+  if (isChannelValid(lowerCaseChannel)) {
     if (
       !message.guild.channels
         .get(joinableChannels[lowerCaseChannel])
@@ -21,5 +21,5 @@ module.exports = (channel, message) => {
           message.reply(`you have been added to #${lowerCaseChannel}`)
         )
     } else message.reply(`you already have access to that channel.`)
-  } else message.reply(`sorry, ${lowerCaseChannel} is not a joinable channel.`)
+  } else message.reply(`sorry, ${channel} is not a joinable channel.`)
 }
