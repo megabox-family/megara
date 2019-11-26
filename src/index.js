@@ -2,6 +2,7 @@ const config = require('../config')
 const changeNickname = require('./commands/change-nickname')
 const joinChannel = require('./commands/join-channel')
 const rollDice = require('./commands/dice-roller')
+const setColor = require('./commands/set-color')
 
 const Discord = require('discord.js')
 const bot = new Discord.Client()
@@ -27,6 +28,9 @@ bot.on('message', message => {
         break
       case 'roll':
         rollDice(args, message)
+        break
+      case 'color':
+        setColor(args, message)
         break
     }
   }
