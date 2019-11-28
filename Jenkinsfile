@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        DISCORD_BOT_TOKEN  = credentials('BOT_TOKEN')
+        DISCORD_BOT_TOKEN  = "FOO"
     }
     tools {nodejs "12.13.0"}
     stages {
