@@ -2,4 +2,4 @@
 . ~/.nvm/nvm.sh
 
 nvm use
-node ../src/index.js
+node home/megara/megara/src/index.js
