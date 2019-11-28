@@ -1,3 +1,3 @@
 #!/bin/bash
 nvm use
-node .../index.js
+node ../index.js
