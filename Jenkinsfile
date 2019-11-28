@@ -9,6 +9,7 @@ pipeline {
                 echo 'Building...'
                 nodejs('12.13.0') {
                 }
+                sh label: '', script: 'npm install'
                 archiveArtifacts '**/*'
             }
         }
