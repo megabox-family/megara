@@ -8,7 +8,6 @@ pipeline {
             steps {
                 echo 'Building...'
                 nodejs('12.13.0') {
-                    npm install
                 }
                 archiveArtifacts '**/*'
             }
