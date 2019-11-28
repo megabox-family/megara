@@ -1,4 +1,4 @@
-const { joinableChannels } = require('../../config')
+const { joinableChannels } = require('../utils')
 
 const isChannelValid = channel => {
   return !!joinableChannels[channel]

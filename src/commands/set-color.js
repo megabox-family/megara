@@ -1,4 +1,4 @@
-const { colorRoles } = require('../../config')
+const { colorRoles } = require('../utils')
 
 const isColorValid = color => {
   return !!colorRoles[color]
