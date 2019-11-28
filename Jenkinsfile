@@ -9,7 +9,8 @@ pipeline {
             steps {
                 echo 'Building...'
                 sh label: '', script: 'npm install'
-                sh label: '', script: 'export DISCORD_BOT_TOKEN=${env.DISCORD_BOT_TOKEN}'
+                echo 'Printing env var:'
+                print(env.DISCORD_BOT_TOKEN)
                 archiveArtifacts '**/*'
             }
         }
