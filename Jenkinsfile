@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        DISCORD_BOT_TOKEN  = "FOO"
+        DISCORD_BOT_TOKEN  = credentials('BOT_TOKEN')
     }
     tools {nodejs "12.13.0"}
     stages {
@@ -9,6 +9,7 @@ pipeline {
             steps {
                 echo 'Building...'
                 sh label: '', script: 'npm install'
+                sh label: '', script: 'export DISCORD_BOT_TOKEN=$DISCORD_BOT_TOKEN'
                 archiveArtifacts '**/*'
             }
         }
