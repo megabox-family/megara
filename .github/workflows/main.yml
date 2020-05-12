@@ -9,9 +9,9 @@ jobs:
       - name: Docker Login
         run: echo ${{ secrets.REGISTRY_PASSWORD }} | docker login -u ${{ secrets.REGISTRY_USER }} --password-stdin
       - name: Build tagged
-        run: docker build . --tag jordanfuzz/megara:0.0.1
+        run: docker build . --tag jordanfuzz/megara:0.0.2
       - name: Push tagged
-        run: docker push jordanfuzz/megara:0.0.1
+        run: docker push jordanfuzz/megara:0.0.2
       - name: Build latest
         run: docker build . --tag jordanfuzz/megara:latest
       - name: Push latest
@@ -24,5 +24,5 @@ jobs:
       - name: Docker Login
         run: echo ${{ secrets.REGISTRY_PASSWORD }} | docker login -u ${{ secrets.REGISTRY_USER }} --password-stdin
       - name: Run container
-        run: docker run --name app -d jordanfuzz/megara:latest
+        run: docker run --name app -d jordanfuzz/megara:0.0.2
       
