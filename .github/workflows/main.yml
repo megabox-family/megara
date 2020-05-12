@@ -16,3 +16,12 @@ jobs:
         run: docker build . --tag jordanfuzz/megara:latest
       - name: Push latest
         run: docker push jordanfuzz/megara:latest
+  deploy:
+    runs-on: self-hosted
+    name: Deploy
+    steps:
+      - name: Docker Login
+        run: echo ${{ secrets.REGISTRY_PASSWORD }} | docker login -u ${{ secrets.REGISTRY_USER }} --password-stdin
+      - name: Run container
+        run: docker run --name app -d jordanfuzz/megara:latest
+      
