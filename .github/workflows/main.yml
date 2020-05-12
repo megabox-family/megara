@@ -8,13 +8,10 @@ jobs:
       - uses: actions/checkout@v2
       - name: Docker Login
         run: echo ${{ secrets.REGISTRY_PASSWORD }} | docker login -u ${{ secrets.REGISTRY_USER }} --password-stdin
-      - name: Version
-        id: vars
-        run: echo ::set-output name=tag::$(echo ${GITHUB_REF:10})
       - name: Build tagged
-        run: docker build . --tag jordanfuzz/megara:${{steps.vars.outputs.tag}}
+        run: docker build . --tag jordanfuzz/megara:0.0.1
       - name: Push tagged
-        run: docker push jordanfuzz/megara:${{steps.vars.outputs.tag}}
+        run: docker push jordanfuzz/megara:0.0.1
       - name: Build latest
         run: docker build . --tag jordanfuzz/megara:latest
       - name: Push latest
