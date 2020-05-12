@@ -17,6 +17,7 @@ jobs:
       - name: Push latest
         run: docker push jordanfuzz/megara:latest
   deploy:
+    needs: [build]
     runs-on: self-hosted
     name: Deploy
     steps:
