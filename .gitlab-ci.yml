@@ -35,7 +35,8 @@ Deploy:
   before_script:
     - echo ${REGISTRY_PASSWORD} | base64 -d | docker login -u ${REGISTRY_USER} --password-stdin
   script:
-    - docker run --name app -d -p 80:80 jordanfuzz/megara:latest
+    - docker pull jordanfuzz/megara:latest
+    - docker-compose up
   tags:
     - production
   when: manual
