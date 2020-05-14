@@ -1,0 +1,41 @@
+stages:
+  - build
+  - test
+  - deploy
+
+Build:
+  stage: build
+  image: docker:stable
+  services:
+    - docker:dind
+  before_script:
+    - echo ${REGISTRY_PASSWORD} | base64 -d | docker login -u ${REGISTRY_USER} --password-stdin
+  script:
+    - docker build --tag jordanfuzz/megara:latest .
+    - docker push jordanfuzz/megara:latest
+  tags:
+    - production
+  
+Test:
+  stage: test
+  image: docker:stable
+  services:
+    - docker:dind
+  before_script:
+    - echo ${REGISTRY_PASSWORD} | base64 -d | docker login -u ${REGISTRY_USER} --password-stdin
+  script:
+    - docker pull jordanfuzz/megara:latest
+    - docker-compose run bot npm test
+  tags:
+    - production
+
+Deploy:
+  environment: production
+  stage: deploy
+  before_script:
+    - echo ${REGISTRY_PASSWORD} | base64 -d | docker login -u ${REGISTRY_USER} --password-stdin
+  script:
+    - docker run --name app -d -p 80:80 jordanfuzz/megara:latest
+  tags:
+    - production
+  when: manual
