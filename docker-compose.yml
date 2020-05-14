@@ -3,6 +3,7 @@ version: '3.7'
 services:
   bot:
     build: .
+    working_dir: /app
     volumes:
       - .:/app
     environment:
