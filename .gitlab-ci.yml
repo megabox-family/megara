@@ -26,6 +26,7 @@ Test:
   script:
     - docker pull jordanfuzz/megara:latest
     - docker-compose run bot npm test
+    - cd /app && ls
   tags:
     - production
 

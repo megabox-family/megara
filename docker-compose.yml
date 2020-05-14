@@ -4,7 +4,5 @@ services:
   bot:
     build: .
     working_dir: /app
-    volumes:
-      - .:/app
     environment:
       DISCORD_BOT_TOKEN: '${DISCORD_BOT_TOKEN}'
