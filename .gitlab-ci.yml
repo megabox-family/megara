@@ -25,7 +25,7 @@ Test:
     - echo ${REGISTRY_PASSWORD} | base64 -d | docker login -u ${REGISTRY_USER} --password-stdin
   script:
     - docker pull jordanfuzz/megara:latest
-    - cd /app && ls
+    - pwd && ls
     - docker-compose run bot npm test
   tags:
     - production
