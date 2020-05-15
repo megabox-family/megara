@@ -11,8 +11,9 @@ Build:
   before_script:
     - echo ${REGISTRY_PASSWORD} | base64 -d | docker login -u ${REGISTRY_USER} --password-stdin
   script:
-    - docker build --tag jordanfuzz/megara:latest .
-    - docker push jordanfuzz/megara:latest
+    - docker build --tag ${CONTAINER_IMAGE}:latest --tag ${CONTAINER_IMAGE}:${CI_COMMIT_SHORT_SHA}
+    - docker push ${CONTAINER_IMAGE}:latest
+    - docker push ${CONTAINER_IMAGE}:${CI_COMMIT_SHORT_SHA}
   tags:
     - production
   
@@ -24,7 +25,7 @@ Test:
   before_script:
     - echo ${REGISTRY_PASSWORD} | base64 -d | docker login -u ${REGISTRY_USER} --password-stdin
   script:
-    - docker pull jordanfuzz/megara:latest
+    - docker pull ${CONTAINER_IMAGE}:${CI_COMMIT_SHORT_SHA}
     - docker-compose run bot npm test
   tags:
     - production
@@ -32,11 +33,8 @@ Test:
 Deploy:
   environment: production
   stage: deploy
-  before_script:
-    - echo ${REGISTRY_PASSWORD} | base64 -d | docker login -u ${REGISTRY_USER} --password-stdin
   script:
-    - docker pull jordanfuzz/megara:latest
-    - docker-compose up -d
+    - docker-compose up -d --force-recreate
   tags:
     - production
   when: manual
