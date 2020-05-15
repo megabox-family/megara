@@ -3,4 +3,4 @@ version: '3.7'
 services:
   bot:
     build: .
-    env_file: /ubuntu/home/megara/host-files/.env
+    env_file: /home/ubuntu/megara/host-files/.env
