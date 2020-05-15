@@ -36,7 +36,7 @@ Deploy:
     - echo ${REGISTRY_PASSWORD} | base64 -d | docker login -u ${REGISTRY_USER} --password-stdin
   script:
     - docker pull jordanfuzz/megara:latest
-    - docker-compose up
+    - docker-compose up -d
   tags:
     - production
   when: manual

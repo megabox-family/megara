@@ -3,6 +3,4 @@ version: '3.7'
 services:
   bot:
     build: .
-    env_file: /home/ubuntu/megara/host-files/.env
-    environment:
-      DISCORD_BOT_TOKEN: '${DISCORD_BOT_TOKEN}'
+    env_file: /ubuntu/home/megara/host-files/.env
