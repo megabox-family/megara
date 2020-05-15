@@ -3,8 +3,6 @@ version: '3.7'
 services:
   bot:
     build: .
-    working_dir: /app
-    volumes:
-      - .:/app
+    env_file: /ubuntu/home/megara/host-files/.env
     environment:
       DISCORD_BOT_TOKEN: '${DISCORD_BOT_TOKEN}'
