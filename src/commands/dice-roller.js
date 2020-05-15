@@ -22,7 +22,7 @@ module.exports = (roll, message) => {
       rolls.push(result)
     }
     message.reply(
-      `rolled: \`\`\`md\n# Total: ${total}\nDetails: ${roll.toLowerCase()} (${rolls.join(
+      `rolled HAW: \`\`\`md\n# Total: ${total}\nDetails: ${roll.toLowerCase()} (${rolls.join(
         ' '
       )})\`\`\``
     )
