@@ -9,6 +9,7 @@ const isDevelopment = e.NODE_ENV === 'development'
 
 module.exports = {
   botToken: e.DISCORD_BOT_TOKEN,
+  isDevelopment,
   roles: isDevelopment
     ? { verified: '711043006253367427', 'nitro booster': null }
     : {

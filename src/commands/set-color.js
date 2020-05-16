@@ -31,6 +31,6 @@ module.exports = (colorCommand, message) => {
       )
   } else
     message.reply(
-      "sorry, that isn't a valid color. :pepehands: Use `!color list` to see the list of available colors."
+      "sorry, that isn't a valid color. <:pepehands:641024485339693057> Use `!color list` to see the list of available colors."
     )
 }

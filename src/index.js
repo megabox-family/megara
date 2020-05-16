@@ -3,12 +3,13 @@ const changeNickname = require('./commands/change-nickname')
 const joinChannel = require('./commands/join-channel')
 const rollDice = require('./commands/dice-roller')
 const setColor = require('./commands/set-color')
+const getIds = require('./commands/get-ids')
 
 const Discord = require('discord.js')
 const bot = new Discord.Client()
 
 bot.on('ready', () => {
-  console.log(`Gosh! Bogged in as ${bot.user.tag}!`)
+  console.log(`Logged in as ${bot.user.tag}!`)
 })
 
 bot.on('message', message => {
@@ -31,6 +32,9 @@ bot.on('message', message => {
         break
       case 'color':
         setColor(args, message)
+        break
+      case 'ids':
+        getIds(args, message)
         break
     }
   }
