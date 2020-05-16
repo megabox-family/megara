@@ -1,5 +1,5 @@
 const { isAlpha } = require('validator')
-const { roles } = require('../utils')
+const { roles } = require('../../config')
 
 const isNicknameValid = nickname => {
   return isAlpha(nickname) || nickname.split(/[\s-]+/).every(x => isAlpha(x))

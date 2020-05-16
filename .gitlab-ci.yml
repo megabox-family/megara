@@ -37,4 +37,3 @@ Deploy:
     - docker-compose up -d --force-recreate
   tags:
     - production
-  when: manual

@@ -1,4 +1,4 @@
-const { colorRoles } = require('../utils')
+const { colorRoles } = require('../../config')
 
 const isColorValid = color => {
   return !!colorRoles[color]
@@ -8,7 +8,7 @@ module.exports = (colorCommand, message) => {
   const lowerCaseColorCommand = colorCommand.toLowerCase()
 
   if (lowerCaseColorCommand === 'list')
-    message.channel.send('Here ya go!', {
+    message.channel.send('Your wish is my command! ^-^', {
       files: ['./src/media/role-colors.PNG'],
     })
   else if (isColorValid(lowerCaseColorCommand)) {
@@ -23,10 +23,14 @@ module.exports = (colorCommand, message) => {
       .then(() =>
         guildMember
           .addRole(colorRoles[lowerCaseColorCommand])
-          .then(() => message.reply('your color has been changed!'))
+          .then(() =>
+            message.reply(
+              `your color has been changed to ${lowerCaseColorCommand}!~`
+            )
+          )
       )
   } else
     message.reply(
-      "sorry, that isn't a valid color. Use `!color list` to see the list of available colors."
+      "sorry, that isn't a valid color. :pepehands: Use `!color list` to see the list of available colors."
     )
 }
