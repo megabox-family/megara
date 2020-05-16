@@ -3,4 +3,4 @@ version: '3.7'
 services:
   bot:
     image: jordanfuzz/megara:${CI_COMMIT_SHORT_SHA}
-    env_file: /home/ubuntu/megara/host-files/.env
+    env_file: /home/megara/host-files/.env
