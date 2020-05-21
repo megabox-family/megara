@@ -4,6 +4,7 @@ const joinChannel = require('./commands/join-channel')
 const rollDice = require('./commands/dice-roller')
 const setColor = require('./commands/set-color')
 const getIds = require('./commands/get-ids')
+const getChannelInfo = require('./commands/get-channel-info')
 
 const Discord = require('discord.js')
 const bot = new Discord.Client()
@@ -35,6 +36,9 @@ bot.on('message', message => {
         break
       case 'ids':
         getIds(args, message)
+        break
+      case 'channel':
+        getChannelInfo(args, message)
         break
     }
   }
