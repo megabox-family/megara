@@ -40,7 +40,7 @@ module.exports = {
         dnd: '567459948779536392',
         sports: '609204665757728798',
         cryptocurrency: '518207180881788934',
-        'video-games': '518205579383013509',
+        'games-general': '518205579383013509',
       },
   colorRoles: isDevelopment
     ? {
