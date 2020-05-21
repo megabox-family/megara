@@ -1,11 +1,14 @@
 const config = require('../config')
-const changeNickname = require('./commands/change-nickname')
-const joinChannel = require('./commands/join-channel')
-const leaveChannel = require('./commands/leave-channel')
-const rollDice = require('./commands/dice-roller')
-const setColor = require('./commands/set-color')
-const getIds = require('./commands/get-ids')
-const getChannelInfo = require('./commands/get-channel-info')
+
+const commands = {
+ name: require('./commands/change-nickname'),
+ join: require('./commands/join-channel'),
+ leave: require('./commands/leave-channel'),
+ roll: require('./commands/dice-roller'),
+ color: require('./commands/set-color'),
+ ids: require('./commands/get-ids'),
+ channel: require('./commands/get-channel-info'),
+}
 
 const Discord = require('discord.js')
 const bot = new Discord.Client()
@@ -22,28 +25,8 @@ bot.on('message', message => {
       : messageText.substring(1)
     const args = messageText.substring(messageText.indexOf(' ') + 1)
 
-    switch (command.toLowerCase()) {
-      case 'name':
-        changeNickname(args, message)
-        break
-      case 'join':
-        joinChannel(args, message)
-        break
-      case 'leave':
-        leaveChannel(args, message)
-        break
-      case 'roll':
-        rollDice(args, message)
-        break
-      case 'color':
-        setColor(args, message)
-        break
-      case 'ids':
-        getIds(args, message)
-        break
-      case 'channel':
-        getChannelInfo(args, message)
-        break
+    if(commands[command.toLowerCase()]) {
+      commands[command.toLowerCase()](args, message)
     }
   }
 })
