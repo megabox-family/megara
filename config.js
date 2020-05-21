@@ -33,7 +33,6 @@ module.exports = {
       }
     : {
         'minecraft-server': '518206551807229982',
-        'minecraft-commands': '599841087926042634',
         programming: '518206926035615765',
         wow: '580508544638648331',
         music: '646028174731509781',
