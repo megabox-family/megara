@@ -1,6 +1,7 @@
 const config = require('../config')
 const changeNickname = require('./commands/change-nickname')
 const joinChannel = require('./commands/join-channel')
+const leaveChannel = require('./commands/leave-channel')
 const rollDice = require('./commands/dice-roller')
 const setColor = require('./commands/set-color')
 const getIds = require('./commands/get-ids')
@@ -27,6 +28,9 @@ bot.on('message', message => {
         break
       case 'join':
         joinChannel(args, message)
+        break
+      case 'leave':
+        leaveChannel(args, message)
         break
       case 'roll':
         rollDice(args, message)
