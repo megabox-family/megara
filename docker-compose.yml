@@ -4,3 +4,10 @@ services:
   bot:
     image: jordanfuzz/megara:${CI_COMMIT_SHORT_SHA}
     env_file: /home/megara/host-files/.env
+    depends_on: 
+      - postgres
+  postgres:
+    image: postgres:12.3-alpine
+    env_file: /home/megara/host-files/.env
+    volumes:
+      - /home/megara/host-files/postgres-data:/var/lib/postgresql/data
