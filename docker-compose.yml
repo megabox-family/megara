@@ -9,5 +9,7 @@ services:
   postgres:
     image: postgres:12.3-alpine
     env_file: /home/megara/host-files/.env
+    ports:
+      - "5432:5433"
     volumes:
       - /home/megara/host-files/postgres-data:/var/lib/postgresql/data
