@@ -8,6 +8,7 @@ const commands = {
  color: require('./commands/set-color'),
  ids: require('./commands/get-ids'),
  channel: require('./commands/get-channel-info'),
+ sync: require('./commands/sync-missing-data')
 }
 
 const Discord = require('discord.js')

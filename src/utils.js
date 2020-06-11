@@ -7,16 +7,17 @@ const userIsInTestChannel = (message) => {
   return message.channel.id === botChannelId
 }
 
-const getChannelIds = (message) => {
+const getChannelIdsWithNames = (message) => {
   return message.guild.channels.map((value, key) => `${value.name}: '${key}'`).join('\n')
 }
 
-const getRoleIds = (message) => {
+
+const getRoleIdsWithNames = (message) => {
   return message.guild.roles.map((value, key) => `${value.name}: '${key}'`).join('\n')
 }
 
 module.exports = {
   userIsInTestChannel,
-  getChannelIds,
-  getRoleIds
+  getChannelIdsWithNames,
+  getRoleIdsWithNames
 }
