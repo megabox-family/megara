@@ -1,4 +1,4 @@
-const { joinableChannels } = require('../../config')
+const { getJoinableChannels } = require('../repositories/channels')
 
 const getChannelsInCategories = (message) => {
   const channelNames = Object.keys(joinableChannels)
