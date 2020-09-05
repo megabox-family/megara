@@ -2,7 +2,7 @@ const { isAlpha } = require('validator')
 const { roles } = require('../../config')
 
 const isNicknameValid = nickname => {
-  return isAlpha(nickname) || nickname.split(/[\s-]+/).every(x => isAlpha(x))
+  return isAlpha(nickname) || nickname.split(/[\s-.']+/).every(x => isAlpha(x))
 }
 
 module.exports = (nickname, message) => {
