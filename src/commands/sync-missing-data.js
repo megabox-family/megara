@@ -7,7 +7,7 @@ module.exports = (dataType, message) => {
       .query('select id from channels;')
       .then((res) => {
         const existingChannelIds = res.rows.map((x) => x.id)
-        const channels = message.guild.channels.filter(
+        const channels = message.guild.channels.cache.filter(
           (x) => x.type !== 'voice' && !existingChannelIds.includes(x.id)
         )
 

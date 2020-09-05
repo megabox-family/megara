@@ -17,8 +17,8 @@ module.exports = (nickname, message) => {
         .join(symbol)
     })
 
-    message.guild.members.get(message.author.id).setNickname(newNickname)
-    message.guild.members.get(message.author.id).addRole(roles['verified'])
+    message.guild.members.cache.get(message.author.id).setNickname(newNickname)
+    message.guild.members.cache.get(message.author.id).roles.add(roles['verified'])
     message.reply(`your nickname has been changed to ${newNickname} ^-^`)
   } else message.reply("your nickname can't have any special characters!")
 }

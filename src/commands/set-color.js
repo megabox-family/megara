@@ -12,17 +12,17 @@ module.exports = (colorCommand, message) => {
       files: ['./src/media/role-colors.PNG'],
     })
   else if (isColorValid(lowerCaseColorCommand)) {
-    const guildMember = message.guild.members.get(message.author.id)
-    const currentRoles = Array.from(guildMember.roles.values()).map(x => x.id)
+    const guildMember = message.guild.members.cache.get(message.author.id)
+    const currentRoles = Array.from(guildMember.roles.cache.values()).map(x => x.id)
     const rolesToRemove = currentRoles.filter(x =>
       Object.values(colorRoles).includes(x)
     )
 
-    guildMember
-      .removeRoles(rolesToRemove)
+    guildMember.roles
+      .remove(rolesToRemove)
       .then(() =>
-        guildMember
-          .addRole(colorRoles[lowerCaseColorCommand])
+        guildMember.roles
+          .add(colorRoles[lowerCaseColorCommand])
           .then(() =>
             message.reply(
               `your color has been changed to ${lowerCaseColorCommand}!~`

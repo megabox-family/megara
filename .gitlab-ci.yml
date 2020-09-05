@@ -14,6 +14,8 @@ Build:
     - docker build --tag ${CONTAINER_IMAGE}:latest --tag ${CONTAINER_IMAGE}:${CI_COMMIT_SHORT_SHA} .
     - docker push ${CONTAINER_IMAGE}:latest
     - docker push ${CONTAINER_IMAGE}:${CI_COMMIT_SHORT_SHA}
+  only:
+    - master
   tags:
     - production
   
@@ -27,6 +29,8 @@ Test:
   script:
     - docker pull ${CONTAINER_IMAGE}:${CI_COMMIT_SHORT_SHA}
     - docker-compose run bot npm test
+  only:
+    - master
   tags:
     - production
 

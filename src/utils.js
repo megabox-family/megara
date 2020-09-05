@@ -8,12 +8,12 @@ const userIsInTestChannel = (message) => {
 }
 
 const getChannelIdsWithNames = (message) => {
-  return message.guild.channels.map((value, key) => `${value.name}: '${key}'`).join('\n')
+  return message.guild.channels.cache.map((value, key) => `${value.name}: '${key}'`).join('\n')
 }
 
 
 const getRoleIdsWithNames = (message) => {
-  return message.guild.roles.map((value, key) => `${value.name}: '${key}'`).join('\n')
+  return message.guild.roles.cache.map((value, key) => `${value.name}: '${key}'`).join('\n')
 }
 
 module.exports = {

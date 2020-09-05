@@ -1,22 +1,20 @@
-const { joinableChannels } = require('../../config')
+const { getIdForJoinableChannel } = require('../repositories/channels')
 
-const isChannelValid = channel => {
-  return !!joinableChannels[channel]
-}
-
-module.exports = (channel, message) => {
+module.exports = async (channel, message) => {
   const lowerCaseChannel = channel.toLowerCase()
-  if (isChannelValid(lowerCaseChannel)) {
+  const joinableChannelId = await getIdForJoinableChannel(lowerCaseChannel)
+
+  if (joinableChannelId) {
     if (
-      message.guild.channels
-        .get(joinableChannels[lowerCaseChannel])
-        .permissionsFor(message.guild.members.get(message.author.id))
+      message.guild.channels.cache
+        .get(joinableChannelId)
+        .permissionsFor(message.guild.members.cache.get(message.author.id))
         .toArray()
         .includes('VIEW_CHANNEL')
     ) {
-      message.guild.channels
-        .get(joinableChannels[lowerCaseChannel])
-        .overwritePermissions(message.author.id, { VIEW_CHANNEL: false })
+      message.guild.channels.cache
+        .get(joinableChannelId)
+        .updateOverwrite(message.author.id, { VIEW_CHANNEL: false })
         .then(() =>
           message.reply(`you have been removed from #${lowerCaseChannel}`)
         )

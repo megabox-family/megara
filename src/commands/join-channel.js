@@ -8,15 +8,15 @@ module.exports = async (channel, message) => {
   // Or rather, does awaiting here block other commands from being handled until this resolves?
   if (joinableChannelId) {
     if (
-      !message.guild.channels
+      !message.guild.channels.cache
         .get(joinableChannelId)
-        .permissionsFor(message.guild.members.get(message.author.id))
+        .permissionsFor(message.guild.members.cache.get(message.author.id))
         .toArray()
         .includes('VIEW_CHANNEL')
     ) {
-      message.guild.channels
+      message.guild.channels.cache
         .get(joinableChannelId)
-        .overwritePermissions(message.author.id, { VIEW_CHANNEL: true })
+        .updateOverwrite(message.author.id, { VIEW_CHANNEL: true })
         .then(() =>
           message.reply(`you have been added to #${lowerCaseChannel}`)
         )
