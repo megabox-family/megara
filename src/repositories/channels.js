@@ -10,13 +10,15 @@ const getIdForJoinableChannel = async (channel) => {
     .then((res) => (res.rows[0] ? res.rows[0].id : undefined))
 }
 
-const getJoinableChannels = async (channel) => {
+const getJoinableChannels = async () => {
   return await pgPool
-    .query(`select * from channels where channel_type = 'joinable';`)
+    .query(`select c1.id, c2.name as category_name, c1.name from channels c1
+    join channels c2 on c1.category_id = c2.id and c2.channel_type = 'category'
+    where c1.channel_type = 'joinable';`)
     .then((res) => camelize(res.rows))
 }
 
 module.exports = {
   getIdForJoinableChannel,
-  getJoinableChannels
+  getJoinableChannels,
 }

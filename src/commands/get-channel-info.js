@@ -1,16 +1,13 @@
 const { getJoinableChannels } = require('../repositories/channels')
 
-const getChannelsInCategories = (message) => {
-  const channelNames = Object.keys(joinableChannels)
+const getChannelsInCategories = async () => {
+  const channels = await getJoinableChannels()
   let categorizedChannelsDictionary = {}
 
-  channelNames.forEach((channelName) => {
-    const parentName = message.guild.channels.get(
-      message.guild.channels.get(joinableChannels[channelName]).parentID
-    ).name
-    if (categorizedChannelsDictionary[parentName])
-      categorizedChannelsDictionary[parentName].push(channelName)
-    else categorizedChannelsDictionary[parentName] = [channelName]
+  channels.forEach((channel) => {
+    if(categorizedChannelsDictionary[channel.categoryName])
+      categorizedChannelsDictionary[channel.categoryName].push(channel.name)
+    else categorizedChannelsDictionary[channel.categoryName] = [channel.name]
   })
 
   return categorizedChannelsDictionary
@@ -30,10 +27,10 @@ const formatChannelsMessage = (channelsDictionary) => {
   return `here's a list of joinable channels: \`\`\`ml\n${formattedChannelsMessage}\`\`\``
 }
 
-module.exports = (subcommand, message) => {
+module.exports = async (subcommand, message) => {
   const lowerCaseSubcommand = subcommand.toLowerCase()
 
   if (lowerCaseSubcommand === 'list') {
-    message.reply(formatChannelsMessage(getChannelsInCategories(message)))
+    message.reply(formatChannelsMessage(await getChannelsInCategories()))
   } else message.reply(`sorry, ${subcommand} is not a channel command.`)
 }
