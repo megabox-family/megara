@@ -35,5 +35,7 @@ Deploy:
   stage: deploy
   script:
     - docker-compose up -d --force-recreate
+  only:
+    - master
   tags:
     - production

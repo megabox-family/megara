@@ -1,21 +1,21 @@
-const { joinableChannels } = require('../../config')
+const { getIdForJoinableChannel } = require('../repositories/channels')
 
-const isChannelValid = channel => {
-  return !!joinableChannels[channel]
-}
-
-module.exports = (channel, message) => {
+module.exports = async (channel, message) => {
   const lowerCaseChannel = channel.toLowerCase()
-  if (isChannelValid(lowerCaseChannel)) {
+  const joinableChannelId = await getIdForJoinableChannel(lowerCaseChannel)
+
+  // Is it faster to put the rest of this in a .then() rather than awaiting the function call above?
+  // Or rather, does awaiting here block other commands from being handled until this resolves?
+  if (joinableChannelId) {
     if (
       !message.guild.channels
-        .get(joinableChannels[lowerCaseChannel])
+        .get(joinableChannelId)
         .permissionsFor(message.guild.members.get(message.author.id))
         .toArray()
         .includes('VIEW_CHANNEL')
     ) {
       message.guild.channels
-        .get(joinableChannels[lowerCaseChannel])
+        .get(joinableChannelId)
         .overwritePermissions(message.author.id, { VIEW_CHANNEL: true })
         .then(() =>
           message.reply(`you have been added to #${lowerCaseChannel}`)

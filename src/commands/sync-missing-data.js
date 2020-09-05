@@ -18,14 +18,13 @@ module.exports = (dataType, message) => {
         values($1, $2, $3, $4)
         returning *;
       `
-
           Promise.all(
             channels.map((channel) => {
               pgPool.query(insertStatement, [
                 channel.id,
                 channel.parentID,
                 channel.name,
-                channel.type === 'category' ? channel.type : null,
+                channel.type === 'category' ? channel.type : 'joinable',
               ])
             })
           )
