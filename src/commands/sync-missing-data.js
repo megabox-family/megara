@@ -1,14 +1,14 @@
 const pgPool = require('../pg-pool')
 
-module.exports = (dataType, message) => {
+module.exports = (dataType, { message, guild }) => {
   //should only be useable from the #admin channel
   if (dataType.toLowerCase() === 'channels') {
     pgPool
       .query('select id from channels;')
-      .then((res) => {
-        const existingChannelIds = res.rows.map((x) => x.id)
-        const channels = message.guild.channels.cache.filter(
-          (x) => x.type !== 'voice' && !existingChannelIds.includes(x.id)
+      .then(res => {
+        const existingChannelIds = res.rows.map(x => x.id)
+        const channels = guild.channels.cache.filter(
+          x => x.type !== 'voice' && !existingChannelIds.includes(x.id)
         )
 
         if (channels.size === 0) message.reply(`everything's up to date!`)
@@ -19,7 +19,7 @@ module.exports = (dataType, message) => {
         returning *;
       `
           Promise.all(
-            channels.map((channel) => {
+            channels.map(channel => {
               pgPool.query(insertStatement, [
                 channel.id,
                 channel.parentID,
@@ -28,14 +28,14 @@ module.exports = (dataType, message) => {
               ])
             })
           )
-            .then((insertedRows) => {
+            .then(insertedRows => {
               message.reply(
                 `synced ${insertedRows.length} unregistered channel(s)!`
               )
             })
-            .catch((err) => console.log(err))
+            .catch(err => console.log(err))
         }
       })
-      .catch((err) => console.log(err))
+      .catch(err => console.log(err))
   } else message.reply(`sorry, I cannot sync ${dataType}...`)
 }

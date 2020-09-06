@@ -1,18 +1,18 @@
 const { getIdForJoinableChannel } = require('../repositories/channels')
 
-module.exports = async (channel, message) => {
+module.exports = async (channel, { message, guild }) => {
   const lowerCaseChannel = channel.toLowerCase()
   const joinableChannelId = await getIdForJoinableChannel(lowerCaseChannel)
 
   if (joinableChannelId) {
     if (
-      !message.guild.channels.cache
+      !guild.channels.cache
         .get(joinableChannelId)
-        .permissionsFor(message.guild.members.cache.get(message.author.id))
+        .permissionsFor(guild.members.cache.get(message.author.id))
         .toArray()
         .includes('VIEW_CHANNEL')
     ) {
-      message.guild.channels.cache
+      guild.channels.cache
         .get(joinableChannelId)
         .updateOverwrite(message.author.id, { VIEW_CHANNEL: true })
         .then(() =>

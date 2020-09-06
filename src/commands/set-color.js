@@ -1,6 +1,6 @@
-const { getIdForColorRole, getColorRoleIds } = require('../repositories/roles')  
+const { getIdForColorRole, getColorRoleIds } = require('../repositories/roles')
 
-module.exports = async (colorCommand, message) => {
+module.exports = async (colorCommand, { message, guild }) => {
   const lowerCaseColorCommand = colorCommand.toLowerCase()
   const colorRoleId = await getIdForColorRole(lowerCaseColorCommand)
 
@@ -10,11 +10,11 @@ module.exports = async (colorCommand, message) => {
     })
   else if (colorRoleId) {
     const colorRoles = await getColorRoleIds()
-    const guildMember = message.guild.members.cache.get(message.author.id)
-    const currentRoles = Array.from(guildMember.roles.cache.values()).map(x => x.id)
-    const rolesToRemove = currentRoles.filter(x =>
-      colorRoles.includes(x)
+    const guildMember = guild.members.cache.get(message.author.id)
+    const currentRoles = Array.from(guildMember.roles.cache.values()).map(
+      x => x.id
     )
+    const rolesToRemove = currentRoles.filter(x => colorRoles.includes(x))
 
     guildMember.roles
       .remove(rolesToRemove)

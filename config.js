@@ -23,4 +23,5 @@ module.exports = {
         verified: '644442586014023680',
         'nitro booster': '586312212612907009',
       },
+  guildId: isDevelopment ? '711043006253367426' : '146109488745807873',
 }

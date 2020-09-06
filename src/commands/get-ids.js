@@ -1,12 +1,16 @@
-const { userIsInTestChannel, getChannelIdsWithNames, getRoleIdsWithNames } = require('../utils')
+const {
+  userIsInTestChannel,
+  getChannelIdsWithNames,
+  getRoleIdsWithNames,
+} = require('../utils')
 
-module.exports = (idType, message) => {
+module.exports = (idType, { message }) => {
   const lowerCaseIdType = idType.toLowerCase()
 
-  if(userIsInTestChannel(message)) {
-    if(lowerCaseIdType === 'channel')
+  if (userIsInTestChannel(message)) {
+    if (lowerCaseIdType === 'channel')
       message.reply(`\`\`\`${getChannelIdsWithNames(message)}\`\`\``)
-    else if(lowerCaseIdType === 'role')
+    else if (lowerCaseIdType === 'role')
       message.reply(`\`\`\`${getRoleIdsWithNames(message)}\`\`\``)
   }
 }

@@ -10,7 +10,7 @@ const isRollValid = roll => {
   )
 }
 
-module.exports = (roll, message) => {
+module.exports = (roll, { message }) => {
   if (isRollValid(roll)) {
     const [dieCount, die] = roll.toLowerCase().split('d')
     let total = 0
