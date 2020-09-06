@@ -1,28 +1,26 @@
-const { colorRoles } = require('../../config')
+const { getIdForColorRole, getColorRoleIds } = require('../repositories/roles')  
 
-const isColorValid = color => {
-  return !!colorRoles[color]
-}
-
-module.exports = (colorCommand, message) => {
+module.exports = async (colorCommand, message) => {
   const lowerCaseColorCommand = colorCommand.toLowerCase()
+  const colorRoleId = await getIdForColorRole(lowerCaseColorCommand)
 
   if (lowerCaseColorCommand === 'list')
     message.channel.send('Your wish is my command! ^-^', {
       files: ['./src/media/role-colors.PNG'],
     })
-  else if (isColorValid(lowerCaseColorCommand)) {
+  else if (colorRoleId) {
+    const colorRoles = await getColorRoleIds()
     const guildMember = message.guild.members.cache.get(message.author.id)
     const currentRoles = Array.from(guildMember.roles.cache.values()).map(x => x.id)
     const rolesToRemove = currentRoles.filter(x =>
-      Object.values(colorRoles).includes(x)
+      colorRoles.includes(x)
     )
 
     guildMember.roles
       .remove(rolesToRemove)
       .then(() =>
         guildMember.roles
-          .add(colorRoles[lowerCaseColorCommand])
+          .add(colorRoleId)
           .then(() =>
             message.reply(
               `your color has been changed to ${lowerCaseColorCommand}!~`

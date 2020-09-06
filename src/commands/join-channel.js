@@ -4,8 +4,6 @@ module.exports = async (channel, message) => {
   const lowerCaseChannel = channel.toLowerCase()
   const joinableChannelId = await getIdForJoinableChannel(lowerCaseChannel)
 
-  // Is it faster to put the rest of this in a .then() rather than awaiting the function call above?
-  // Or rather, does awaiting here block other commands from being handled until this resolves?
   if (joinableChannelId) {
     if (
       !message.guild.channels.cache
