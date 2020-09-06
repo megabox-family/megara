@@ -9,6 +9,14 @@ const getIdForColorRole = async (role) => {
     .then((res) => (res.rows[0] ? res.rows[0].id : undefined))
 }
 
+const getIdForRole = async (role) => {
+  return await pgPool
+    .query(`select id from roles where name = $1 AND role_type = 'other';`, [
+      role,
+    ])
+    .then((res) => (res.rows[0] ? res.rows[0].id : undefined))
+}
+
 const getColorRoleIds = async () => {
   return await pgPool
     .query(`select id from roles where role_type = 'color';`)
@@ -16,6 +24,7 @@ const getColorRoleIds = async () => {
 }
 
 module.exports = {
+  getIdForRole,
   getIdForColorRole,
   getColorRoleIds,
 }
