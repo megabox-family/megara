@@ -13,6 +13,7 @@ const commands = {
   ids: require('./commands/get-ids'),
   channel: require('./commands/get-channel-info'),
   sync: require('./commands/sync-missing-data'),
+  help: require('./commands/help'),
 }
 
 bot.on('ready', () => {
