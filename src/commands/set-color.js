@@ -1,6 +1,7 @@
 const { getIdForColorRole, getColorRoleIds } = require('../repositories/roles')
+const { formatReply } = require('../utils')
 
-module.exports = async (colorCommand, { message, guild }) => {
+module.exports = async (colorCommand, { message, guild, isDirectMessage }) => {
   const lowerCaseColorCommand = colorCommand.toLowerCase()
   const colorRoleId = await getIdForColorRole(lowerCaseColorCommand)
 
@@ -23,12 +24,18 @@ module.exports = async (colorCommand, { message, guild }) => {
           .add(colorRoleId)
           .then(() =>
             message.reply(
-              `your color has been changed to ${lowerCaseColorCommand}!~`
+              formatReply(
+                `your color has been changed to ${lowerCaseColorCommand}!~`,
+                isDirectMessage
+              )
             )
           )
       )
   } else
     message.reply(
-      "sorry, that isn't a valid color. <:pepehands:641024485339693057> Use `!color list` to see the list of available colors."
+      formatReply(
+        "sorry, that isn't a valid color. <:pepehands:641024485339693057> Use `!color list` to see the list of available colors.",
+        isDirectMessage
+      )
     )
 }

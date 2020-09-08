@@ -1,4 +1,5 @@
 const { getJoinableChannels } = require('../repositories/channels')
+const { formatReply } = require('../utils')
 
 const getChannelsInCategories = async () => {
   const channels = await getJoinableChannels()
@@ -27,10 +28,21 @@ const formatChannelsMessage = channelsDictionary => {
   return `here's a list of joinable channels: \`\`\`ml\n${formattedChannelsMessage}\`\`\``
 }
 
-module.exports = async (subcommand, { message }) => {
+module.exports = async (subcommand, { message, isDirectMessage }) => {
   const lowerCaseSubcommand = subcommand.toLowerCase()
 
   if (lowerCaseSubcommand === 'list') {
-    message.reply(formatChannelsMessage(await getChannelsInCategories()))
-  } else message.reply(`sorry, ${subcommand} is not a channel command.`)
+    message.reply(
+      formatReply(
+        formatChannelsMessage(await getChannelsInCategories()),
+        isDirectMessage
+      )
+    )
+  } else
+    message.reply(
+      formatReply(
+        `sorry, ${subcommand} is not a channel command.`,
+        isDirectMessage
+      )
+    )
 }

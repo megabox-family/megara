@@ -1,4 +1,5 @@
 const { isNumeric } = require('validator')
+const { formatReply } = require('../utils')
 
 const isRollValid = roll => {
   const lowerCaseRoll = roll.toLowerCase()
@@ -10,7 +11,7 @@ const isRollValid = roll => {
   )
 }
 
-module.exports = (roll, { message }) => {
+module.exports = (roll, { message, isDirectMessage }) => {
   if (isRollValid(roll)) {
     const [dieCount, die] = roll.toLowerCase().split('d')
     let total = 0
@@ -22,12 +23,18 @@ module.exports = (roll, { message }) => {
       rolls.push(result)
     }
     message.reply(
-      `rolled: \`\`\`md\n# Total: ${total}\nDetails: ${roll.toLowerCase()} (${rolls.join(
-        ' '
-      )})\`\`\``
+      formatReply(
+        `rolled: \`\`\`md\n# Total: ${total}\nDetails: ${roll.toLowerCase()} (${rolls.join(
+          ' '
+        )})\`\`\``,
+        isDirectMessage
+      )
     )
   } else
     message.reply(
-      'your roll was invalid. Correct syntax is: `[count]d[die]` e.g. `1d20`'
+      formatReply(
+        'your roll was invalid. Correct syntax is: `[count]d[die]` e.g. `1d20`',
+        isDirectMessage
+      )
     )
 }

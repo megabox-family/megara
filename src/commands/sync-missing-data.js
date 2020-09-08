@@ -1,6 +1,7 @@
 const pgPool = require('../pg-pool')
+const { formatReply } = require('../utils')
 
-module.exports = (dataType, { message, guild }) => {
+module.exports = (dataType, { message, guild, isDirectMessage }) => {
   //should only be useable from the #admin channel
   if (dataType.toLowerCase() === 'channels') {
     pgPool
@@ -11,7 +12,10 @@ module.exports = (dataType, { message, guild }) => {
           x => x.type !== 'voice' && !existingChannelIds.includes(x.id)
         )
 
-        if (channels.size === 0) message.reply(`everything's up to date!`)
+        if (channels.size === 0)
+          message.reply(
+            formatReply(`everything's up to date!`, isDirectMessage)
+          )
         else {
           const insertStatement = `
         insert into channels(id, category_id, name, channel_type)
@@ -30,12 +34,18 @@ module.exports = (dataType, { message, guild }) => {
           )
             .then(insertedRows => {
               message.reply(
-                `synced ${insertedRows.length} unregistered channel(s)!`
+                formatReply(
+                  `synced ${insertedRows.length} unregistered channel(s)!`,
+                  isDirectMessage
+                )
               )
             })
             .catch(err => console.log(err))
         }
       })
       .catch(err => console.log(err))
-  } else message.reply(`sorry, I cannot sync ${dataType}...`)
+  } else
+    message.reply(
+      formatReply(`sorry, I cannot sync ${dataType}...`, isDirectMessage)
+    )
 }
