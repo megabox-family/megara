@@ -18,8 +18,8 @@ module.exports = (dataType, { message, guild, isDirectMessage }) => {
           )
         else {
           const insertStatement = `
-        insert into channels(id, category_id, name, channel_type)
-        values($1, $2, $3, $4)
+        insert into channels(id, category_id, name, channel_type, is_pending_announcement)
+        values($1, $2, $3, $4, $5)
         returning *;
       `
           Promise.all(
@@ -29,13 +29,15 @@ module.exports = (dataType, { message, guild, isDirectMessage }) => {
                 channel.parentID,
                 channel.name,
                 channel.type === 'category' ? channel.type : 'joinable',
+                true,
               ])
             })
           )
             .then(insertedRows => {
               message.reply(
                 formatReply(
-                  `synced ${insertedRows.length} unregistered channel(s)!`,
+                  `synced ${insertedRows.length} unregistered channel(s)!
+                  \nWould you like me to make an announcement for the new channels? Type \`!announce\` to announce them or \`!skip\` to skip these ones.`,
                   isDirectMessage
                 )
               )

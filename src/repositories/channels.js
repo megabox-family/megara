@@ -10,6 +10,28 @@ const getIdForJoinableChannel = async channel => {
     .then(res => (res.rows[0] ? res.rows[0].id : undefined))
 }
 
+const getIdForChannel = async channel => {
+  return await pgPool
+    .query(`select id from channels where name = $1;`, [channel])
+    .then(res => (res.rows[0] ? res.rows[0].id : undefined))
+}
+
+const getChannelsForAnnouncement = async () => {
+  return await pgPool
+    .query(
+      `select * from channels where is_pending_announcement = true and channel_type != 'category';`
+    )
+    .then(res => camelize(res.rows))
+}
+
+const setChannelsAsAnnounced = async () => {
+  return await pgPool
+    .query(
+      `update channels set is_pending_announcement = false where is_pending_announcement = true returning *;`
+    )
+    .then(res => camelize(res.rows))
+}
+
 const getJoinableChannels = async () => {
   return await pgPool
     .query(
@@ -21,6 +43,9 @@ const getJoinableChannels = async () => {
 }
 
 module.exports = {
+  getIdForChannel,
+  getChannelsForAnnouncement,
+  setChannelsAsAnnounced,
   getIdForJoinableChannel,
   getJoinableChannels,
 }

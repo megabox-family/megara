@@ -15,7 +15,8 @@ create table channels (
   name text not null,
   channel_type channel_type,
   is_pending_deletion boolean not null default 'false',
-  command_level command_level not null default 'restricted'
+  command_level command_level not null default 'restricted',
+  is_pending_announcement boolean not null default 'false'
 );
 
 create table roles (

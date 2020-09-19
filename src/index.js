@@ -14,6 +14,8 @@ const commands = {
   channel: require('./commands/get-channel-info'),
   sync: require('./commands/sync-missing-data'),
   help: require('./commands/help'),
+  announce: require('./commands/announce-new-channels'),
+  skip: require('./commands/skip-channel-announcement'),
 }
 
 bot.on('ready', () => {
