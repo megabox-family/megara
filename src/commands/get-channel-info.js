@@ -1,11 +1,12 @@
 const { getJoinableChannels } = require('../repositories/channels')
+const { formatReply } = require('../utils')
 
 const getChannelsInCategories = async () => {
   const channels = await getJoinableChannels()
   let categorizedChannelsDictionary = {}
 
-  channels.forEach((channel) => {
-    if(categorizedChannelsDictionary[channel.categoryName])
+  channels.forEach(channel => {
+    if (categorizedChannelsDictionary[channel.categoryName])
       categorizedChannelsDictionary[channel.categoryName].push(channel.name)
     else categorizedChannelsDictionary[channel.categoryName] = [channel.name]
   })
@@ -13,12 +14,12 @@ const getChannelsInCategories = async () => {
   return categorizedChannelsDictionary
 }
 
-const formatChannelsMessage = (channelsDictionary) => {
+const formatChannelsMessage = channelsDictionary => {
   const formattedChannelsMessage = Object.entries(channelsDictionary)
     .map(
       ([parent, channels]) =>
         `${parent}\n${channels
-          .map((channel) => `#${channel}`)
+          .map(channel => `#${channel}`)
           .sort()
           .join('\n')}\n`
     )
@@ -27,10 +28,21 @@ const formatChannelsMessage = (channelsDictionary) => {
   return `here's a list of joinable channels: \`\`\`ml\n${formattedChannelsMessage}\`\`\``
 }
 
-module.exports = async (subcommand, message) => {
+module.exports = async (subcommand, { message, isDirectMessage }) => {
   const lowerCaseSubcommand = subcommand.toLowerCase()
 
   if (lowerCaseSubcommand === 'list') {
-    message.reply(formatChannelsMessage(await getChannelsInCategories()))
-  } else message.reply(`sorry, ${subcommand} is not a channel command.`)
+    message.reply(
+      formatReply(
+        formatChannelsMessage(await getChannelsInCategories()),
+        isDirectMessage
+      )
+    )
+  } else
+    message.reply(
+      formatReply(
+        `sorry, ${subcommand} is not a channel command.`,
+        isDirectMessage
+      )
+    )
 }

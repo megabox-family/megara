@@ -1,11 +1,12 @@
 const { isAlpha } = require('validator')
 const { getIdForRole } = require('../repositories/roles')
+const { formatReply } = require('../utils')
 
 const isNicknameValid = nickname => {
   return isAlpha(nickname) || nickname.split(/[\s-.']+/).every(x => isAlpha(x))
 }
 
-module.exports = async (nickname, message) => {
+module.exports = async (nickname, { message, guild, isDirectMessage }) => {
   if (isNicknameValid(nickname)) {
     const allowedSymbols = [' ', '-', "'", '.']
     let newNickname = nickname.toLowerCase()
@@ -19,8 +20,19 @@ module.exports = async (nickname, message) => {
 
     const verifiedRoleId = await getIdForRole('verified')
 
-    message.guild.members.cache.get(message.author.id).setNickname(newNickname)
-    message.guild.members.cache.get(message.author.id).roles.add(verifiedRoleId)
-    message.reply(`your nickname has been changed to ${newNickname} ^-^`)
-  } else message.reply("your nickname can't have any special characters!")
+    guild.members.cache.get(message.author.id).setNickname(newNickname)
+    guild.members.cache.get(message.author.id).roles.add(verifiedRoleId)
+    message.reply(
+      formatReply(
+        `your nickname has been changed to ${newNickname} ^-^`,
+        isDirectMessage
+      )
+    )
+  } else
+    message.reply(
+      formatReply(
+        "your nickname can't have any special characters!",
+        isDirectMessage
+      )
+    )
 }

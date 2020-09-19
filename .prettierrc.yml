@@ -6,3 +6,4 @@ overrides:
   - files: '*specs.js'
     options:
       printWidth: 120
+arrowParens: avoid

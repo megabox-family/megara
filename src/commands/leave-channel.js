@@ -1,23 +1,35 @@
 const { getIdForJoinableChannel } = require('../repositories/channels')
+const { formatReply } = require('../utils')
 
-module.exports = async (channel, message) => {
+module.exports = async (channel, { message, guild, isDirectMessage }) => {
   const lowerCaseChannel = channel.toLowerCase()
   const joinableChannelId = await getIdForJoinableChannel(lowerCaseChannel)
 
   if (joinableChannelId) {
     if (
-      message.guild.channels.cache
+      guild.channels.cache
         .get(joinableChannelId)
-        .permissionsFor(message.guild.members.cache.get(message.author.id))
+        .permissionsFor(guild.members.cache.get(message.author.id))
         .toArray()
         .includes('VIEW_CHANNEL')
     ) {
-      message.guild.channels.cache
+      guild.channels.cache
         .get(joinableChannelId)
         .updateOverwrite(message.author.id, { VIEW_CHANNEL: false })
         .then(() =>
-          message.reply(`you have been removed from #${lowerCaseChannel}`)
+          message.reply(
+            formatReply(
+              `you have been removed from #${lowerCaseChannel}`,
+              isDirectMessage
+            )
+          )
         )
-    } else message.reply(`you are not a part of that channel.`)
-  } else message.reply(`sorry, ${channel} is not a valid channel.`)
+    } else
+      message.reply(
+        formatReply(`you are not a part of that channel.`, isDirectMessage)
+      )
+  } else
+    message.reply(
+      formatReply(`sorry, ${channel} is not a valid channel.`, isDirectMessage)
+    )
 }
