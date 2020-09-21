@@ -1,5 +1,6 @@
 drop table if exists channels;
 drop table if exists roles;
+drop table if exists coordinates;
 
 drop type if exists channel_type;
 drop type if exists command_level;
@@ -23,4 +24,13 @@ create table roles (
   id text not null primary key,
   name text not null,
   role_type role_type default 'other'
+);
+
+create table coordinates (
+  id uuid not null primary key,
+  name text not null,
+  owner text not null,
+  x integer not null,
+  y integer not null,
+  z integer not null
 );

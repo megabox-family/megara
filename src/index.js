@@ -16,6 +16,7 @@ const commands = {
   help: require('./commands/help'),
   announce: require('./commands/announce-new-channels'),
   skip: require('./commands/skip-channel-announcement'),
+  coords: require('./commands/minecraft-coordinates'),
 }
 
 bot.on('ready', () => {
