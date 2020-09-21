@@ -17,11 +17,12 @@ const isCoordinateSetValid = coordinates => {
 
 module.exports = async (args, { message, guild, isDirectMessage }) => {
   const formatCoordinateList = coordinates => {
-    const ownerNickname = guild.members.cache.find(
-      member => member.tag === coordinates.owner
-    ).nickname
     return coordinates
       .map(coordinate => {
+        const ownerNickname = guild.members.cache.find(member => {
+          return member.user.tag === coordinate.owner
+        }).nickname
+
         return `\n**${coordinate.name}** (${ownerNickname}): \`${coordinate.x}, ${coordinate.y}, ${coordinate.z}\``
       })
       .join('')
@@ -91,15 +92,20 @@ module.exports = async (args, { message, guild, isDirectMessage }) => {
     )
   } else if (separatedArgs[0] === 'delete') {
     const name = separatedArgs.slice(1).join(' ')
-    const deletedCoordinates = await deleteCoordinatesByName(name)
-    if (!deletedCoordinates.length)
+    const existingCoordinate = await getCoordinatesByName(name)
+    if (!existingCoordinate)
       return message.reply(
         formatReply(
           "I couldn't find a coordinate set with that name...",
           isDirectMessage
         )
       )
+    else if (existingCoordinate.owner !== message.author.tag)
+      return message.reply(
+        formatReply("You don't own that coordinate set!", isDirectMessage)
+      )
 
+    await deleteCoordinatesByName(name)
     message.reply(`${name} has been deleted.`)
   } else {
     message.reply(
