@@ -1,4 +1,7 @@
-const { getJoinableChannels } = require('../repositories/channels')
+const {
+  getJoinableChannels,
+  getCommandLevelForChannel,
+} = require('../repositories/channels')
 const { formatReply } = require('../utils')
 
 const getChannelsInCategories = async () => {
@@ -29,6 +32,9 @@ const formatChannelsMessage = channelsDictionary => {
 }
 
 module.exports = async (subcommand, { message, isDirectMessage }) => {
+  const commandLevel = await getCommandLevelForChannel(message.channel.id)
+  if (commandLevel === 'restricted') return
+
   const lowerCaseSubcommand = subcommand.toLowerCase()
 
   if (lowerCaseSubcommand === 'list') {

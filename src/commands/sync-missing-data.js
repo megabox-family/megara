@@ -1,8 +1,11 @@
 const pgPool = require('../pg-pool')
+const { getCommandLevelForChannel } = require('../repositories/channels')
 const { formatReply } = require('../utils')
 
-module.exports = (dataType, { message, guild, isDirectMessage }) => {
-  //should only be useable from the #admin channel
+module.exports = async (dataType, { message, guild, isDirectMessage }) => {
+  const commandLevel = await getCommandLevelForChannel(message.channel.id)
+  if (commandLevel !== 'admin') return
+
   if (dataType.toLowerCase() === 'channels') {
     pgPool
       .query('select id from channels;')

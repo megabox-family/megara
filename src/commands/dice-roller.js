@@ -1,5 +1,6 @@
 const { isNumeric } = require('validator')
 const { formatReply } = require('../utils')
+const { getCommandLevelForChannel } = require('../repositories/channels')
 
 const isRollValid = roll => {
   const lowerCaseRoll = roll.toLowerCase()
@@ -11,7 +12,10 @@ const isRollValid = roll => {
   )
 }
 
-module.exports = (roll, { message, isDirectMessage }) => {
+module.exports = async (roll, { message, isDirectMessage }) => {
+  const commandLevel = await getCommandLevelForChannel(message.channel.id)
+  if (commandLevel === 'restricted') return
+
   if (isRollValid(roll)) {
     const [dieCount, die] = roll.toLowerCase().split('d')
     let total = 0

@@ -1,7 +1,11 @@
 const { getIdForColorRole, getColorRoleIds } = require('../repositories/roles')
+const { getCommandLevelForChannel } = require('../repositories/channels')
 const { formatReply } = require('../utils')
 
 module.exports = async (colorCommand, { message, guild, isDirectMessage }) => {
+  const commandLevel = await getCommandLevelForChannel(message.channel.id)
+  if (commandLevel === 'restricted') return
+
   const lowerCaseColorCommand = colorCommand.toLowerCase()
   const colorRoleId = await getIdForColorRole(lowerCaseColorCommand)
 

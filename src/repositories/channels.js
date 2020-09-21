@@ -42,10 +42,17 @@ const getJoinableChannels = async () => {
     .then(res => camelize(res.rows))
 }
 
+const getCommandLevelForChannel = async channel => {
+  return await pgPool
+    .query(`select command_level from channels where id = $1;`, [channel])
+    .then(res => (res.rows[0] ? camelize(res.rows[0]).commandLevel : {}))
+}
+
 module.exports = {
   getIdForChannel,
   getChannelsForAnnouncement,
   setChannelsAsAnnounced,
   getIdForJoinableChannel,
   getJoinableChannels,
+  getCommandLevelForChannel,
 }

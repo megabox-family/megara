@@ -1,7 +1,13 @@
-const { getIdForJoinableChannel } = require('../repositories/channels')
+const {
+  getIdForJoinableChannel,
+  getCommandLevelForChannel,
+} = require('../repositories/channels')
 const { formatReply } = require('../utils')
 
 module.exports = async (channel, { message, guild, isDirectMessage }) => {
+  const commandLevel = await getCommandLevelForChannel(message.channel.id)
+  if (commandLevel === 'restricted') return
+
   const lowerCaseChannel = channel.toLowerCase()
   const joinableChannelId = await getIdForJoinableChannel(lowerCaseChannel)
 

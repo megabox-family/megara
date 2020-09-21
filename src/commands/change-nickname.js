@@ -1,5 +1,6 @@
 const { isAlpha } = require('validator')
 const { getIdForRole } = require('../repositories/roles')
+const { getCommandLevelForChannel } = require('../repositories/channels')
 const { formatReply } = require('../utils')
 
 const isNicknameValid = nickname => {
@@ -7,6 +8,9 @@ const isNicknameValid = nickname => {
 }
 
 module.exports = async (nickname, { message, guild, isDirectMessage }) => {
+  const commandLevel = await getCommandLevelForChannel(message.channel.id)
+  if (commandLevel === 'restricted') return
+
   if (isNicknameValid(nickname)) {
     const allowedSymbols = [' ', '-', "'", '.']
     let newNickname = nickname.toLowerCase()

@@ -1,6 +1,10 @@
 const Discord = require('discord.js')
+const { getCommandLevelForChannel } = require('../repositories/channels')
 
-module.exports = (args, { message }) => {
+module.exports = async (args, { message }) => {
+  const commandLevel = await getCommandLevelForChannel(message.channel.id)
+  if (commandLevel === 'restricted') return
+
   const commandListEmbed = new Discord.MessageEmbed()
     .setColor('#ff8bdb')
     .setTitle('Command List')

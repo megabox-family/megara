@@ -1,4 +1,5 @@
 const { formatReply } = require('../utils')
+const { getCommandLevelForChannel } = require('../repositories/channels')
 const {
   getAllCoordinates,
   coordinateExistsByName,
@@ -16,6 +17,9 @@ const isCoordinateSetValid = coordinates => {
 }
 
 module.exports = async (args, { message, guild, isDirectMessage }) => {
+  const commandLevel = await getCommandLevelForChannel(message.channel.id)
+  if (commandLevel === 'restricted') return
+
   const formatCoordinateList = coordinates => {
     return coordinates
       .map(coordinate => {
