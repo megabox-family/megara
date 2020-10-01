@@ -25,11 +25,9 @@ module.exports = async (args, { message, guild, isDirectMessage }) => {
       .map(coordinate => {
         const ownerNickname = guild.members.cache.find(member => {
           return member.user.tag === coordinate.owner
-        })?.nickname
+        }).nickname
 
-        return `\n**${coordinate.name}** (${
-          ownerNickname ? ownerNickname : 'Unknown'
-        }): \`${coordinate.x}, ${coordinate.y}, ${coordinate.z}\``
+        return `\n**${coordinate.name}** (${ownerNickname}): \`${coordinate.x}, ${coordinate.y}, ${coordinate.z}\``
       })
       .join('')
   }
