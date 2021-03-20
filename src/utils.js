@@ -1,4 +1,4 @@
-const { isDevelopment } = require('../config')
+const { isDevelopment, logChannelId } = require('../config')
 
 const userIsInTestChannel = message => {
   const botChannelId = isDevelopment
@@ -58,10 +58,19 @@ const generateNewChannelAnnouncement = (newChannels, guild) => {
   }
 }
 
+const logMessageToChannel = ({ message, guild }) => {
+  const currentDateTime = new Date()
+  const messagePrefix = `**${
+    message.author.tag
+  } sent the following message at ${currentDateTime.toISOString()}:**\n`
+  guild.channels.cache.get(logChannelId).send(messagePrefix + message.content)
+}
+
 module.exports = {
   userIsInTestChannel,
   getChannelIdsWithNames,
   generateNewChannelAnnouncement,
   getRoleIdsWithNames,
   formatReply,
+  logMessageToChannel,
 }

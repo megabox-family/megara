@@ -3,6 +3,7 @@ const bot = new Discord.Client()
 const fs = require('fs')
 
 const config = require('../config')
+const { logMessageToChannel } = require('./utils')
 
 const commands = {
   name: require('./commands/change-nickname'),
@@ -25,13 +26,14 @@ bot.on('ready', () => {
 
 bot.on('message', message => {
   const messageText = message.content
-  if (messageText.substring(0, 1) === '!') {
-    const context = {
-      guild: bot.guilds.cache.get(config.guildId),
-      message,
-      isDirectMessage: !message.guild,
-    }
+  const context = {
+    guild: bot.guilds.cache.get(config.guildId),
+    message,
+    isDirectMessage: !message.guild,
+  }
+  if (context.isDirectMessage) logMessageToChannel(context)
 
+  if (messageText.substring(0, 1) === '!') {
     const command = messageText.includes(' ')
       ? messageText.substring(1, messageText.indexOf(' '))
       : messageText.substring(1)

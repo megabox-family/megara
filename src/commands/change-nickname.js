@@ -24,6 +24,7 @@ module.exports = async (nickname, { message, guild, isDirectMessage }) => {
 
     const verifiedRoleId = await getIdForRole('verified')
 
+    await guild.members.fetch()
     guild.members.cache.get(message.author.id).setNickname(newNickname)
     guild.members.cache.get(message.author.id).roles.add(verifiedRoleId)
     message.reply(
