@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   bot:
-    image: jordanfuzz/megara:${CI_COMMIT_SHORT_SHA}
+    image: ${BOT_IMAGE}:${CI_COMMIT_SHORT_SHA}
     env_file: /home/megara/host-files/.env
     depends_on:
       - postgres
@@ -19,6 +19,31 @@ services:
       - '5433:5432'
     volumes:
       - /home/megara/host-files/postgres-data:/var/lib/postgresql/data
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 10
+        window: 60s
+  ui:
+    image: ${CONTAINER_IMAGE}-ui:${CI_COMMIT_SHORT_SHA}
+    env_file: /home/megara/host-files/.env
+    depends_on:
+      - postgres
+      - api
+    ports:
+      - '80:80'
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 10
+        window: 60s
+  api:
+    image: ${CONTAINER_IMAGE}-api:${CI_COMMIT_SHORT_SHA}
+    env_file: /home/megara/host-files/.env
+    ports:
+      - '3002:3002'
     deploy:
       restart_policy:
         condition: on-failure
