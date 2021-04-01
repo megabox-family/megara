@@ -1,9 +1,8 @@
 stages:
   - build
-  - test
   - deploy
 
-Build:
+build-bot:
   stage: build
   image: docker:stable
   services:
@@ -11,34 +10,56 @@ Build:
   before_script:
     - echo ${REGISTRY_PASSWORD} | base64 -d | docker login -u ${REGISTRY_USER} --password-stdin
   script:
-    - docker build --tag ${CONTAINER_IMAGE}:latest --tag ${CONTAINER_IMAGE}:${CI_COMMIT_SHORT_SHA} .
-    - docker push ${CONTAINER_IMAGE}:latest
-    - docker push ${CONTAINER_IMAGE}:${CI_COMMIT_SHORT_SHA}
+    - docker build --tag ${BOT_IMAGE}:latest --tag ${BOT_IMAGE}:${CI_COMMIT_SHORT_SHA} ./bot
+    - docker push ${BOT_IMAGE}:latest
+    - docker push ${BOT_IMAGE}:${CI_COMMIT_SHORT_SHA}
   only:
     - master
   tags:
     - production
-  
-Test:
-  stage: test
+
+build-api:
+  stage: build
   image: docker:stable
   services:
     - docker:dind
   before_script:
     - echo ${REGISTRY_PASSWORD} | base64 -d | docker login -u ${REGISTRY_USER} --password-stdin
   script:
-    - docker pull ${CONTAINER_IMAGE}:${CI_COMMIT_SHORT_SHA}
-    - docker-compose run bot npm test
+    - docker build --tag ${CONTAINER_IMAGE}-api:latest --tag ${CONTAINER_IMAGE}-api:${CI_COMMIT_SHORT_SHA} ./api
+    - docker push ${CONTAINER_IMAGE}-api:latest
+    - docker push ${CONTAINER_IMAGE}-api:${CI_COMMIT_SHORT_SHA}
   only:
     - master
   tags:
     - production
 
-Deploy:
+build-ui:
+  stage: build
+  image: docker:stable
+  services:
+    - docker:dind
+  before_script:
+    - echo ${REGISTRY_PASSWORD} | base64 -d | docker login -u ${REGISTRY_USER} --password-stdin
+  script:
+    - docker build --tag ${CONTAINER_IMAGE}-ui:latest --tag ${CONTAINER_IMAGE}-ui:${CI_COMMIT_SHORT_SHA} -f ./app/Dockerfile.prod ./app
+    - docker push ${CONTAINER_IMAGE}-ui:latest
+    - docker push ${CONTAINER_IMAGE}-ui:${CI_COMMIT_SHORT_SHA}
+  only:
+    - master
+  tags:
+    - production
+
+deploy:
   environment: production
   stage: deploy
+  before_script:
+    - echo ${REGISTRY_PASSWORD} | base64 -d | docker login -u ${REGISTRY_USER} --password-stdin
   script:
-    - docker-compose up -d --force-recreate
+    - docker pull ${BOT_IMAGE}:${CI_COMMIT_SHORT_SHA}
+    - docker pull ${CONTAINER_IMAGE}-api:${CI_COMMIT_SHORT_SHA}
+    - docker pull ${CONTAINER_IMAGE}-ui:${CI_COMMIT_SHORT_SHA}
+    - docker-compose -f docker-compose.production.yml up -d --force-recreate
   only:
     - master
   tags:
