@@ -23,8 +23,15 @@ const getColorRoleIds = async () => {
     .then(res => camelize(res.rows).map(x => x.id))
 }
 
+const getAdminRoleIds = async () => {
+  return await pgPool
+    .query(`select id from roles where role_type = 'admin';`)
+    .then(res => camelize(res.rows).map(x => x.id))
+}
+
 module.exports = {
   getIdForRole,
   getIdForColorRole,
   getColorRoleIds,
+  getAdminRoleIds,
 }

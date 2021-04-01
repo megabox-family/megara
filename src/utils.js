@@ -66,6 +66,18 @@ const logMessageToChannel = ({ message, guild }) => {
   guild.channels.cache.get(logChannelId).send(messagePrefix + message.content)
 }
 
+const sortChannelsIntoCategories = channels => {
+  let categorizedChannelsDictionary = {}
+
+  channels.forEach(channel => {
+    if (categorizedChannelsDictionary[channel.categoryName])
+      categorizedChannelsDictionary[channel.categoryName].push(channel)
+    else categorizedChannelsDictionary[channel.categoryName] = [channel]
+  })
+
+  return categorizedChannelsDictionary
+}
+
 module.exports = {
   userIsInTestChannel,
   getChannelIdsWithNames,
@@ -73,4 +85,5 @@ module.exports = {
   getRoleIdsWithNames,
   formatReply,
   logMessageToChannel,
+  sortChannelsIntoCategories,
 }

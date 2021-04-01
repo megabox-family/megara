@@ -5,10 +5,12 @@ drop table if exists coordinates;
 drop type if exists channel_type;
 drop type if exists command_level;
 drop type if exists role_type;
+drop type if exists emoji_type;
 
 create type channel_type as enum('category', 'public', 'joinable', 'private');
 create type command_level as enum('admin', 'basic', 'restricted');
-create type role_type as enum('color', 'other');
+create type role_type as enum('color', 'other', 'admin');
+create type emoji_type as enum('vanilla', 'custom');
 
 create table channels (
   id text not null primary key,
@@ -17,7 +19,10 @@ create table channels (
   channel_type channel_type,
   is_pending_deletion boolean not null default 'false',
   command_level command_level not null default 'restricted',
-  is_pending_announcement boolean not null default 'false'
+  is_pending_announcement boolean not null default 'false',
+  emoji text,
+  emoji_type emoji_type,
+  message_id text
 );
 
 create table roles (
