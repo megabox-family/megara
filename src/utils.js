@@ -58,11 +58,15 @@ const generateNewChannelAnnouncement = (newChannels, guild) => {
   }
 }
 
-const logMessageToChannel = ({ message, guild }) => {
+const logMessageToChannel = ({ message, guild }, botId) => {
   const currentDateTime = new Date()
-  const messagePrefix = `**${
-    message.author.tag
-  } sent the following message at ${currentDateTime.toISOString()}:**\n`
+  const recipient = message.channel.recipient.tag
+  const messagePrefix =
+    message.author.id === botId
+      ? `**I sent the following message to ${recipient} at ${currentDateTime.toISOString()}:**\n`
+      : `**${
+          message.author.tag
+        } sent the following message at ${currentDateTime.toISOString()}:**\n`
   guild.channels.cache.get(logChannelId).send(messagePrefix + message.content)
 }
 

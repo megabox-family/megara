@@ -40,7 +40,7 @@ bot.on('message', message => {
 
   if (!context.isDirectMessage && message.guild.id !== config.guildId) return
 
-  if (context.isDirectMessage) logMessageToChannel(context)
+  if (context.isDirectMessage) logMessageToChannel(context, bot.user.id)
 
   if (messageText.substring(0, 1) === '!') {
     const command = messageText.includes(' ')
