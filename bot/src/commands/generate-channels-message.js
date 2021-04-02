@@ -19,10 +19,10 @@ module.exports = async (command, { message, guild }) => {
   const sortedChannels = sortChannelsIntoCategories(channels)
 
   for (const category in sortedChannels) {
-    let messageContent = `${category}:`
+    let messageContent = `**${category}** - (**#** = members in channel)`
 
     sortedChannels[category].forEach(channel => {
-      messageContent += `\n${channel.emoji} - <#${channel.id}>`
+      messageContent += `\n${channel.emoji}  <#${channel.id}> `
     })
 
     message.channel.send(messageContent).then(sentMessage => {

@@ -8,9 +8,9 @@ module.exports = (channel, message) => {
   const newMessage = channelRows
     .map((row, i) => {
       if (i < 1 || !row.includes(channel.id)) return row
-      let [rowContent, countText] = row.split('>')
-      countText = ` Users: ${userCount}`
-      return [rowContent, countText].join('>')
+      let [rowContent, countText] = row.split('-')
+      countText = ` **${userCount}**`
+      return [rowContent, countText].join('-')
     })
     .join('\n')
 
