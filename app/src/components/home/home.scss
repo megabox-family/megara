@@ -1,5 +1,71 @@
-.hello {
+.header-image {
+  background-image: url('../../media/mega-duo.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  width: 100%;
+  height: 45vh;
+  position: relative;
+}
+
+.header-content {
+  position: absolute;
+  top: 34px;
+  left: 24px;
+}
+
+.header-text {
+  font-size: 24px;
+  font-weight: 700;
+  display: inline;
+  margin-left: 8px;
+  vertical-align: top;
+}
+
+.small-nitro-star {
+  width: 22px;
+  height: 22px;
+  display: inline;
+  margin-top: 2px;
+}
+
+.coming-soon-message {
   display: block;
-  margin: 150px auto;
+  margin-top: 72px;
   text-align: center;
+  font-size: 39px;
+  font-weight: 500;
+}
+
+.coming-soon-subtitle {
+  display: block;
+  margin-top: 14px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 400;
+  opacity: 40%;
+}
+
+.footer {
+  background-color: #232529;
+  width: 100%;
+  height: 73px;
+  position: fixed;
+  bottom: 0;
+}
+
+.footer-content {
+  display: block;
+  margin: 23px auto;
+  text-align: center;
+}
+
+.footer-text {
+  color: #909093;
+  text-align: center;
+  margin-left: 7px;
+  padding-right: 7px;
+  vertical-align: top;
+  font-size: 22px;
+  font-weight: 700;
 }
