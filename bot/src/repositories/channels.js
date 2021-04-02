@@ -59,9 +59,10 @@ const getChannelIdFromEmoji = async emoji => {
 const getJoinableChannelsWithEmoji = async () => {
   return await pgPool
     .query(
-      `select c1.id, c2.name as category_name, c1.name, c1.emoji from channels c1
+      `select c1.id, c2.name as category_name, c1.name, c1.emoji, c1.has_priority from channels c1
     join channels c2 on c1.category_id = c2.id and c2.channel_type = 'category'
-    where c1.channel_type = 'joinable' and c1.emoji is not null;`
+    where c1.channel_type = 'joinable' and c1.emoji is not null
+    order by category_name, c1.name;`
     )
     .then(res => camelize(res.rows))
 }

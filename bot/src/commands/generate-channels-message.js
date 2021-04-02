@@ -18,15 +18,18 @@ module.exports = async (command, { message, guild }) => {
   const channels = await getJoinableChannelsWithEmoji()
   const sortedChannels = sortChannelsIntoCategories(channels)
 
-  for (const category in sortedChannels) {
-    let messageContent = `**${category}** - (**#** = members in channel)`
+  for (const [category, categoryChannels] of sortedChannels) {
+    let messageContent =
+      category === 'General'
+        ? `**${category}** - (**#** = members in channel)`
+        : `**${category}**`
 
-    sortedChannels[category].forEach(channel => {
+    categoryChannels.forEach(channel => {
       messageContent += `\n${channel.emoji}  <#${channel.id}> `
     })
 
     message.channel.send(messageContent).then(sentMessage => {
-      sortedChannels[category].forEach(channel => {
+      categoryChannels.forEach(channel => {
         updateChannelMessageId(channel.id, sentMessage.id)
         sentMessage.react(channel.emoji)
       })

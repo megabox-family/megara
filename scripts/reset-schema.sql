@@ -10,7 +10,6 @@ drop type if exists emoji_type;
 create type channel_type as enum('category', 'public', 'joinable', 'private');
 create type command_level as enum('admin', 'basic', 'restricted');
 create type role_type as enum('color', 'other', 'admin');
-create type emoji_type as enum('vanilla', 'custom');
 
 create table channels (
   id text not null primary key,
@@ -21,7 +20,6 @@ create table channels (
   command_level command_level not null default 'restricted',
   is_pending_announcement boolean not null default 'false',
   emoji text,
-  emoji_type emoji_type,
   message_id text
 );
 

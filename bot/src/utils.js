@@ -71,15 +71,27 @@ const logMessageToChannel = ({ message, guild }, botId) => {
 }
 
 const sortChannelsIntoCategories = channels => {
-  let categorizedChannelsDictionary = {}
+  let categorizedChannels = new Map()
+
+  categorizedChannels.set('General', [])
 
   channels.forEach(channel => {
-    if (categorizedChannelsDictionary[channel.categoryName])
-      categorizedChannelsDictionary[channel.categoryName].push(channel)
-    else categorizedChannelsDictionary[channel.categoryName] = [channel]
+    if (categorizedChannels.get(channel.categoryName))
+      categorizedChannels.get(channel.categoryName).push(channel)
+    else categorizedChannels.set(channel.categoryName, [channel])
   })
 
-  return categorizedChannelsDictionary
+  for (const [category, categoryChannels] of categorizedChannels) {
+    let prioritizedChannel = categoryChannels.find((channel, i) => {
+      if (channel.hasPriority) {
+        categoryChannels.splice(i, 1)
+        return true
+      } else return false
+    })
+    categorizedChannels.set(category, [prioritizedChannel, ...categoryChannels])
+  }
+
+  return categorizedChannels
 }
 
 module.exports = {
