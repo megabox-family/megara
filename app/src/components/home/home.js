@@ -14,7 +14,7 @@ const Home = () => {
       </div>
       <div className="content">
         <span className="coming-soon-message">
-          🚧 Channel Manager Coming Soon! 🚧
+          🚧 Channel Manager Coming Soon 🚧
         </span>
         <span className="coming-soon-subtitle">Just you wait...</span>
       </div>
