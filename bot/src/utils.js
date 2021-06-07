@@ -91,6 +91,10 @@ const logMessageToChannel = async ({ message, guild }, botId) => {
   guild.channels.cache.get(logChannelId).send(messagePrefix + message.content)
 }
 
+const logErrorMessageToChannel = (errorMessage, guild) => {
+  guild.channels.cache.get(logChannelId).send(`Error: ${errorMessage}`)
+}
+
 const sortChannelsIntoCategories = channels => {
   let categorizedChannels = new Map()
 
@@ -122,5 +126,6 @@ module.exports = {
   getRoleIdsWithNames,
   formatReply,
   logMessageToChannel,
+  logErrorMessageToChannel,
   sortChannelsIntoCategories,
 }

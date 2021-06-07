@@ -1,10 +1,19 @@
 const { isAlpha } = require('validator')
 const { getIdForRole } = require('../repositories/roles')
 const { getCommandLevelForChannel } = require('../repositories/channels')
-const { formatReply } = require('../utils')
+const { formatReply, logErrorMessageToChannel } = require('../utils')
 
 const isNicknameValid = nickname => {
   return isAlpha(nickname) || nickname.split(/[\s-.']+/).every(x => isAlpha(x))
+}
+
+const handleNicknameFailure = (err, guild) => {
+  console.log(err)
+  logErrorMessageToChannel(err.message, guild)
+}
+
+const timeout = ms => {
+  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 module.exports = async (nickname, { message, guild, isDirectMessage }) => {
@@ -23,10 +32,69 @@ module.exports = async (nickname, { message, guild, isDirectMessage }) => {
     })
 
     const verifiedRoleId = await getIdForRole('verified')
+    if (!verifiedRoleId)
+      return logErrorMessageToChannel(
+        "Could not fetch 'verified' role id",
+        guild
+      )
 
     await guild.members.fetch()
-    guild.members.cache.get(message.author.id).setNickname(newNickname)
-    guild.members.cache.get(message.author.id).roles.add(verifiedRoleId)
+
+    // Attempt to set nickname
+    try {
+      let nicknameIsUpdated = false
+      let attempts = 0
+
+      while (!nicknameIsUpdated) {
+        await Promise.all([
+          guild.members.cache.get(message.author.id).setNickname(newNickname),
+          timeout(1000),
+        ])
+
+        let updatedNickname = await guild.members.cache.get(message.author.id)
+          .nickname
+
+        nicknameIsUpdated = updatedNickname === newNickname
+
+        if (!nicknameIsUpdated) {
+          attempts++
+          logErrorMessageToChannel(
+            `Failed to update nickname after ${attempts} second(s), retrying...`,
+            guild
+          )
+        }
+      }
+    } catch (error) {
+      handleNicknameFailure(error, guild)
+    }
+
+    // Attempt to set verified role
+    try {
+      let roleIsUpdated = false
+      let attempts = 0
+
+      while (!roleIsUpdated) {
+        await Promise.all([
+          guild.members.cache.get(message.author.id).roles.add(verifiedRoleId),
+          timeout(1000),
+        ])
+
+        roleIsUpdated = await guild.members.cache
+          .get(message.author.id)
+          .roles.cache.some(x => x.id === verifiedRoleId)
+
+        if (!roleIsUpdated) {
+          attempts++
+          logErrorMessageToChannel(
+            `Failed to update role after ${attempts} second(s), retrying...`,
+            guild
+          )
+        }
+      }
+    } catch (error) {
+      handleNicknameFailure(error, guild)
+    }
+
     message.reply(
       formatReply(
         `your nickname has been changed to ${newNickname} ^-^`,
