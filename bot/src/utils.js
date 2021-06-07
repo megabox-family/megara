@@ -58,15 +58,36 @@ const generateNewChannelAnnouncement = (newChannels, guild) => {
   }
 }
 
-const logMessageToChannel = ({ message, guild }, botId) => {
+const logMessageToChannel = async ({ message, guild }, botId) => {
   const currentDateTime = new Date()
-  const recipient = message.channel.recipient.tag
+  const recipientId =
+    message.author.id === botId
+      ? message.channel.recipient.id
+      : message.author.id
+
+  const guildMember = guild.members.cache.get(recipientId)
+
+  if (guildMember.partial) {
+    try {
+      await guild.members.fetch()
+    } catch (err) {
+      console.log('Error fetching users: ', err)
+    }
+  }
+
+  const userDisplayName =
+    message.author.id === botId
+      ? guildMember.nickname
+        ? guildMember.nickname + ` (${message.channel.recipient.tag})`
+        : message.channel.recipient.tag
+      : guildMember.nickname
+      ? guildMember.nickname + ` (${message.author.tag})`
+      : message.author.tag
+
   const messagePrefix =
     message.author.id === botId
-      ? `**I sent the following message to ${recipient} at ${currentDateTime.toISOString()}:**\n`
-      : `**${
-          message.author.tag
-        } sent the following message at ${currentDateTime.toISOString()}:**\n`
+      ? `**I sent the following message to ${userDisplayName} at ${currentDateTime.toISOString()}:**\n`
+      : `**${userDisplayName} sent the following message at ${currentDateTime.toISOString()}:**\n`
   guild.channels.cache.get(logChannelId).send(messagePrefix + message.content)
 }
 
