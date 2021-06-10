@@ -1,4 +1,5 @@
 const { isDevelopment, logChannelId } = require('../config')
+const { removeActiveVoiceChannelId } = require('./repositories/channels')
 
 const userIsInTestChannel = message => {
   const botChannelId = isDevelopment
@@ -119,6 +120,15 @@ const sortChannelsIntoCategories = channels => {
   return categorizedChannels
 }
 
+const removeVoiceChannelIfEmpty = voiceChannel => {
+  const currentMembers = voiceChannel?.members.size
+
+  if (!currentMembers)
+    voiceChannel.delete().then(() => {
+      removeActiveVoiceChannelId(voiceChannel.id)
+    })
+}
+
 module.exports = {
   userIsInTestChannel,
   getChannelIdsWithNames,
@@ -128,4 +138,5 @@ module.exports = {
   logMessageToChannel,
   logErrorMessageToChannel,
   sortChannelsIntoCategories,
+  removeVoiceChannelIfEmpty,
 }

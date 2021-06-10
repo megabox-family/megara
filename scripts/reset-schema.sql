@@ -5,7 +5,6 @@ drop table if exists coordinates;
 drop type if exists channel_type;
 drop type if exists command_level;
 drop type if exists role_type;
-drop type if exists emoji_type;
 
 create type channel_type as enum('category', 'public', 'joinable', 'private');
 create type command_level as enum('admin', 'basic', 'restricted');
@@ -20,7 +19,8 @@ create table channels (
   command_level command_level not null default 'restricted',
   is_pending_announcement boolean not null default 'false',
   emoji text,
-  message_id text
+  message_id text,
+  column active_voice_channel_id text
 );
 
 create table roles (

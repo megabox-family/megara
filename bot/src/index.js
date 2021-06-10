@@ -3,8 +3,12 @@ const bot = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION'] })
 const fs = require('fs')
 
 const config = require('../config')
-const { logMessageToChannel } = require('./utils')
-const { getJoinableChannelsMessageIds } = require('./repositories/channels')
+const { logMessageToChannel, removeVoiceChannelIfEmpty } = require('./utils')
+const {
+  getJoinableChannelsMessageIds,
+  channelWithVoiceChannelIsJoinable,
+  getActiveVoiceChannelIds,
+} = require('./repositories/channels')
 
 const textCommands = {
   name: require('./commands/change-nickname'),
@@ -20,14 +24,26 @@ const textCommands = {
   skip: require('./commands/skip-channel-announcement'),
   coords: require('./commands/minecraft-coordinates'),
   generate: require('./commands/generate-channels-message'),
+  voice: require('./commands/voice'),
 }
 
 const reactionCommands = {
   join: require('./commands/join-channel-via-reaction'),
 }
 
-bot.on('ready', () => {
+bot.on('ready', async () => {
   console.log(`Logged in as ${bot.user.tag}!`)
+
+  const activeVoiceChannels = await getActiveVoiceChannelIds()
+
+  activeVoiceChannels.forEach(channel => {
+    setTimeout(async () => {
+      const voiceChannel = await bot.guilds.cache
+        .get(config.guildId)
+        .channels.cache.get(channel.activeVoiceChannelId)
+      removeVoiceChannelIfEmpty(voiceChannel)
+    }, 30000)
+  })
 })
 
 bot.on('message', message => {
@@ -84,6 +100,22 @@ bot.on('messageReactionAdd', async (reaction, user) => {
     }
   }
   reactionCommands.join(reaction, user, bot.guilds.cache.get(config.guildId))
+})
+
+bot.on('voiceStateUpdate', async oldState => {
+  if (
+    oldState.channel &&
+    (await channelWithVoiceChannelIsJoinable(oldState.channelID)) &&
+    oldState.channel.members.size === 0
+  ) {
+    setTimeout(async () => {
+      if (!oldState.channel) return
+      const voiceChannel = await oldState.channel.guild.channels.cache.get(
+        oldState.channelID
+      )
+      removeVoiceChannelIfEmpty(voiceChannel)
+    }, 30000)
+  }
 })
 
 bot.login(config.botToken)

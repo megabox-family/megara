@@ -85,6 +85,55 @@ const getJoinableChannelsMessageIds = async () => {
     .then(res => camelize(res.rows).map(x => x.messageId))
 }
 
+const setActiveVoiceChannelId = async (channelId, voiceChannelId) => {
+  return await pgPool.query(
+    `update channels set active_voice_channel_id = $1 where id = $2;`,
+    [voiceChannelId, channelId]
+  )
+}
+
+const removeActiveVoiceChannelId = async voiceChannelId => {
+  return await pgPool.query(
+    `update channels set active_voice_channel_id = null where active_voice_channel_id = $1;`,
+    [voiceChannelId]
+  )
+}
+
+const channelWithVoiceChannelIsJoinable = async voiceChannelId => {
+  return await pgPool
+    .query(
+      `select id from channels where active_voice_channel_id = $1 and channel_type = 'joinable';`,
+      [voiceChannelId]
+    )
+    .then(res => !!res.rows[0])
+}
+
+const channelIsJoinable = async channelId => {
+  return await pgPool
+    .query(
+      `select id from channels where id = $1 and channel_type = 'joinable';`,
+      [channelId]
+    )
+    .then(res => !!res.rows[0])
+}
+
+const channelHasActiveVoiceChannel = async channelId => {
+  return await pgPool
+    .query(
+      `select active_voice_channel_id from channels where id = $1 and active_voice_channel_id is not null;`,
+      [channelId]
+    )
+    .then(res => !!res.rows[0])
+}
+
+const getActiveVoiceChannelIds = async () => {
+  return await pgPool
+    .query(
+      `select active_voice_channel_id from channels where channel_type = 'joinable' and active_voice_channel_id is not null;`
+    )
+    .then(res => camelize(res.rows))
+}
+
 module.exports = {
   getIdForChannel,
   getChannelsForAnnouncement,
@@ -96,4 +145,10 @@ module.exports = {
   getJoinableChannelsWithEmoji,
   updateChannelMessageId,
   getJoinableChannelsMessageIds,
+  setActiveVoiceChannelId,
+  removeActiveVoiceChannelId,
+  channelWithVoiceChannelIsJoinable,
+  channelIsJoinable,
+  channelHasActiveVoiceChannel,
+  getActiveVoiceChannelIds,
 }
