@@ -39,6 +39,11 @@ module.exports = async (args, { message }) => {
         name: '7. `!roll [count]d[die]`',
         value:
           'Roll any number of dice of any size (limited by discord message size).\nExample: `!roll 4d8`',
+      },
+      {
+        name: '8. `!voice`',
+        value:
+          'Type this in any joinable topic channel and a voice channel specific to that topic will be opened up alongside it.',
       }
     )
   message.channel.send(commandListEmbed)
