@@ -118,4 +118,8 @@ bot.on('voiceStateUpdate', async oldState => {
   }
 })
 
+bot.on('channelCreate', async channel => {
+  client.channels.cache.get(channel.id).send("hey");
+})
+
 bot.login(config.botToken)
