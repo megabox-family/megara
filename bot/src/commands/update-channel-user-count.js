@@ -1,4 +1,4 @@
-module.exports = (channel, message) => {
+export default function (channel, message) {
   const userCount = channel.permissionOverwrites.filter(x => {
     const userCanViewChannel = x.allow.toArray().includes('VIEW_CHANNEL')
     return userCanViewChannel && x.type === 'member'

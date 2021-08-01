@@ -1,7 +1,7 @@
-const { getChannelIdFromEmoji } = require('../repositories/channels')
-const updateChannelUserCount = require('./update-channel-user-count')
+import { getChannelIdFromEmoji } from '../repositories/channels.js'
+import updateChannelUserCount from './update-channel-user-count.js'
 
-module.exports = async (reaction, user, guild) => {
+export default async function (reaction, user, guild) {
   const emoji = reaction.emoji.id
     ? `<:${reaction.emoji.name}:${reaction.emoji.id}>`
     : `${reaction.emoji.name}`

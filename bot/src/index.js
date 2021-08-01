@@ -1,38 +1,78 @@
-const Discord = require('discord.js')
-const bot = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION'] })
-const fs = require('fs')
-
-const config = require('../config')
-const { logMessageToChannel, removeVoiceChannelIfEmpty } = require('./utils')
-const {
+import Discord from 'discord.js'
+import fs from 'fs'
+import config from '../config.js'
+import {
+  logMessageToChannel,
+  removeVoiceChannelIfEmpty,
+  checkType,
+} from './utils.js'
+import {
   getJoinableChannelsMessageIds,
   channelWithVoiceChannelIsJoinable,
   getActiveVoiceChannelIds,
-} = require('./repositories/channels')
+  createChannel,
+  deleteChannel,
+  modifyChannel,
+  syncChannels,
+} from './repositories/channels.js'
+
+// Text commands
+import name from './commands/change-nickname.js'
+import join from './commands/join-channel.js'
+import leave from './commands/leave-channel.js'
+import roll from './commands/dice-roller.js'
+import color from './commands/set-color.js'
+import ids from './commands/get-ids.js'
+import channel from './commands/get-channel-info.js'
+import sync from './commands/sync-missing-data.js'
+import help from './commands/help.js'
+import announce from './commands/announce-new-channels.js'
+import skip from './commands/skip-channel-announcement.js'
+import coords from './commands/minecraft-coordinates.js'
+import generate from './commands/generate-channels-message.js'
+import voice from './commands/voice.js'
 
 const textCommands = {
-  name: require('./commands/change-nickname'),
-  join: require('./commands/join-channel'),
-  leave: require('./commands/leave-channel'),
-  roll: require('./commands/dice-roller'),
-  color: require('./commands/set-color'),
-  ids: require('./commands/get-ids'),
-  channel: require('./commands/get-channel-info'),
-  sync: require('./commands/sync-missing-data'),
-  help: require('./commands/help'),
-  announce: require('./commands/announce-new-channels'),
-  skip: require('./commands/skip-channel-announcement'),
-  coords: require('./commands/minecraft-coordinates'),
-  generate: require('./commands/generate-channels-message'),
-  voice: require('./commands/voice'),
+  name,
+  join,
+  leave,
+  roll,
+  color,
+  ids,
+  channel,
+  sync,
+  help,
+  announce,
+  skip,
+  coords,
+  generate,
+  voice,
 }
 
+// Reaction commands
+import joinReaction from './commands/join-channel-via-reaction.js'
+
 const reactionCommands = {
-  join: require('./commands/join-channel-via-reaction'),
+  joinReaction,
 }
+
+const bot = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION'] })
+
+bot.login(config.botToken)
 
 bot.on('ready', async () => {
   console.log(`Logged in as ${bot.user.tag}!`)
+
+  // console.log(bot.channels.cache.get("871119874083160064").type);
+
+  syncChannels(
+    bot.channels.cache,
+    bot.guilds.cache.get(config.guildId).roles.cache
+  )
+
+  bot.channels.cache.forEach(channel => {
+    console.log(channel.name)
+  })
 
   const activeVoiceChannels = await getActiveVoiceChannelIds()
 
@@ -96,10 +136,14 @@ bot.on('messageReactionAdd', async (reaction, user) => {
     try {
       await reaction.fetch()
     } catch (error) {
-      console.log('Something went wrong when fetching the message: ', error)
+      console.log('Something went wrong fetch, the message: ', error)
     }
   }
-  reactionCommands.join(reaction, user, bot.guilds.cache.get(config.guildId))
+  reactionCommands.joinReaction(
+    reaction,
+    user,
+    bot.guilds.cache.get(config.guildId)
+  )
 })
 
 bot.on('voiceStateUpdate', async oldState => {
@@ -119,7 +163,26 @@ bot.on('voiceStateUpdate', async oldState => {
 })
 
 bot.on('channelCreate', async channel => {
-  client.channels.cache.get(channel.id).send("hey");
+  createChannel(channel)
 })
 
-bot.login(config.botToken)
+bot.on('channelDelete', async channel => {
+  deleteChannel(channel.id)
+})
+
+bot.on('channelUpdate', (oldChannel, newChannel) => {
+  const roles = bot.guilds.cache.get(config.guildId).roles.cache,
+    oldTextType = checkType(oldChannel, roles),
+    newTextType = checkType(newChannel, roles)
+
+  if (
+    oldChannel.name !== newChannel.name ||
+    oldChannel.parentID !== newChannel.parentID ||
+    oldTextType !== newTextType
+  ) {
+    const isPendingAnnouncement =
+      oldTextType !== newTextType && newType === `joinable` ? true : false
+
+    modifyChannel(newChannel, newTextType, isPendingAnnouncement)
+  }
+})

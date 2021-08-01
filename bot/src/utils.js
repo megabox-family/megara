@@ -1,32 +1,32 @@
-const { isDevelopment, logChannelId } = require('../config')
-const { removeActiveVoiceChannelId } = require('./repositories/channels')
+import config from '../config.js'
+import { removeActiveVoiceChannelId } from './repositories/channels.js'
 
-const userIsInTestChannel = message => {
-  const botChannelId = isDevelopment
+export function userIsInTestChannel(message) {
+  const botChannelId = config.isDevelopment
     ? '711043006781849689'
     : '644365041684185099'
   return message.channel.id === botChannelId
 }
 
-const getChannelIdsWithNames = message => {
+export function getChannelIdsWithNames(message) {
   return message.guild.channels.cache
     .map((value, key) => `${value.name}: '${key}'`)
     .join('\n')
 }
 
-const getRoleIdsWithNames = message => {
+export function getRoleIdsWithNames(message) {
   return message.guild.roles.cache
     .map((value, key) => `${value.name}: '${key}'`)
     .join('\n')
 }
 
-const formatReply = (replyMessage, isDirectMessage = false) => {
+export function formatReply(replyMessage, isDirectMessage = false) {
   return isDirectMessage
     ? replyMessage.charAt(0).toUpperCase() + replyMessage.substring(1)
     : replyMessage
 }
 
-const generateNewChannelAnnouncement = (newChannels, guild) => {
+export function generateNewChannelAnnouncement(newChannels, guild) {
   if (newChannels.length >= 5) {
     const newChannelIds = newChannels.map(x => x.id)
     return `@everyone \nWe've got a bunch of new channels! Here they are:
@@ -59,7 +59,7 @@ const generateNewChannelAnnouncement = (newChannels, guild) => {
   }
 }
 
-const logMessageToChannel = async ({ message, guild }, botId) => {
+export async function logMessageToChannel({ message, guild }, botId) {
   const currentDateTime = new Date()
   const recipientId =
     message.author.id === botId
@@ -89,14 +89,16 @@ const logMessageToChannel = async ({ message, guild }, botId) => {
     message.author.id === botId
       ? `**I sent the following message to ${userDisplayName} at ${currentDateTime.toISOString()}:**\n`
       : `**${userDisplayName} sent the following message at ${currentDateTime.toISOString()}:**\n`
-  guild.channels.cache.get(logChannelId).send(messagePrefix + message.content)
+  guild.channels.cache
+    .get(config.logChannelId)
+    .send(messagePrefix + message.content)
 }
 
-const logErrorMessageToChannel = (errorMessage, guild) => {
-  guild.channels.cache.get(logChannelId).send(`Error: ${errorMessage}`)
+export function logErrorMessageToChannel(errorMessage, guild) {
+  guild.channels.cache.get(config.logChannelId).send(`Error: ${errorMessage}`)
 }
 
-const sortChannelsIntoCategories = channels => {
+export function sortChannelsIntoCategories(channels) {
   let categorizedChannels = new Map()
 
   categorizedChannels.set('General', [])
@@ -120,7 +122,7 @@ const sortChannelsIntoCategories = channels => {
   return categorizedChannels
 }
 
-const removeVoiceChannelIfEmpty = voiceChannel => {
+export function removeVoiceChannelIfEmpty(voiceChannel) {
   const currentMembers = voiceChannel?.members.size
 
   if (!currentMembers)
@@ -129,14 +131,16 @@ const removeVoiceChannelIfEmpty = voiceChannel => {
     })
 }
 
-module.exports = {
-  userIsInTestChannel,
-  getChannelIdsWithNames,
-  generateNewChannelAnnouncement,
-  getRoleIdsWithNames,
-  formatReply,
-  logMessageToChannel,
-  logErrorMessageToChannel,
-  sortChannelsIntoCategories,
-  removeVoiceChannelIfEmpty,
+export function checkType(channel, roles) {
+  const permissions = channel.permissionOverwrites.map(role => {
+    roles[role.id]?.name
+  })
+
+  if (permissions.includes(`joinable`)) {
+    return `joinable`
+  } else if (permissions.includes(`public`)) {
+    return `public`
+  } else {
+    return `private`
+  }
 }

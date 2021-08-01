@@ -1,8 +1,8 @@
-const {
+export {
   getJoinableChannels,
   getCommandLevelForChannel,
-} = require('../repositories/channels')
-const { formatReply } = require('../utils')
+} from '../repositories/channels.js'
+export { formatReply } from '../utils.js'
 
 const getChannelsInCategories = async () => {
   const channels = await getJoinableChannels()
@@ -31,7 +31,7 @@ const formatChannelsMessage = channelsDictionary => {
   return `here's a list of joinable channels: \`\`\`ml\n${formattedChannelsMessage}\`\`\``
 }
 
-module.exports = async (subcommand, { message, isDirectMessage }) => {
+export default async function (subcommand, { message, isDirectMessage }) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
   if (commandLevel === 'restricted') return
 

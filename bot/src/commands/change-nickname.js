@@ -1,7 +1,9 @@
-const { isAlpha } = require('validator')
-const { getIdForRole } = require('../repositories/roles')
-const { getCommandLevelForChannel } = require('../repositories/channels')
-const { formatReply, logErrorMessageToChannel } = require('../utils')
+import { getIdForRole } from '../repositories/roles.js'
+import { getCommandLevelForChannel } from '../repositories/channels.js'
+import { formatReply, logErrorMessageToChannel } from '../utils.js'
+import validator from 'validator'
+
+const { isAlpha } = validator
 
 const isNicknameValid = nickname => {
   return isAlpha(nickname) || nickname.split(/[\s-.']+/).every(x => isAlpha(x))
@@ -16,7 +18,7 @@ const timeout = ms => {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-module.exports = async (nickname, { message, guild, isDirectMessage }) => {
+export default async function (nickname, { message, guild, isDirectMessage }) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
   if (commandLevel === 'restricted') return
 

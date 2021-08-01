@@ -1,11 +1,11 @@
-const { getAdminRoleIds } = require('../repositories/roles')
-const {
+export { getAdminRoleIds } from '../repositories/roles.js'
+export {
   getJoinableChannelsWithEmoji,
   updateChannelMessageId,
-} = require('../repositories/channels')
-const { sortChannelsIntoCategories } = require('../utils')
+} from '../repositories/channels.js'
+export { sortChannelsIntoCategories } from '../utils.js'
 
-module.exports = async (command, { message, guild }) => {
+export default async function (command, { message, guild }) {
   const lowerCaseCommand = command.toLowerCase()
   const adminRoleIds = await getAdminRoleIds()
 

@@ -1,14 +1,16 @@
-const { formatReply } = require('../utils')
-const { getCommandLevelForChannel } = require('../repositories/channels')
-const {
+import { formatReply } from '../utils.js'
+import { getCommandLevelForChannel } from '../repositories/channels.js'
+import {
   getAllCoordinates,
   coordinateExistsByName,
   setCoordinates,
   getCoordinatesByOwner,
   getCoordinatesByName,
   deleteCoordinatesByName,
-} = require('../repositories/coordinates')
-const { isInt } = require('validator')
+} from '../repositories/coordinates.js'
+import validator from 'validator'
+
+const { isInt } = validator
 
 const isCoordinateSetValid = coordinates => {
   return coordinates.every(coordinate => {
@@ -16,7 +18,7 @@ const isCoordinateSetValid = coordinates => {
   })
 }
 
-module.exports = async (args, { message, guild, isDirectMessage }) => {
+export default async function (args, { message, guild, isDirectMessage }) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
   if (commandLevel === 'restricted') return
 

@@ -1,7 +1,7 @@
-const pgPool = require('../pg-pool')
-const camelize = require('camelize')
+import pgPool from '../pg-pool.js'
+import camelize from 'camelize'
 
-const getIdForColorRole = async role => {
+export async function getIdForColorRole(role) {
   return await pgPool
     .query(`select id from roles where name = $1 AND role_type = 'color';`, [
       role,
@@ -9,7 +9,7 @@ const getIdForColorRole = async role => {
     .then(res => (res.rows[0] ? res.rows[0].id : undefined))
 }
 
-const getIdForRole = async role => {
+export async function getIdForRole(role) {
   return await pgPool
     .query(`select id from roles where name = $1 AND role_type = 'other';`, [
       role,
@@ -17,21 +17,14 @@ const getIdForRole = async role => {
     .then(res => (res.rows[0] ? res.rows[0].id : undefined))
 }
 
-const getColorRoleIds = async () => {
+export async function getColorRoleIds() {
   return await pgPool
     .query(`select id from roles where role_type = 'color';`)
     .then(res => camelize(res.rows).map(x => x.id))
 }
 
-const getAdminRoleIds = async () => {
+export async function getAdminRoleIds() {
   return await pgPool
     .query(`select id from roles where role_type = 'admin';`)
     .then(res => camelize(res.rows).map(x => x.id))
-}
-
-module.exports = {
-  getIdForRole,
-  getIdForColorRole,
-  getColorRoleIds,
-  getAdminRoleIds,
 }

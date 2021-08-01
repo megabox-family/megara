@@ -1,10 +1,10 @@
-const {
+import {
   userIsInTestChannel,
   getChannelIdsWithNames,
   getRoleIdsWithNames,
-} = require('../utils')
+} from '../utils.js'
 
-module.exports = (idType, { message }) => {
+export default function (idType, { message }) {
   const lowerCaseIdType = idType.toLowerCase()
 
   if (userIsInTestChannel(message)) {

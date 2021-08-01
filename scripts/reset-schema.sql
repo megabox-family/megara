@@ -6,9 +6,9 @@ drop type if exists channel_type;
 drop type if exists command_level;
 drop type if exists role_type;
 
-create type channel_type as enum('category', 'public', 'joinable', 'private');
+create type channel_type as enum('category', 'joinable', 'private', 'public', 'voice');
 create type command_level as enum('admin', 'basic', 'restricted');
-create type role_type as enum('color', 'other', 'admin');
+create type role_type as enum('admin', 'color', 'other');
 
 create table channels (
   id text not null primary key,
@@ -16,11 +16,12 @@ create table channels (
   name text not null,
   channel_type channel_type,
   is_pending_deletion boolean not null default 'false',
-  command_level command_level not null default 'restricted',
+  command_level command_level not null default 'basic',
   is_pending_announcement boolean not null default 'false',
   emoji text,
   message_id text,
-  column active_voice_channel_id text
+  has_priority boolean default 'false',
+  active_voice_channel_id text
 );
 
 create table roles (

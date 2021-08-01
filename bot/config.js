@@ -1,13 +1,15 @@
 'use strict'
 
-const dotenv = require('dotenv')
+// const dotenv = require('dotenv')
+import dotenv from 'dotenv'
+
 dotenv.config()
 
 const e = process.env
 
 const isDevelopment = e.NODE_ENV === 'development'
 
-module.exports = {
+export default {
   pg: {
     host: e.POSTGRES_HOST,
     user: e.POSTGRES_USER,

@@ -1,6 +1,8 @@
-const { isNumeric } = require('validator')
-const { formatReply } = require('../utils')
-const { getCommandLevelForChannel } = require('../repositories/channels')
+import validator from 'validator'
+import { formatReply } from '../utils.js'
+import { getCommandLevelForChannel } from '../repositories/channels.js'
+
+const { isNumeric } = validator
 
 const isRollValid = roll => {
   const lowerCaseRoll = roll.toLowerCase()
@@ -12,7 +14,7 @@ const isRollValid = roll => {
   )
 }
 
-module.exports = async (roll, { message, isDirectMessage }) => {
+export default async function (roll, { message, isDirectMessage }) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
   if (commandLevel === 'restricted') return
 

@@ -1,8 +1,8 @@
-const pgPool = require('../pg-pool')
-const { getCommandLevelForChannel } = require('../repositories/channels')
-const { formatReply } = require('../utils')
+import pgPool from '../pg-pool.js'
+import { getCommandLevelForChannel } from '../repositories/channels.js'
+import { formatReply } from '../utils.js'
 
-module.exports = async (dataType, { message, guild, isDirectMessage }) => {
+export default async function (dataType, { message, guild, isDirectMessage }) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
   if (commandLevel !== 'admin') return
 

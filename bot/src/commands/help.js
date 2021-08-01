@@ -1,7 +1,7 @@
-const Discord = require('discord.js')
-const { getCommandLevelForChannel } = require('../repositories/channels')
+import Discord from 'discord.js'
+import { getCommandLevelForChannel } from '../repositories/channels.js'
 
-module.exports = async (args, { message }) => {
+export default async function (args, { message }) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
   if (commandLevel === 'restricted') return
 

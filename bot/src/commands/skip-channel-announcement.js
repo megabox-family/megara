@@ -1,10 +1,10 @@
-const {
+import {
   setChannelsAsAnnounced,
   getCommandLevelForChannel,
-} = require('../repositories/channels')
-const { formatReply } = require('../utils')
+} from '../repositories/channels.js'
+import { formatReply } from '../utils.js'
 
-module.exports = async (args, { message, isDirectMessage }) => {
+export default async function (args, { message, isDirectMessage }) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
   if (commandLevel !== 'admin') return
 

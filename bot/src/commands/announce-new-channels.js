@@ -1,12 +1,12 @@
-const { generateNewChannelAnnouncement } = require('../utils')
-const {
+import { generateNewChannelAnnouncement } from '../utils.js'
+import {
   getChannelsForAnnouncement,
   getIdForChannel,
   setChannelsAsAnnounced,
   getCommandLevelForChannel,
-} = require('../repositories/channels')
+} from '../repositories/channels.js'
 
-module.exports = async (args, { message, guild }) => {
+export default async function (args, { message, guild }) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
   if (commandLevel !== 'admin') return
 

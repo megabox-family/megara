@@ -1,8 +1,11 @@
-const { getIdForColorRole, getColorRoleIds } = require('../repositories/roles')
-const { getCommandLevelForChannel } = require('../repositories/channels')
-const { formatReply } = require('../utils')
+import { getIdForColorRole, getColorRoleIds } from '../repositories/roles.js'
+import { getCommandLevelForChannel } from '../repositories/channels.js'
+import { formatReply } from '../utils.js'
 
-module.exports = async (colorCommand, { message, guild, isDirectMessage }) => {
+export default async function (
+  colorCommand,
+  { message, guild, isDirectMessage }
+) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
   if (commandLevel === 'restricted') return
 

@@ -1,12 +1,12 @@
-const { headerCase } = require('change-case')
-const {
+import { headerCase } from 'change-case'
+import {
   setActiveVoiceChannelId,
   channelIsJoinable,
   channelHasActiveVoiceChannel,
-} = require('../repositories/channels')
-const { removeVoiceChannelIfEmpty } = require('../utils')
+} from '../repositories/channels.js'
+import { removeVoiceChannelIfEmpty } from '../utils.js'
 
-module.exports = async (args, { message, guild }) => {
+export default async function (args, { message, guild }) {
   const isJoinableTextChannel = !(await channelIsJoinable(message.channel.id))
   const alreadyHasActiveVoiceChannel = await channelHasActiveVoiceChannel(
     message.channel.id

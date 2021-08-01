@@ -1,7 +1,9 @@
-const pgPool = require('../pg-pool')
-const camelize = require('camelize')
+import pgPool from '../pg-pool.js'
+import camelize from 'camelize'
+import SQL from 'sql-template-strings'
+import { checkType } from '../utils.js'
 
-const getIdForJoinableChannel = async channel => {
+export async function getIdForJoinableChannel(channel) {
   return await pgPool
     .query(
       `select id from channels where name = $1 AND channel_type = 'joinable';`,
@@ -10,13 +12,13 @@ const getIdForJoinableChannel = async channel => {
     .then(res => (res.rows[0] ? res.rows[0].id : undefined))
 }
 
-const getIdForChannel = async channel => {
+export async function getIdForChannel(channel) {
   return await pgPool
     .query(`select id from channels where name = $1;`, [channel])
     .then(res => (res.rows[0] ? res.rows[0].id : undefined))
 }
 
-const getChannelsForAnnouncement = async () => {
+export async function getChannelsForAnnouncement() {
   return await pgPool
     .query(
       `select * from channels where is_pending_announcement = true and channel_type != 'category';`
@@ -24,7 +26,7 @@ const getChannelsForAnnouncement = async () => {
     .then(res => camelize(res.rows))
 }
 
-const setChannelsAsAnnounced = async () => {
+export async function setChannelsAsAnnounced() {
   return await pgPool
     .query(
       `update channels set is_pending_announcement = false where is_pending_announcement = true returning *;`
@@ -32,7 +34,7 @@ const setChannelsAsAnnounced = async () => {
     .then(res => camelize(res.rows))
 }
 
-const getJoinableChannels = async () => {
+export async function getJoinableChannels() {
   return await pgPool
     .query(
       `select c1.id, c2.name as category_name, c1.name from channels c1
@@ -42,13 +44,13 @@ const getJoinableChannels = async () => {
     .then(res => camelize(res.rows))
 }
 
-const getCommandLevelForChannel = async channel => {
+export async function getCommandLevelForChannel(channel) {
   return await pgPool
     .query(`select command_level from channels where id = $1;`, [channel])
     .then(res => (res.rows[0] ? camelize(res.rows[0]).commandLevel : {}))
 }
 
-const getChannelIdFromEmoji = async emoji => {
+export async function getChannelIdFromEmoji(emoji) {
   return await pgPool
     .query(`select id, name, message_id from channels where emoji = $1;`, [
       emoji,
@@ -56,7 +58,7 @@ const getChannelIdFromEmoji = async emoji => {
     .then(res => camelize(res.rows[0]))
 }
 
-const getJoinableChannelsWithEmoji = async () => {
+export async function getJoinableChannelsWithEmoji() {
   return await pgPool
     .query(
       `select c1.id, c2.name as category_name, c1.name, c1.emoji, c1.has_priority from channels c1
@@ -67,7 +69,7 @@ const getJoinableChannelsWithEmoji = async () => {
     .then(res => camelize(res.rows))
 }
 
-const updateChannelMessageId = async (channelId, messageId) => {
+export async function updateChannelMessageId(channelId, messageId) {
   return await pgPool
     .query(`update channels set message_id = $1 where id = $2 returning *;`, [
       messageId,
@@ -77,7 +79,7 @@ const updateChannelMessageId = async (channelId, messageId) => {
     .catch(err => console.log(err))
 }
 
-const getJoinableChannelsMessageIds = async () => {
+export async function getJoinableChannelsMessageIds() {
   return await pgPool
     .query(
       `select distinct message_id from channels where message_id is not null;`
@@ -85,21 +87,21 @@ const getJoinableChannelsMessageIds = async () => {
     .then(res => camelize(res.rows).map(x => x.messageId))
 }
 
-const setActiveVoiceChannelId = async (channelId, voiceChannelId) => {
+export async function setActiveVoiceChannelId(channelId, voiceChannelId) {
   return await pgPool.query(
     `update channels set active_voice_channel_id = $1 where id = $2;`,
     [voiceChannelId, channelId]
   )
 }
 
-const removeActiveVoiceChannelId = async voiceChannelId => {
+export async function removeActiveVoiceChannelId(voiceChannelId) {
   return await pgPool.query(
     `update channels set active_voice_channel_id = null where active_voice_channel_id = $1;`,
     [voiceChannelId]
   )
 }
 
-const channelWithVoiceChannelIsJoinable = async voiceChannelId => {
+export async function channelWithVoiceChannelIsJoinable(voiceChannelId) {
   return await pgPool
     .query(
       `select id from channels where active_voice_channel_id = $1 and channel_type = 'joinable';`,
@@ -108,7 +110,7 @@ const channelWithVoiceChannelIsJoinable = async voiceChannelId => {
     .then(res => !!res.rows[0])
 }
 
-const channelIsJoinable = async channelId => {
+export async function channelIsJoinable(channelId) {
   return await pgPool
     .query(
       `select id from channels where id = $1 and channel_type = 'joinable';`,
@@ -117,7 +119,7 @@ const channelIsJoinable = async channelId => {
     .then(res => !!res.rows[0])
 }
 
-const channelHasActiveVoiceChannel = async channelId => {
+export async function channelHasActiveVoiceChannel(channelId) {
   return await pgPool
     .query(
       `select active_voice_channel_id from channels where id = $1 and active_voice_channel_id is not null;`,
@@ -126,7 +128,7 @@ const channelHasActiveVoiceChannel = async channelId => {
     .then(res => !!res.rows[0])
 }
 
-const getActiveVoiceChannelIds = async () => {
+export async function getActiveVoiceChannelIds() {
   return await pgPool
     .query(
       `select active_voice_channel_id from channels where channel_type = 'joinable' and active_voice_channel_id is not null;`
@@ -134,21 +136,136 @@ const getActiveVoiceChannelIds = async () => {
     .then(res => camelize(res.rows))
 }
 
-module.exports = {
-  getIdForChannel,
-  getChannelsForAnnouncement,
-  setChannelsAsAnnounced,
-  getIdForJoinableChannel,
-  getJoinableChannels,
-  getCommandLevelForChannel,
-  getChannelIdFromEmoji,
-  getJoinableChannelsWithEmoji,
-  updateChannelMessageId,
-  getJoinableChannelsMessageIds,
-  setActiveVoiceChannelId,
-  removeActiveVoiceChannelId,
-  channelWithVoiceChannelIsJoinable,
-  channelIsJoinable,
-  channelHasActiveVoiceChannel,
-  getActiveVoiceChannelIds,
+export async function createChannel(channel, textType = `private`) {
+  let channelType, isPendingAnnouncement
+
+  switch (channel.type) {
+    case `category`:
+      ;(channelType = `category`), (isPendingAnnouncement = false)
+      break
+    case `text`:
+      ;(channelType = textType),
+        (isPendingAnnouncement = textType !== `private` ? true : false)
+      break
+    case `voice`:
+      ;(channelType = `voice`), (isPendingAnnouncement = false)
+      break
+  }
+
+  return await pgPool
+    .query(
+      SQL`
+        insert into channels (id, category_id, name, channel_type, is_pending_announcement)
+        values(${channel.id}, ${channel.parentID}, ${channel.name}, ${channelType}, ${isPendingAnnouncement}) 
+        returning *;
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function deleteChannel(channelID) {
+  return await pgPool
+    .query(
+      SQL`
+        delete from channels 
+        where id = ${channelID} 
+        returning *;
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function modifyChannel(
+  channel,
+  channelType,
+  isPendingAnnouncement
+) {
+  return await pgPool
+    .query(
+      SQL`
+        update channels 
+        set 
+          category_id = ${channel.parentID}, 
+          name = ${channel.name}, 
+          channel_type = ${channelType}, 
+          is_pending_announcement = ${isPendingAnnouncement} 
+        where id = ${channel.id} 
+        returning *;
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function syncChannels(channels, roles) {
+  const liveChannelIds = []
+
+  channels.forEach(channel => {
+    if (!channel.deleted) liveChannelIds.push(channel.id)
+  })
+
+  pgPool
+    .query(
+      `
+    select 
+      id,
+      category_id,
+      name,
+      channel_type
+    from channels
+  `
+    )
+    .then(table => {
+      const rows = camelize(table.rows),
+        tabledChannelIds = rows.map(row => row.id),
+        allIds = [...new Set([...liveChannelIds, ...tabledChannelIds])]
+
+      allIds.forEach(id => {
+        if (id === '871316166059130910') {
+          console.log(
+            id,
+            liveChannelIds.includes(id),
+            tabledChannelIds.includes(id)
+          )
+        }
+
+        if (liveChannelIds.includes(id) && !tabledChannelIds.includes(id)) {
+          const channel = channels.get(id),
+            textType = checkType(channel, roles)
+
+          createChannel(channel, textType)
+        } else if (
+          !liveChannelIds.includes(id) &&
+          tabledChannelIds.includes(id)
+        ) {
+          deleteChannel(id)
+        } else {
+          const channel = channels.get(id),
+            record = rows.filter(row => row.id === id),
+            textType = checkType(channel, roles)
+
+          if (
+            channel.name !== record.name ||
+            channel.parentID !== record.categoryId ||
+            textType !== record.channelType
+          ) {
+            const isPendingAnnouncement =
+              textType !== record.channelType && textType === `joinable`
+                ? true
+                : false
+
+            modifyChannel(channel, textType, isPendingAnnouncement)
+          }
+        }
+      })
+    })
+    .catch(error => console.log(error))
 }
