@@ -70,9 +70,9 @@ bot.on('ready', async () => {
     bot.guilds.cache.get(config.guildId).roles.cache
   )
 
-  bot.channels.cache.forEach(channel => {
-    console.log(channel.name)
-  })
+  // bot.channels.cache.forEach(channel => {
+  //   console.log(channel.name)
+  // })
 
   const activeVoiceChannels = await getActiveVoiceChannelIds()
 
@@ -181,7 +181,7 @@ bot.on('channelUpdate', (oldChannel, newChannel) => {
     oldTextType !== newTextType
   ) {
     const isPendingAnnouncement =
-      oldTextType !== newTextType && newType === `joinable` ? true : false
+      oldTextType !== newTextType && newTextType === `joinable` ? true : false
 
     modifyChannel(newChannel, newTextType, isPendingAnnouncement)
   }
