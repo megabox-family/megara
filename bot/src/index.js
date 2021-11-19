@@ -1,4 +1,4 @@
-import Discord from 'discord.js'
+import { Client, Intents } from 'discord.js'
 import fs from 'fs'
 import config from '../config.js'
 import {
@@ -31,6 +31,7 @@ import skip from './commands/skip-channel-announcement.js'
 import coords from './commands/minecraft-coordinates.js'
 import generate from './commands/generate-channels-message.js'
 import voice from './commands/voice.js'
+import test from './commands/button-test.js'
 
 const textCommands = {
   name,
@@ -47,6 +48,7 @@ const textCommands = {
   coords,
   generate,
   voice,
+  test,
 }
 
 // Reaction commands
@@ -56,7 +58,19 @@ const reactionCommands = {
   joinReaction,
 }
 
-const bot = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION'] })
+const bot = new Client({
+  partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
+  intents: [
+    Intents.FLAGS.GUILDS,
+    Intents.FLAGS.GUILD_MEMBERS,
+    Intents.FLAGS.GUILD_VOICE_STATES,
+    Intents.FLAGS.GUILD_PRESENCES,
+    Intents.FLAGS.GUILD_MESSAGES,
+    Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+    Intents.FLAGS.DIRECT_MESSAGES,
+    Intents.FLAGS.DIRECT_MESSAGE_REACTIONS,
+  ],
+})
 
 bot.login(config.botToken)
 

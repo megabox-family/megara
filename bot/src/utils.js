@@ -132,7 +132,7 @@ export function removeVoiceChannelIfEmpty(voiceChannel) {
 }
 
 export function checkType(channel, roles) {
-  const permissions = channel.permissionOverwrites.map(
+  const permissions = channel.permissionOverwrites.cache.map(
     role => roles.get(role.id)?.name
   )
 

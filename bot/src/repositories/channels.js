@@ -138,16 +138,17 @@ export async function getActiveVoiceChannelIds() {
 
 export async function createChannel(channel, textType = `private`) {
   let channelType, isPendingAnnouncement
+  console.log('GOT HERE', channel.type)
 
   switch (channel.type) {
-    case `category`:
+    case `GUILD_CATEGORY`:
       ;(channelType = `category`), (isPendingAnnouncement = false)
       break
-    case `text`:
+    case `GUILD_TEXT`:
       ;(channelType = textType),
         (isPendingAnnouncement = textType !== `private` ? true : false)
       break
-    case `voice`:
+    case `GUILD_VOICE`:
       ;(channelType = `voice`), (isPendingAnnouncement = false)
       break
   }
@@ -209,13 +210,14 @@ export async function syncChannels(channels, roles) {
   const liveChannelIds = []
 
   channels.forEach(channel => {
+    console.log(channel.type)
     if (!channel.deleted) liveChannelIds.push(channel.id)
   })
 
   pgPool
     .query(
       `
-    select 
+    select
       id,
       category_id,
       name,
@@ -249,23 +251,38 @@ export async function syncChannels(channels, roles) {
           deleteChannel(id)
         } else {
           const channel = channels.get(id),
-            record = rows.filter(row => row.id === id),
-            textType = checkType(channel, roles)
+            record = rows.filter(row => row.id === id)
+
+          let channelType
+
+          switch (channel.type) {
+            case `GUILD_CATEGORY`:
+              channelType = `category`
+              break
+            case `GUILD_TEXT`:
+              channelType = checkType(channel, roles)
+              break
+            case `GUILD_VOICE`:
+              channelType = `voice`
+              break
+          }
 
           if (
             channel.name !== record.name ||
             channel.parentID !== record.categoryId ||
-            textType !== record.channelType
+            channelType !== record.channelType
           ) {
             const isPendingAnnouncement =
-              textType !== record.channelType && textType === `joinable`
+              channelType !== record.channelType && channelType === `joinable`
                 ? true
                 : false
 
-            modifyChannel(channel, textType, isPendingAnnouncement)
+            modifyChannel(channel, channelType, isPendingAnnouncement)
           }
         }
       })
     })
     .catch(error => console.log(error))
 }
+
+this is a test to see how many characters 80 is seems to be pretty dang long if ...
