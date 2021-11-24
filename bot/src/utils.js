@@ -132,11 +132,9 @@ export function removeVoiceChannelIfEmpty(voiceChannel) {
 }
 
 export function checkType(channel, roles) {
-  const permissions = channel.permissionOverwrites.cache.map(
+  const permissions = channel.permissionOverwrites.map(
     role => roles.get(role.id)?.name
   )
-
-  console.log(permissions)
 
   if (permissions.includes(`joinable`)) {
     return `joinable`

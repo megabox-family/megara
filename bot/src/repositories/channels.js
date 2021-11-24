@@ -138,20 +138,22 @@ export async function getActiveVoiceChannelIds() {
 
 export async function createChannel(channel, textType = `private`) {
   let channelType, isPendingAnnouncement
-  console.log('GOT HERE', channel.type)
 
   switch (channel.type) {
     case `GUILD_CATEGORY`:
-      ;(channelType = `category`), (isPendingAnnouncement = false)
+      channelType = `category`
+      isPendingAnnouncement = false
       break
     case `GUILD_TEXT`:
-      ;(channelType = textType),
-        (isPendingAnnouncement = textType !== `private` ? true : false)
+      channelType = textType
+      isPendingAnnouncement = textType !== `private` ? true : false
       break
     case `GUILD_VOICE`:
-      ;(channelType = `voice`), (isPendingAnnouncement = false)
+      channelType = `voice`
+      isPendingAnnouncement = false
       break
   }
+  console.log({ channelType: channel.type, isPendingAnnouncement })
 
   return await pgPool
     .query(
@@ -210,7 +212,6 @@ export async function syncChannels(channels, roles) {
   const liveChannelIds = []
 
   channels.forEach(channel => {
-    console.log(channel.type)
     if (!channel.deleted) liveChannelIds.push(channel.id)
   })
 
@@ -284,5 +285,3 @@ export async function syncChannels(channels, roles) {
     })
     .catch(error => console.log(error))
 }
-
-this is a test to see how many characters 80 is seems to be pretty dang long if ...
