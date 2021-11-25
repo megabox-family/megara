@@ -25,7 +25,7 @@ export default async function (args, { message, guild }) {
       const userCanViewChannel = x.allow.toArray().includes('VIEW_CHANNEL')
       return userCanViewChannel && x.type === 'member'
     }),
-    parent: message.channel.parentID,
+    parent: message.channel.parentId,
     position: message.channel.position + categoryChannelCount,
   })
 

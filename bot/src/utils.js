@@ -1,5 +1,10 @@
+import { getGuild } from './repositories/guild-cache.js'
 import config from '../config.js'
-import { removeActiveVoiceChannelId } from './repositories/channels.js'
+import {
+  removeActiveVoiceChannelId,
+  getCategoryName,
+} from './repositories/channels.js'
+import { MessageActionRow, MessageButton } from 'discord.js'
 
 export function userIsInTestChannel(message) {
   const botChannelId = config.isDevelopment
@@ -132,15 +137,36 @@ export function removeVoiceChannelIfEmpty(voiceChannel) {
 }
 
 export function checkType(channel, roles) {
-  const permissions = channel.permissionOverwrites.map(
+  const permissions = channel.permissionOverwrites.cache.map(
     role => roles.get(role.id)?.name
   )
 
-  if (permissions.includes(`joinable`)) {
+  if (permissions.includes(`!channel type: joinable`)) {
     return `joinable`
-  } else if (permissions.includes(`public`)) {
+  } else if (permissions.includes(`!channel type: public`)) {
     return `public`
   } else {
     return `private`
   }
+}
+
+export async function announceNewChannel(newChannel) {
+  const joinButton = new MessageActionRow().addComponents(
+      new MessageButton()
+        .setCustomId(`!joinChannel: ${newChannel.id}`)
+        .setLabel(`Join ${newChannel.name}`)
+        .setStyle('SUCCESS')
+    ),
+    categoryName = await getCategoryName(newChannel.parentId)
+
+  getGuild()
+    .channels.cache.get(config.announcementChannelID)
+    .send({
+      content: `
+    @everyone Hey guys! ^_^ 
+    \nWe've added a new channel, <#${newChannel.id}>, in the '${categoryName}' category. 
+    \nUse the button below, or the \`!join\` command in <#${config.botCommandsChannelID}> (ex: \`!join ${newChannel.name}\`) to join.
+  `,
+      components: [joinButton],
+    })
 }

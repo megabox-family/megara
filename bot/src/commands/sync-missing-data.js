@@ -21,7 +21,7 @@ export default async function (dataType, { message, guild, isDirectMessage }) {
           )
         else {
           const insertStatement = `
-        insert into channels(id, category_id, name, channel_type, is_pending_announcement)
+        insert into channels(id, category_id, name, channel_type)
         values($1, $2, $3, $4, $5)
         returning *;
       `
@@ -29,7 +29,7 @@ export default async function (dataType, { message, guild, isDirectMessage }) {
             channels.map(channel => {
               pgPool.query(insertStatement, [
                 channel.id,
-                channel.parentID,
+                channel.parentId,
                 channel.name,
                 channel.type === 'category' ? channel.type : 'joinable',
                 true,

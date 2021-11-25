@@ -13,7 +13,6 @@ create table channels (
   category_id text, 
   name text not null,
   channel_type channel_type,
-  is_pending_announcement boolean not null default 'false',
   active_voice_channel_id text
 );
 

@@ -5,9 +5,9 @@ import {
   logMessageToChannel,
   removeVoiceChannelIfEmpty,
   checkType,
+  announceNewChannel,
 } from './utils.js'
 import {
-  getJoinableChannelsMessageIds,
   channelWithVoiceChannelIsJoinable,
   getActiveVoiceChannelIds,
   createChannel,
@@ -15,6 +15,7 @@ import {
   modifyChannel,
   syncChannels,
 } from './repositories/channels.js'
+import { cacheGuild, getGuild } from './repositories/guild-cache.js'
 
 // Text commands
 import name from './commands/change-nickname.js'
@@ -27,11 +28,10 @@ import channel from './commands/get-channel-info.js'
 import sync from './commands/sync-missing-data.js'
 import help from './commands/help.js'
 import announce from './commands/announce-new-channels.js'
-import skip from './commands/skip-channel-announcement.js'
 import coords from './commands/minecraft-coordinates.js'
 import generate from './commands/generate-channels-message.js'
 import voice from './commands/voice.js'
-import test from './commands/button-test.js'
+// import test from './commands/button-test'
 
 const textCommands = {
   name,
@@ -44,19 +44,20 @@ const textCommands = {
   sync,
   help,
   announce,
-  skip,
   coords,
   generate,
   voice,
-  test,
+  // test,
 }
 
 // Reaction commands
-import joinReaction from './commands/join-channel-via-reaction.js'
+const reactionCommands = {}
 
-const reactionCommands = {
-  joinReaction,
-}
+// Button commands
+import joinChannel from './button-commands/join-channel.js'
+import leaveChannel from './button-commands/join-channel.js'
+
+const buttonCommands = { joinChannel, leaveChannel }
 
 const bot = new Client({
   partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
@@ -77,12 +78,11 @@ bot.login(config.botToken)
 bot.on('ready', async () => {
   console.log(`Logged in as ${bot.user.tag}!`)
 
-  // console.log(bot.channels.cache.get("871119874083160064").type);
+  // console.log(bot.channels.cache.get('711043006781849686'))
+  const guild = bot.guilds.cache.get(config.guildId)
+  cacheGuild(guild)
 
-  syncChannels(
-    bot.channels.cache,
-    bot.guilds.cache.get(config.guildId).roles.cache
-  )
+  syncChannels(guild, config.adminChannelId)
 
   // bot.channels.cache.forEach(channel => {
   //   console.log(channel.name)
@@ -92,18 +92,18 @@ bot.on('ready', async () => {
 
   activeVoiceChannels.forEach(channel => {
     setTimeout(async () => {
-      const voiceChannel = await bot.guilds.cache
-        .get(config.guildId)
-        .channels.cache.get(channel.activeVoiceChannelId)
+      const voiceChannel = await guild.channels.cache.get(
+        channel.activeVoiceChannelId
+      )
       removeVoiceChannelIfEmpty(voiceChannel)
     }, 30000)
   })
 })
 
-bot.on('message', message => {
+bot.on('messageCreate', message => {
   const messageText = message.content
   const context = {
-    guild: bot.guilds.cache.get(config.guildId),
+    guild: getGuild(),
     message,
     isDirectMessage: !message.guild,
   }
@@ -135,30 +135,15 @@ bot.on('guildMemberAdd', member => {
   member.send(welcomeMessage)
 })
 
-bot.on('messageReactionAdd', async (reaction, user) => {
-  if (!reaction.message.guild || reaction.message.guild.id !== config.guildId)
-    return
-
-  const joinableChannelsMessageIds = await getJoinableChannelsMessageIds()
-
-  if (
-    !joinableChannelsMessageIds.includes(reaction.message.id) ||
-    user.id === bot.user.id
-  )
-    return
-  if (reaction.partial) {
-    try {
-      await reaction.fetch()
-    } catch (error) {
-      console.log('Something went wrong fetch, the message: ', error)
-    }
-  }
-  reactionCommands.joinReaction(
-    reaction,
-    user,
-    bot.guilds.cache.get(config.guildId)
-  )
-})
+// bot.on('messageReactionAdd', async (reaction, user) => {
+// if (reaction.partial) {
+//   try {
+//     await reaction.fetch()
+//   } catch (error) {
+//     console.log('Something went wrong fetch, the message: ', error)
+//   }
+// }
+// })
 
 bot.on('voiceStateUpdate', async oldState => {
   if (
@@ -191,12 +176,17 @@ bot.on('channelUpdate', (oldChannel, newChannel) => {
 
   if (
     oldChannel.name !== newChannel.name ||
-    oldChannel.parentID !== newChannel.parentID ||
+    oldChannel.parentId !== newChannel.parentId ||
     oldTextType !== newTextType
   ) {
-    const isPendingAnnouncement =
-      oldTextType !== newTextType && newTextType === `joinable` ? true : false
+    if (newTextType === 'joinable' && oldTextType !== 'joinable')
+      announceNewChannel(newChannel)
 
-    modifyChannel(newChannel, newTextType, isPendingAnnouncement)
+    modifyChannel(newChannel, newTextType)
   }
+})
+
+bot.on('interactionCreate', interaction => {
+  if (interaction.isButton())
+    buttonCommands[interaction.customId.match(`(?!!).+(?=:)`)[0]](interaction)
 })
