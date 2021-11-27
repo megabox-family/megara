@@ -1,4 +1,4 @@
-import { getGuild } from './repositories/guild-cache.js'
+import { getBot } from './repositories/cache-bot.js'
 import config from '../config.js'
 import {
   removeActiveVoiceChannelId,
@@ -36,7 +36,7 @@ export function generateNewChannelAnnouncement(newChannels, guild) {
     const newChannelIds = newChannels.map(x => x.id)
     return `@everyone \nWe've got a bunch of new channels! Here they are:
     \n${newChannelIds
-      .map(id => `- ${guild.channels.cache.get(id).toString()}`)
+      .map(id => `- ${getBot().channels.cache.get(id).toString()}`)
       .join('\n')}
     \nJoin 'em with the\`!join\` command. (ex: \`!join ${
       newChannels[0].name
@@ -46,8 +46,8 @@ export function generateNewChannelAnnouncement(newChannels, guild) {
     return `@everyone \nAnnouncement! We have a few more channels you can join! ${newChannelIds
       .map((id, i, originalIds) => {
         if (i + 1 === originalIds.length)
-          return `and ${guild.channels.cache.get(id).toString()}`
-        else return guild.channels.cache.get(id).toString()
+          return `and ${getBot().channels.cache.get(id).toString()}`
+        else return getBot().channels.cache.get(id).toString()
       })
       .join(', ')}
       \nJoin any of them with the \`!join\` command. (ex: \`!join ${
@@ -56,8 +56,8 @@ export function generateNewChannelAnnouncement(newChannels, guild) {
   } else {
     const newChannelId = newChannels[0].id
 
-    return `@everyone \nHey guys, we added a new channel, ${guild.channels.cache
-      .get(newChannelId)
+    return `@everyone \nHey guys, we added a new channel, ${getBot()
+      .channels.cache.get(newChannelId)
       .toString()}! Join it with the \`!join\` command. (ex: \`!join ${
       newChannels[0].name
     }\`)`
@@ -71,11 +71,11 @@ export async function logMessageToChannel({ message, guild }, botId) {
       ? message.channel.recipient.id
       : message.author.id
 
-  const guildMember = guild.members.cache.get(recipientId)
+  const guildMember = getBot().members.cache.get(recipientId)
 
   if (guildMember.partial) {
     try {
-      await guild.members.fetch()
+      await getBot().members.fetch()
     } catch (err) {
       console.log('Error fetching users: ', err)
     }
@@ -94,13 +94,15 @@ export async function logMessageToChannel({ message, guild }, botId) {
     message.author.id === botId
       ? `**I sent the following message to ${userDisplayName} at ${currentDateTime.toISOString()}:**\n`
       : `**${userDisplayName} sent the following message at ${currentDateTime.toISOString()}:**\n`
-  guild.channels.cache
-    .get(config.logChannelId)
+  getBot()
+    .channels.cache.get(config.logChannelId)
     .send(messagePrefix + message.content)
 }
 
 export function logErrorMessageToChannel(errorMessage, guild) {
-  guild.channels.cache.get(config.logChannelId).send(`Error: ${errorMessage}`)
+  getBot()
+    .channels.cache.get(config.logChannelId)
+    .send(`Error: ${errorMessage}`)
 }
 
 export function sortChannelsIntoCategories(channels) {
@@ -136,22 +138,24 @@ export function removeVoiceChannelIfEmpty(voiceChannel) {
     })
 }
 
-export function checkType(channel, roles) {
-  const permissions = channel.permissionOverwrites.cache.map(
-    role => roles.get(role.id)?.name
-  )
+export function checkType(channel) {
+  if (channel.type === `GUILD_CATEGORY`) return `category`
+  else if (channel.type === `GUILD_VOICE`) return `voice`
 
-  if (permissions.includes(`!channel type: joinable`)) {
-    return `joinable`
-  } else if (permissions.includes(`!channel type: public`)) {
-    return `public`
-  } else {
-    return `private`
-  }
+  const roles = getBot().guilds.cache.get(
+      getBot().channels.cache.get(channel.id).guild.id
+    ).roles.cache,
+    permissions = channel.permissionOverwrites.cache.map(
+      role => roles.get(role.id)?.name
+    )
+
+  if (permissions.includes(`!channel type: joinable`)) return `joinable`
+  else if (permissions.includes(`!channel type: public`)) return `public`
+  else return `private`
 }
 
 export async function announceNewChannel(newChannel) {
-  const joinButton = new MessageActionRow().addComponents(
+  const joinButtonRow = new MessageActionRow().addComponents(
       new MessageButton()
         .setCustomId(`!joinChannel: ${newChannel.id}`)
         .setLabel(`Join ${newChannel.name}`)
@@ -159,14 +163,48 @@ export async function announceNewChannel(newChannel) {
     ),
     categoryName = await getCategoryName(newChannel.parentId)
 
-  getGuild()
+  getBot()
     .channels.cache.get(config.announcementChannelID)
     .send({
       content: `
-    @everyone Hey guys! ^_^ 
-    \nWe've added a new channel, <#${newChannel.id}>, in the '${categoryName}' category. 
-    \nUse the button below, or the \`!join\` command in <#${config.botCommandsChannelID}> (ex: \`!join ${newChannel.name}\`) to join.
-  `,
-      components: [joinButton],
+        @everyone Hey guys! 😁\
+        \nWe've added a new channel, <#${newChannel.id}>, in the '${categoryName}' category.\
+        \nPress the button below, or use the \`!join\` command in your DMs with me / <#${config.botCommandsChannelID}> (ex: \`!join ${newChannel.name}\`) to join.
+      `,
+      components: [joinButtonRow],
     })
+}
+
+export function getCommandLevel(channel) {
+  const roles = getBot().guilds.cache.get(
+      getBot().channels.cache.get(channel.id).guild.id
+    ).roles.cache,
+    channelPermissionOverwrites = channel.permissionOverwrites.cache,
+    alphaPermissions = channelPermissionOverwrites.map(
+      role => roles.get(role.id)?.name
+    )
+
+  if (alphaPermissions.includes(`!command level: admin`)) return `admin`
+  else if (alphaPermissions.includes(`!command level: unrestricted`))
+    return `unrestricted`
+  else if (alphaPermissions.includes(`!command level: restricted`))
+    return `restricted`
+  else return `prohibited`
+}
+
+export function getPositionOverride(channel) {
+  const roles = getBot().guilds.cache.get(
+      getBot().channels.cache.get(channel.id).guild.id
+    ).roles.cache,
+    channelPermissionOverwrites = channel.permissionOverwrites.cache,
+    alphaPermissions = channelPermissionOverwrites.map(
+      role => roles.get(role.id)?.name
+    )
+
+  const positionOverride = alphaPermissions.find(alphaPermission => {
+    if (alphaPermission)
+      return alphaPermission.match(`(?!!)position override(?=:)`)
+  })
+
+  return positionOverride ? +positionOverride.match(`-?[0-9]+`)[0] : null
 }

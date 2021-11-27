@@ -1,3 +1,4 @@
+import { getBot } from '../repositories/cache-bot.js'
 import {
   getIdForJoinableChannel,
   getCommandLevelForChannel,
@@ -13,32 +14,29 @@ export default async function (channel, { message, guild, isDirectMessage }) {
 
   if (joinableChannelId) {
     if (
-      !guild.channels.cache
-        .get(joinableChannelId)
-        .permissionsFor(guild.members.cache.get(message.author.id))
-        .toArray()
-        .includes('VIEW_CHANNEL')
+      getBot()
+        .channels.cache.get(joinableChannelId)
+        .permissionOverwrites.cache.filter(
+          permissionOverwrite => permissionOverwrite.id === message.author.id
+        ).size > 0
     ) {
-      guild.channels.cache
-        .get(joinableChannelId)
-        .updateOverwrite(message.author.id, { VIEW_CHANNEL: true })
+      getBot()
+        .channels.cache.get(joinableChannelId)
+        .permissionOverwrites.delete(message.author.id)
         .then(() =>
           message.reply(
             formatReply(
-              `you have been added to #${lowerCaseChannel}`,
+              `you have been removed from #${lowerCaseChannel}`,
               isDirectMessage
             )
           )
         )
     } else
       message.reply(
-        formatReply(`you already have access to that channel.`, isDirectMessage)
+        formatReply(`you are not a part of that channel.`, isDirectMessage)
       )
   } else
     message.reply(
-      formatReply(
-        `sorry, ${channel} is not a joinable channel.`,
-        isDirectMessage
-      )
+      formatReply(`sorry, ${channel} is not a valid channel.`, isDirectMessage)
     )
 }

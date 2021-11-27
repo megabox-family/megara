@@ -1,46 +1,51 @@
 import { MessageActionRow, MessageButton } from 'discord.js'
-import { getGuild } from '../repositories/guild-cache.js'
-import { checkType } from '../utils.js'
+import { getBot } from '../repositories/cache-bot.js'
+import { getChannelById, getChannelByName } from '../repositories/channels.js'
 
 export default async function (interaction) {
-  const guild = getGuild(),
-    joinableChannel = guild.channels.cache.get(
-      interaction.customId.match(`(?!:)[0-9]+`)[0]
+  const interactionChannelRecord = await getChannelById(
+      `${interaction.customId.match(`(?!:)[0-9]+`)[0]}`
     ),
-    channelType = checkType(joinableChannel, guild.roles.cache),
+    botCommandsChannelRecord = await getChannelByName(`bot-commands`),
     leaveButtonRow = new MessageActionRow().addComponents(
       new MessageButton()
-        .setCustomId(`!leaveChannel: ${joinableChannel.id}`)
-        .setLabel(`Leave ${joinableChannel.name}`)
+        .setCustomId(`!leaveChannel: ${interactionChannelRecord.id}`)
+        .setLabel(`Leave ${interactionChannelRecord.name}`)
         .setStyle('DANGER')
     )
 
-  if (channelType === `joinable`) {
+  if (interactionChannelRecord.channelType === `joinable`) {
     if (
-      !guild.channels.cache
-        .get(joinableChannel.id)
-        .permissionsFor(guild.members.cache.get(interaction.user.id))
-        .toArray()
-        .includes('VIEW_CHANNEL')
+      getBot()
+        .channels.cache.get(interactionChannelRecord.id)
+        .permissionOverwrites.cache.filter(
+          permissionOverwrite => permissionOverwrite.id === interaction.user.id
+        ).size < 1
     ) {
-      guild.channels.cache
-        .get(joinableChannel.id)
+      getBot()
+        .channels.cache.get(interactionChannelRecord.id)
         .permissionOverwrites.create(interaction.user.id, {
           VIEW_CHANNEL: true,
         })
         .then(() =>
           interaction.user.send({
-            content: `You have been added to <#${joinableChannel.id}>! If you would like to leave press the button below.`,
+            content: `
+              You have been added to <#${interactionChannelRecord.id}>! 😁\
+              \nIf you joined by accident press the button below, or use the \`!leave\` command here / in <#${botCommandsChannelRecord.id}> (ex: \`!leave ${interactionChannelRecord.name}\`) to leave.
+            `,
             components: [leaveButtonRow],
           })
         )
     } else
       interaction.user.send({
-        content: `You already have access to that channel, if you would like to leave press the button below.`,
+        content: `
+          You already have access to <#${interactionChannelRecord.id}> 👍\
+          \nIf you'd like to leave press the button below, or use the \`!leave\` command here / in <#${botCommandsChannelRecord.id}> (ex: \`!leave ${interactionChannelRecord.name}\`).
+        `,
         components: [leaveButtonRow],
       })
   } else
     interaction.user.send(
-      `Sorry, <#${joinableChannel.id}> is not a joinable channel.`
+      `Sorry, ${interactionChannelRecord.name} is not a joinable channel 🥺`
     )
 }

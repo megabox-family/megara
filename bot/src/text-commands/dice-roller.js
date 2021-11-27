@@ -14,7 +14,7 @@ const isRollValid = roll => {
   )
 }
 
-export default async function (roll, { message, isDirectMessage }) {
+export default async function (roll, message) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
   if (commandLevel === 'restricted') return
 
@@ -29,18 +29,12 @@ export default async function (roll, { message, isDirectMessage }) {
       rolls.push(result)
     }
     message.reply(
-      formatReply(
-        `rolled: \`\`\`md\n# Total: ${total}\nDetails: ${roll.toLowerCase()} (${rolls.join(
-          ' '
-        )})\`\`\``,
-        isDirectMessage
-      )
+      `Rolled: \`\`\`md\n# Total: ${total}\nDetails: ${roll.toLowerCase()} (${rolls.join(
+        ' '
+      )})\`\`\``
     )
   } else
     message.reply(
-      formatReply(
-        'your roll was invalid. Correct syntax is: `[count]d[die]` e.g. `1d20`',
-        isDirectMessage
-      )
+      'Your roll was invalid. Correct syntax is: `[count]d[die]` e.g. `1d20`'
     )
 }

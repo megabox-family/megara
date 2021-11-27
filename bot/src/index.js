@@ -1,4 +1,6 @@
-import { Client, Intents } from 'discord.js'
+import { Client, Intents, MessageActionRow, MessageButton } from 'discord.js'
+import { dirname } from 'path'
+import { fileURLToPath } from 'url'
 import fs from 'fs'
 import config from '../config.js'
 import {
@@ -6,7 +8,9 @@ import {
   removeVoiceChannelIfEmpty,
   checkType,
   announceNewChannel,
+  getCommandLevel,
 } from './utils.js'
+import { syncGuilds } from './repositories/guilds.js'
 import {
   channelWithVoiceChannelIsJoinable,
   getActiveVoiceChannelIds,
@@ -15,23 +19,21 @@ import {
   modifyChannel,
   syncChannels,
 } from './repositories/channels.js'
-import { cacheGuild, getGuild } from './repositories/guild-cache.js'
+import { cacheBot, getBot } from './repositories/cache-bot.js'
 
 // Text commands
-import name from './commands/change-nickname.js'
-import join from './commands/join-channel.js'
-import leave from './commands/leave-channel.js'
-import roll from './commands/dice-roller.js'
-import color from './commands/set-color.js'
-import ids from './commands/get-ids.js'
-import channel from './commands/get-channel-info.js'
-import sync from './commands/sync-missing-data.js'
-import help from './commands/help.js'
-import announce from './commands/announce-new-channels.js'
-import coords from './commands/minecraft-coordinates.js'
-import generate from './commands/generate-channels-message.js'
-import voice from './commands/voice.js'
-// import test from './commands/button-test'
+import name from './text-commands/change-nickname.js'
+import join from './text-commands/join-channel.js'
+import leave from './text-commands/leave-channel.js'
+import roll from './text-commands/dice-roller.js'
+import color from './text-commands/set-color.js'
+import ids from './text-commands/get-ids.js'
+import channel from './text-commands/get-channel-info.js'
+import sync from './text-commands/sync-missing-data.js'
+import help from './text-commands/help.js'
+import coords from './text-commands/minecraft-coordinates.js'
+import voice from './text-commands/voice.js'
+import test from './text-commands/test.js'
 
 const textCommands = {
   name,
@@ -43,11 +45,9 @@ const textCommands = {
   channel,
   sync,
   help,
-  announce,
   coords,
-  generate,
   voice,
-  // test,
+  test,
 }
 
 // Reaction commands
@@ -55,7 +55,7 @@ const reactionCommands = {}
 
 // Button commands
 import joinChannel from './button-commands/join-channel.js'
-import leaveChannel from './button-commands/join-channel.js'
+import leaveChannel from './button-commands/leave-channel.js'
 
 const buttonCommands = { joinChannel, leaveChannel }
 
@@ -78,21 +78,16 @@ bot.login(config.botToken)
 bot.on('ready', async () => {
   console.log(`Logged in as ${bot.user.tag}!`)
 
-  // console.log(bot.channels.cache.get('711043006781849686'))
-  const guild = bot.guilds.cache.get(config.guildId)
-  cacheGuild(guild)
+  cacheBot(bot)
 
-  syncChannels(guild, config.adminChannelId)
-
-  // bot.channels.cache.forEach(channel => {
-  //   console.log(channel.name)
-  // })
+  await syncGuilds()
+  await syncChannels()
 
   const activeVoiceChannels = await getActiveVoiceChannelIds()
 
   activeVoiceChannels.forEach(channel => {
     setTimeout(async () => {
-      const voiceChannel = await guild.channels.cache.get(
+      const voiceChannel = await bot.channels.cache.get(
         channel.activeVoiceChannelId
       )
       removeVoiceChannelIfEmpty(voiceChannel)
@@ -101,16 +96,10 @@ bot.on('ready', async () => {
 })
 
 bot.on('messageCreate', message => {
+  if (!message.guild || getCommandLevel(message.channel) === 'prohibited')
+    return
+
   const messageText = message.content
-  const context = {
-    guild: getGuild(),
-    message,
-    isDirectMessage: !message.guild,
-  }
-
-  if (!context.isDirectMessage && message.guild.id !== config.guildId) return
-
-  if (context.isDirectMessage) logMessageToChannel(context, bot.user.id)
 
   if (messageText.substring(0, 1) === '!') {
     const command = messageText.includes(' ')
@@ -119,20 +108,37 @@ bot.on('messageCreate', message => {
     const args = messageText.substring(messageText.indexOf(' ') + 1)
 
     if (textCommands[command.toLowerCase()]) {
-      textCommands[command.toLowerCase()](args, context)
+      textCommands[command.toLowerCase()](args, message)
     }
   }
 })
 
 bot.on('guildMemberAdd', member => {
-  if (member.guild.id !== config.guildId) return
-
-  const welcomeMessage = fs.readFileSync(
-    __dirname + '/media/welcome-message.txt',
-    'utf8'
+  const tosButtonRow = new MessageActionRow().addComponents(
+    new MessageButton()
+      .setCustomId(`!acceptTos: ${member.guild.id}`)
+      .setLabel(`Accept`)
+      .setStyle('SUCCESS'),
+    new MessageButton()
+      .setCustomId(`!denyTos: ${member.guild.id}`)
+      .setLabel(`Deny`)
+      .setStyle('DANGER')
   )
 
-  member.send(welcomeMessage)
+  member.send({
+    content: fs.readFileSync(
+      dirname(fileURLToPath(import.meta.url)) + '/media/welcome-message.txt',
+      'utf8'
+    ),
+    components: [tosButtonRow],
+  })
+
+  // const welcomeMessage = fs.readFileSync(
+  //   __dirname + '/media/welcome-message.txt',
+  //   'utf8'
+  // )
+
+  // member.send(welcomeMessage)
 })
 
 // bot.on('messageReactionAdd', async (reaction, user) => {
@@ -170,20 +176,7 @@ bot.on('channelDelete', async channel => {
 })
 
 bot.on('channelUpdate', (oldChannel, newChannel) => {
-  const roles = bot.guilds.cache.get(config.guildId).roles.cache,
-    oldTextType = checkType(oldChannel, roles),
-    newTextType = checkType(newChannel, roles)
-
-  if (
-    oldChannel.name !== newChannel.name ||
-    oldChannel.parentId !== newChannel.parentId ||
-    oldTextType !== newTextType
-  ) {
-    if (newTextType === 'joinable' && oldTextType !== 'joinable')
-      announceNewChannel(newChannel)
-
-    modifyChannel(newChannel, newTextType)
-  }
+  modifyChannel(oldChannel, newChannel)
 })
 
 bot.on('interactionCreate', interaction => {
