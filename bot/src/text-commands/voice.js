@@ -4,7 +4,7 @@ import {
   channelIsJoinable,
   channelHasActiveVoiceChannel,
 } from '../repositories/channels.js'
-import { removeVoiceChannelIfEmpty } from '../utils.js'
+import { removeVoiceChannelIfEmpty } from '../utils/general.js'
 
 export default async function (args, { message, guild }) {
   const isJoinableTextChannel = !(await channelIsJoinable(message.channel.id))

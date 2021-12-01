@@ -1,14 +1,7 @@
-import { getBot } from './cache-bot.js'
 import pgPool from '../pg-pool.js'
 import camelize from 'camelize'
 import SQL from 'sql-template-strings'
-import {
-  checkType,
-  getCommandLevel,
-  announceNewChannel,
-  sortChannelsIntoCategories,
-  getPositionOverride,
-} from '../utils.js'
+import { sortChannels } from '../utils/channels.js'
 
 export async function getIdForJoinableChannel(channel) {
   return await pgPool
@@ -35,10 +28,23 @@ export async function getJoinableChannels() {
     .then(res => camelize(res.rows))
 }
 
-export async function getCommandLevelForChannel(channel) {
+export async function getCommandLevelForChannel(channelId) {
   return await pgPool
-    .query(`select command_level from channels where id = $1;`, [channel])
+    .query(SQL`select command_level from channels where id = ${channelId};`)
     .then(res => (res.rows[0] ? camelize(res.rows[0]).commandLevel : {}))
+}
+
+export async function getUnrestrictedChannels() {
+  return await pgPool
+    .query(
+      SQL`
+      select
+        id
+      from channels
+      where command_level = 'unrestricted';
+    `
+    )
+    .then(res => camelize(res.rows))
 }
 
 export async function updateChannelMessageId(channelId, messageId) {
@@ -108,42 +114,73 @@ export async function getActiveVoiceChannelIds() {
     .then(res => camelize(res.rows))
 }
 
-export async function getAdminChannelId(guildId) {
+export async function getChannelsGuildById(channelId) {
   return await pgPool
-    .query(`select admin_channel from guilds where id = $1;`, [guildId])
-    .then(res => (res.rows[0] ? res.rows[0].id : undefined))
-}
-
-export function createChannel(channel, skipAnnouncement = false) {
-  const channelType = checkType(channel),
-    commandLevel = getCommandLevel(channel),
-    positionOverride = getPositionOverride(channel)
-
-  pgPool
     .query(
       SQL`
-        insert into channels (id, name, guild_id, category_id, channel_type, command_level, position_override)
-        values(${channel.id}, ${channel.name}, ${channel.guild.id}, ${channel.parentId}, ${channelType}, ${commandLevel}, ${positionOverride});
+      select guild_id
+      from channels 
+      where id = ${channelId};
+    `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].guild_id : undefined))
+}
+
+export async function createChannelRecord(
+  channel,
+  channelType,
+  commandLevel,
+  positionOverride
+) {
+  return await pgPool
+    .query(
+      SQL`
+        insert into channels (id, name, guild_id, category_id, channel_type, command_level, position_override, position)
+        values(${channel.id}, ${channel.name}, ${channel.guild.id}, ${channel.parentId}, ${channelType}, ${commandLevel}, ${positionOverride}, ${channel.position});
+      `
+    )
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function updateChannelRecord(
+  channel,
+  channelType,
+  commandLevel,
+  positionOverride
+) {
+  return await pgPool
+    .query(
+      SQL`
+        update channels
+        set
+          name = ${channel.name},
+          category_id = ${channel.parentId},
+          channel_type = ${channelType},
+          command_level = ${commandLevel},
+          position_override = ${positionOverride},
+          position = ${channel.position}
+        where id = ${channel.id}
+        returning *;
       `
     )
     .then(res => camelize(res.rows))
     .catch(error => {
       console.log(error)
     })
-
-  if (skipAnnouncement) {
-    if (channelType === 'joinable') return channel.id
-  } else {
-    announceNewChannel(channel)
-  }
 }
 
-export async function deleteChannel(channelId) {
+export async function deleteChannel(channel, skipAnnouncementAndSort = false) {
+  const guildId = await getChannelsGuildById(channel.id)
+
+  if (!skipAnnouncementAndSort) sortChannels(guildId)
+
   return await pgPool
     .query(
       SQL`
         delete from channels 
-        where id = ${channelId} 
+        where id = ${channel.id} 
         returning *;
       `
     )
@@ -153,120 +190,16 @@ export async function deleteChannel(channelId) {
     })
 }
 
-export async function modifyChannel(
-  oldChannel,
-  newChannel,
-  skipAnnouncement = false
-) {
-  const oldCatergoryId = oldChannel?.categoryId
-      ? oldChannel.categoryId
-      : oldChannel.parentId,
-    oldChannelType = oldChannel?.channelType
-      ? oldChannel.channelType
-      : checkType(oldChannel),
-    oldCommandLevel = oldChannel?.commandLevel
-      ? oldChannel.commandLevel
-      : getCommandLevel(oldChannel),
-    oldPositionOverride = oldChannel?.positionOverride
-      ? oldChannel.positionOverride
-      : getPositionOverride(oldChannel),
-    newChannelType = checkType(newChannel),
-    newCommandLevel = getCommandLevel(newChannel),
-    newPositionOverride = getPositionOverride(newChannel)
-
-  if (
-    oldChannel.name !== newChannel.name ||
-    oldCatergoryId !== newChannel.parentId ||
-    oldChannelType !== newChannelType ||
-    oldCommandLevel !== newCommandLevel ||
-    oldPositionOverride !== newPositionOverride
-  ) {
-    await pgPool
-      .query(
-        SQL`
-        update channels
-        set
-          category_id = ${channel.parentId},
-          name = ${channel.name},
-          channel_type = ${channelType},
-          command_level = ${commandLevel},
-          position_override = ${positionOverride}
-        where id = ${channel.id}
-        returning *;
-      `
-      )
-      .then(res => camelize(res.rows))
-      .catch(error => {
-        console.log(error)
-      })
-
-    if (!oldChannelType === `joinable` && newChannelType === `joinable`) {
-      if (skipAnnouncement) return newChannel.id
-      else announceNewChannel(channel)
-    }
-  }
-}
-
-export async function syncChannels() {
-  getBot().guilds.cache.forEach(guild => {
-    const liveChannelIds = [],
-      channels = guild.channels.cache,
-      roles = guild.roles.cache
-
-    channels.forEach(channel => {
-      if (!channel.deleted) liveChannelIds.push(channel.id)
-    })
-
-    pgPool
-      .query(
-        SQL`
+export async function getChannelTableByGuild(guildId) {
+  return await pgPool
+    .query(
+      SQL`
           select *
           from channels
-          where guild_id = ${guild.id};
+          where guild_id = ${guildId};
         `
-      )
-      .then(table => {
-        const rows = camelize(table.rows),
-          tabledChannelIds = rows.map(row => row.id),
-          allIds = [...new Set([...liveChannelIds, ...tabledChannelIds])],
-          channelsToAnnounce = []
-
-        allIds.forEach(id => {
-          const channel = channels.get(id)
-
-          if (liveChannelIds.includes(id) && !tabledChannelIds.includes(id)) {
-            const channelId = createChannel(channel, true)
-            if (channelId) channelsToAnnounce.push(channelId)
-          } else if (
-            !liveChannelIds.includes(id) &&
-            tabledChannelIds.includes(id)
-          ) {
-            deleteChannel(id)
-          } else {
-            const record = rows.find(row => {
-              return row.id === id
-            })
-
-            const channelId = modifyChannel(record, channel, true)
-
-            if (channelId) channelsToAnnounce.push(channelId)
-          }
-        })
-
-        if (channelsToAnnounce.length >= 5) {
-          const adminChannelId = await getAdminChannelId(guild.id)
-          guild.channels.cache.get(adminChannelId).send(
-            `Potential oopsie detected. More than five channels were marked for announcement:
-              ${channelsToAnnounce.join(', ')}`
-          )
-        } else {
-          channelsToAnnounce.forEach(channelToAnnounce => {
-            announceNewChannel(channelToAnnounce)
-          })
-        }
-      })
-      .catch(error => console.log(error))
-  })
+    )
+    .then(res => camelize(res.rows))
 }
 
 export async function getCategoryName(categoryId) {
@@ -299,14 +232,28 @@ export async function getChannelByName(name) {
     .then(res => (res.rows[0] ? camelize(res.rows[0]) : undefined))
 }
 
-export async function sortChannels(guildId) {
-  const guild = getBot().guilds.cache.get(guildId),
-    channelsWithPositionOverrides = {}
+export async function getAlphabeticalCategories(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select id
+        from channels 
+        where channel_type = 'category' and guild_id = ${guildId} 
+        order by name
+      `
+    )
+    .then(res => camelize(res.rows))
+}
 
-  guild.channels.cache.forEach(
-    channel =>
-      (channelsWithPositionOverrides[channel.id] = getPositionOverride(channel))
-  )
-
-  // const categories = await
+export async function getAlphabeticalChannelsByCategory(categoryId) {
+  return await pgPool
+    .query(
+      SQL`
+        select id
+        from channels 
+        where category_id = ${categoryId}
+        order by name
+      `
+    )
+    .then(res => camelize(res.rows))
 }

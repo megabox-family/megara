@@ -1,6 +1,7 @@
+import { getBot } from '../cache-bot.js'
 import { getIdForRole } from '../repositories/roles.js'
 import { getCommandLevelForChannel } from '../repositories/channels.js'
-import { formatReply, logErrorMessageToChannel } from '../utils.js'
+import { logErrorMessageToChannel } from '../utils/general.js'
 import validator from 'validator'
 
 const { isAlpha } = validator
@@ -18,8 +19,9 @@ const timeout = ms => {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-export default async function (nickname, { message, guild, isDirectMessage }) {
-  const commandLevel = await getCommandLevelForChannel(message.channel.id)
+export default async function (message, nickname) {
+  const guild = getBot().guilds.cache.get(message.guild.id),
+    commandLevel = await getCommandLevelForChannel(message.channel.id)
   if (commandLevel === 'restricted') return
 
   if (isNicknameValid(nickname)) {
@@ -97,17 +99,6 @@ export default async function (nickname, { message, guild, isDirectMessage }) {
       handleNicknameFailure(error, guild)
     }
 
-    message.reply(
-      formatReply(
-        `your nickname has been changed to ${newNickname} ^-^`,
-        isDirectMessage
-      )
-    )
-  } else
-    message.reply(
-      formatReply(
-        "your nickname can't have any special characters!",
-        isDirectMessage
-      )
-    )
+    message.reply(`Your nickname has been changed to ${newNickname} 🥰`)
+  } else message.reply("Your nickname can't have any special characters! 😬")
 }

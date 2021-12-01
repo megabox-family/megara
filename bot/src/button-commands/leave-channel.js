@@ -1,6 +1,10 @@
 import { MessageActionRow, MessageButton } from 'discord.js'
-import { getBot } from '../repositories/cache-bot.js'
-import { getChannelById, getChannelByName } from '../repositories/channels.js'
+import { getBot } from '../cache-bot.js'
+import {
+  getChannelById,
+  getChannelByName,
+  getUnrestrictedChannels,
+} from '../repositories/channels.js'
 
 export default async function (interaction) {
   const interactionChannelRecord = await getChannelById(
@@ -9,9 +13,13 @@ export default async function (interaction) {
     botCommandsChannelRecord = await getChannelByName(`bot-commands`),
     joinButtonRow = new MessageActionRow().addComponents(
       new MessageButton()
-        .setCustomId(`!joinChannel: ${interactionChannelRecord.id}`)
+        .setCustomId(`!join-channel: ${interactionChannelRecord.id}`)
         .setLabel(`Join ${interactionChannelRecord.name}`)
         .setStyle('SUCCESS')
+    ),
+    unrestrictedChannels = await getUnrestrictedChannels(),
+    compatibleChannels = unrestrictedChannels.map(
+      unrestrictedChannel => `<#${unrestrictedChannel.id}>`
     )
 
   if (
@@ -28,7 +36,12 @@ export default async function (interaction) {
         interaction.user.send({
           content: `
               You have been removed from <#${interactionChannelRecord.id}>! 👋\
-              \nIf you left by accident press the button below, or use the \`!join\` command here / in <#${botCommandsChannelRecord.id}> (ex: \`!join ${interactionChannelRecord.name}\`) to re-join.
+              \nIf you left by accident press the button below, or use the \`!join\` command (ex: \`!join ${
+                interactionChannelRecord.name
+              }\`) to re-join.\
+              \nThe \`!join\` command works in these channels: ${compatibleChannels.join(
+                `, `
+              )}
             `,
           components: [joinButtonRow],
         })
@@ -36,8 +49,15 @@ export default async function (interaction) {
   } else
     interaction.user.send({
       content: `
-          You tried to leave a channel you aren't a part of, <#${interactionChannelRecord.id}> 🤔\
-          \nIf you'd like to join press the button below, or use the \`!join\` command here / in <#${botCommandsChannelRecord.id}> (ex: \`!join ${interactionChannelRecord.name}\`).
+          You tried to leave a channel you aren't a part of, <#${
+            interactionChannelRecord.id
+          }> 🤔\
+          \nIf you'd like to join press the button below, or use the \`!join\` command (ex: \`!join ${
+            interactionChannelRecord.name
+          }\`).\
+          \nThe \`!join\` command works in these channels: ${compatibleChannels.join(
+            `, `
+          )}
         `,
       components: [joinButtonRow],
     })

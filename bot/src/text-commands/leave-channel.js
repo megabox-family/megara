@@ -1,9 +1,8 @@
-import { getBot } from '../repositories/cache-bot.js'
+import { getBot } from '../cache-bot.js'
 import {
   getIdForJoinableChannel,
   getCommandLevelForChannel,
 } from '../repositories/channels.js'
-import { formatReply } from '../utils.js'
 
 export default async function (channel, { message, guild, isDirectMessage }) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
@@ -24,19 +23,8 @@ export default async function (channel, { message, guild, isDirectMessage }) {
         .channels.cache.get(joinableChannelId)
         .permissionOverwrites.delete(message.author.id)
         .then(() =>
-          message.reply(
-            formatReply(
-              `you have been removed from #${lowerCaseChannel}`,
-              isDirectMessage
-            )
-          )
+          message.reply(`You have been removed from #${lowerCaseChannel}`)
         )
-    } else
-      message.reply(
-        formatReply(`you are not a part of that channel.`, isDirectMessage)
-      )
-  } else
-    message.reply(
-      formatReply(`sorry, ${channel} is not a valid channel.`, isDirectMessage)
-    )
+    } else message.reply(`You are not a part of that channel.`)
+  } else message.reply(`Sorry, ${channel} is not a valid channel.`)
 }

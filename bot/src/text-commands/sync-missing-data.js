@@ -1,6 +1,5 @@
 import pgPool from '../pg-pool.js'
 import { getCommandLevelForChannel } from '../repositories/channels.js'
-import { formatReply } from '../utils.js'
 
 export default async function (dataType, { message, guild, isDirectMessage }) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
@@ -15,10 +14,7 @@ export default async function (dataType, { message, guild, isDirectMessage }) {
           x => x.type !== 'voice' && !existingChannelIds.includes(x.id)
         )
 
-        if (channels.size === 0)
-          message.reply(
-            formatReply(`everything's up to date!`, isDirectMessage)
-          )
+        if (channels.size === 0) message.reply(`Everything's up to date!`)
         else {
           const insertStatement = `
         insert into channels(id, category_id, name, channel_type)
@@ -38,19 +34,13 @@ export default async function (dataType, { message, guild, isDirectMessage }) {
           )
             .then(insertedRows => {
               message.reply(
-                formatReply(
-                  `synced ${insertedRows.length} unregistered channel(s)!
-                  \nWould you like me to make an announcement for the new channels? Type \`!announce\` to announce them or \`!skip\` to skip these ones.`,
-                  isDirectMessage
-                )
+                `Synced ${insertedRows.length} unregistered channel(s)!
+                  \nWould you like me to make an announcement for the new channels? Type \`!announce\` to announce them or \`!skip\` to skip these ones.`
               )
             })
             .catch(err => console.log(err))
         }
       })
       .catch(err => console.log(err))
-  } else
-    message.reply(
-      formatReply(`sorry, I cannot sync ${dataType}...`, isDirectMessage)
-    )
+  } else message.reply(`Sorry, I cannot sync ${dataType}...`)
 }

@@ -10,10 +10,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@discordjs/voice": "^0.7.5",
     "camelize": "^1.0.0",
     "chai": "^4.2.0",
     "change-case": "^4.1.2",
-    "discord.js": "^13.2.0",
+    "discord.js": "^13.3.1",
     "dotenv": "^8.2.0",
     "esm": "^3.2.25",
     "mocha": "^7.1.2",

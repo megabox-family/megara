@@ -1,15 +1,26 @@
-drop table if exists channels;
+--guilds
 drop table if exists guilds;
--- drop table if exists roles;
--- drop table if exists coordinates;
 
+create table guilds (
+  id text not null primary key,
+  guild_name text not null,
+  joinable_system boolean not null default false,
+  channel_sorting boolean not null default false,
+  admin_channel text,
+  log_channel text,
+  announcement_channel text,
+  verification_channel text,
+  tos_message text
+);
+
+
+--channels
+drop table if exists channels;
 drop type if exists channel_type;
 drop type if exists command_level;
--- drop type if exists role_type;
 
 create type channel_type as enum('category', 'joinable', 'private', 'public', 'voice');
 create type command_level as enum('admin', 'unrestricted', 'restricted', 'prohibited');
--- create type role_type as enum('admin', 'color', 'other');
 
 create table channels (
   id text not null primary key,
@@ -18,21 +29,27 @@ create table channels (
   category_id text, 
   channel_type channel_type,
   command_level command_level,
-  active_voice_channel_id text,
-  position_override integer
+  position_override integer,
+  position integer,
+  active_voice_channel_id text
 );
 
-create table guilds (
-  id text not null primary key,
-  guild_name text not null,
-  admin_channel text
-);
+
+--roles
+-- drop table if exists roles;
+-- drop type if exists role_type;
+
+-- create type role_type as enum('admin', 'color', 'other');
 
 -- create table roles (
 --   id text not null primary key,
 --   name text not null,
 --   role_type role_type default 'other'
 -- );
+
+
+--coordinates
+-- drop table if exists coordinates;
 
 -- create table coordinates (
 --   id uuid not null primary key,

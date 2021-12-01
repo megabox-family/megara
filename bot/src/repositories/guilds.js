@@ -1,4 +1,4 @@
-import { getBot } from './cache-bot.js'
+import { getBot } from '../cache-bot.js'
 import pgPool from '../pg-pool.js'
 import camelize from 'camelize'
 import SQL from 'sql-template-strings'
@@ -93,4 +93,116 @@ export async function syncGuilds() {
         }
       })
     })
+}
+
+export async function setAdminChannel(guildId, channelId) {
+  return await pgPool.query(
+    SQL`
+        update guilds
+        set
+          admin_channel = ${channelId}
+        where id = ${guildId}
+        returning *;
+      `
+  )
+}
+
+export async function setLogChannel(guildId, channelId) {
+  return await pgPool.query(
+    SQL`
+        update guilds
+        set
+          log_channel = ${channelId}
+        where id = ${guildId}
+        returning *;
+      `
+  )
+}
+
+export async function setAnnouncementChannel(guildId, channelId) {
+  return await pgPool.query(
+    SQL`
+        update guilds
+        set
+          announcement_channel = ${channelId}
+        where id = ${guildId}
+        returning *;
+      `
+  )
+}
+
+export async function setVerificationChannel(guildId, channelId) {
+  return await pgPool.query(
+    SQL`
+        update guilds
+        set
+          verification_channel = ${channelId}
+        where id = ${guildId}
+        returning *;
+      `
+  )
+}
+
+export async function getAdminChannelId(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          admin_channel 
+        from guilds 
+        where id = ${guildId}
+      `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].admin_channel : undefined))
+}
+
+export async function getLogChannelId(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          log_channel 
+        from guilds 
+        where id = ${guildId}
+      `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].log_channel : undefined))
+}
+
+export async function getAnnouncementChannel(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          announcement_channel 
+        from guilds 
+        where id = ${guildId}
+      `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].announcement_channel : undefined))
+}
+
+export async function getVerificationChannel(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          verification_channel 
+        from guilds 
+        where id = ${guildId}
+      `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].verification_channel : undefined))
+}
+
+export async function setTosMessage(guildId, TosMessage) {
+  return await pgPool.query(
+    SQL`
+        update guilds
+        set
+          tos_message = ${TosMessage}
+        where id = ${guildId}
+        returning *;
+      `
+  )
 }

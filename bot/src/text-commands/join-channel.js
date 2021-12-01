@@ -1,9 +1,8 @@
-import { getBot } from '../repositories/cache-bot.js'
+import { getBot } from '../cache-bot.js'
 import {
   getIdForJoinableChannel,
   getCommandLevelForChannel,
 } from '../repositories/channels.js'
-import { formatReply } from '../utils.js'
 
 export default async function (channel, { message, guild, isDirectMessage }) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
@@ -26,22 +25,8 @@ export default async function (channel, { message, guild, isDirectMessage }) {
           VIEW_CHANNEL: true,
         })
         .then(() =>
-          message.reply(
-            formatReply(
-              `you have been added to #${lowerCaseChannel}`,
-              isDirectMessage
-            )
-          )
+          message.reply(`You have been added to #${lowerCaseChannel}`)
         )
-    } else
-      message.reply(
-        formatReply(`you already have access to that channel.`, isDirectMessage)
-      )
-  } else
-    message.reply(
-      formatReply(
-        `sorry, ${channel} is not a joinable channel.`,
-        isDirectMessage
-      )
-    )
+    } else message.reply(`You already have access to that channel.`)
+  } else message.reply(`Sorry, ${channel} is not a joinable channel.`)
 }

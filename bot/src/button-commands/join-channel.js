@@ -1,6 +1,10 @@
 import { MessageActionRow, MessageButton } from 'discord.js'
-import { getBot } from '../repositories/cache-bot.js'
-import { getChannelById, getChannelByName } from '../repositories/channels.js'
+import { getBot } from '../cache-bot.js'
+import {
+  getChannelById,
+  getChannelByName,
+  getUnrestrictedChannels,
+} from '../repositories/channels.js'
 
 export default async function (interaction) {
   const interactionChannelRecord = await getChannelById(
@@ -9,9 +13,13 @@ export default async function (interaction) {
     botCommandsChannelRecord = await getChannelByName(`bot-commands`),
     leaveButtonRow = new MessageActionRow().addComponents(
       new MessageButton()
-        .setCustomId(`!leaveChannel: ${interactionChannelRecord.id}`)
+        .setCustomId(`!leave-channel: ${interactionChannelRecord.id}`)
         .setLabel(`Leave ${interactionChannelRecord.name}`)
         .setStyle('DANGER')
+    ),
+    unrestrictedChannels = await getUnrestrictedChannels(),
+    compatibleChannels = unrestrictedChannels.map(
+      unrestrictedChannel => `<#${unrestrictedChannel.id}>`
     )
 
   if (interactionChannelRecord.channelType === `joinable`) {
@@ -31,7 +39,12 @@ export default async function (interaction) {
           interaction.user.send({
             content: `
               You have been added to <#${interactionChannelRecord.id}>! 😁\
-              \nIf you joined by accident press the button below, or use the \`!leave\` command here / in <#${botCommandsChannelRecord.id}> (ex: \`!leave ${interactionChannelRecord.name}\`) to leave.
+              \nIf you joined by accident press the button below, or use the \`!leave\` command (ex: \`!leave ${
+                interactionChannelRecord.name
+              }\`) to leave.\
+              \nThe \`!leave\` command works in these channels: ${compatibleChannels.join(
+                `, `
+              )}
             `,
             components: [leaveButtonRow],
           })
@@ -40,7 +53,12 @@ export default async function (interaction) {
       interaction.user.send({
         content: `
           You already have access to <#${interactionChannelRecord.id}> 👍\
-          \nIf you'd like to leave press the button below, or use the \`!leave\` command here / in <#${botCommandsChannelRecord.id}> (ex: \`!leave ${interactionChannelRecord.name}\`).
+          \nIf you'd like to leave press the button below, or use the \`!leave\` command (ex: \`!leave ${
+            interactionChannelRecord.name
+          }\`).\
+          \nThe \`!leave\` command works in these channels: ${compatibleChannels.join(
+            `, `
+          )}
         `,
         components: [leaveButtonRow],
       })

@@ -1,11 +1,8 @@
+import { getBot } from '../cache-bot.js'
 import { getIdForColorRole, getColorRoleIds } from '../repositories/roles.js'
 import { getCommandLevelForChannel } from '../repositories/channels.js'
-import { formatReply } from '../utils.js'
 
-export default async function (
-  colorCommand,
-  { message, guild, isDirectMessage }
-) {
+export default async function (message, colorCommand) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
   if (commandLevel === 'restricted') return
 
@@ -18,7 +15,9 @@ export default async function (
     })
   else if (colorRoleId) {
     const colorRoles = await getColorRoleIds()
-    const guildMember = guild.members.cache.get(message.author.id)
+    const guildMember = getBot()
+      .guilds.cache.get(message.guild.id)
+      .members.cache.get(message.author.id)
     const currentRoles = Array.from(guildMember.roles.cache.values()).map(
       x => x.id
     )
@@ -31,18 +30,12 @@ export default async function (
           .add(colorRoleId)
           .then(() =>
             message.reply(
-              formatReply(
-                `your color has been changed to ${lowerCaseColorCommand}!~`,
-                isDirectMessage
-              )
+              `Your color has been changed to ${lowerCaseColorCommand}!~`
             )
           )
       )
   } else
     message.reply(
-      formatReply(
-        "sorry, that isn't a valid color. <:pepehands:641024485339693057> Use `!color list` to see the list of available colors.",
-        isDirectMessage
-      )
+      "Sorry, that isn't a valid color. <:pepehands:641024485339693057> Use `!color list` to see the list of available colors."
     )
 }
