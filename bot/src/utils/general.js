@@ -1,14 +1,17 @@
-import { MessageActionRow, MessageButton } from 'discord.js'
+import { MessageActionRow, MessageButton, Permissions } from 'discord.js'
 import { getBot } from '../cache-bot.js'
 import { readdirSync, existsSync } from 'fs'
 import { basename, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { getCommandLevel } from './channels.js'
-import { getAnnouncementChannel } from '../repositories/guilds.js'
+import {
+  getCommandSymbol,
+  getAnnouncementChannel,
+  getLogChannelId,
+} from '../repositories/guilds.js'
 import {
   removeActiveVoiceChannelId,
   getCategoryName,
-  getUnrestrictedChannels,
+  getFormatedCommandChannels,
   getActiveVoiceChannelIds,
   channelWithVoiceChannelIsJoinable,
 } from '../repositories/channels.js'
@@ -51,8 +54,8 @@ export async function logMessageToChannel(message) {
     .send(messagePrefix + message.content)
 }
 
-export function logErrorMessageToChannel(errorMessage) {
-  const logChannelId = getLogChannelId(message.guild.id)
+export async function logErrorMessageToChannel(errorMessage, guild) {
+  const logChannelId = await getLogChannelId(guild.id)
 
   if (!logChannelId) return
 
@@ -75,10 +78,10 @@ export async function announceNewChannel(newChannel) {
 
   if (!announcementChannelId) return
 
-  const unrestrictedChannels = await getUnrestrictedChannels(),
-    compatibleChannels = unrestrictedChannels.map(
-      unrestrictedChannel => `<#${unrestrictedChannel.id}>`
-    )
+  const commandChannels = await getFormatedCommandChannels(
+    newChannel.guild.id,
+    `unrestricted`
+  )
 
   const joinButtonRow = new MessageActionRow().addComponents(
       new MessageButton()
@@ -92,55 +95,70 @@ export async function announceNewChannel(newChannel) {
     .send({
       content: `
         @everyone Hey guys! 😁\
-        \nWe've added a new channel, <#${
-          newChannel.id
-        }>, in the '${categoryName}' category.\
-        \nPress the button below, or use the \`!join\` command (ex: \`!join ${
-          newChannel.name
-        }\`) to join.\
-        \nThe \`!join\` command works in these channels: ${compatibleChannels.join(
-          `, `
-        )}
+        \nWe've added a new channel, <#${newChannel.id}>, in the '${categoryName}' category.\
+        \nPress the button below, or use the \`!join\` command (ex: \`!join ${newChannel.name}\`) to join.\
+        \nThe \`!join\` command can be used in these channels: ${commandChannels}
       `,
       components: [joinButtonRow],
     })
 }
 
-export function handleMessage(message) {
+export async function handleMessage(message) {
+  const messageText = message.content
+
   if (
-    !message.guild ||
-    getCommandLevel(message.channel) === 'prohibited' ||
-    !textCommandFiles
+    ![
+      `!`,
+      `#`,
+      `$`,
+      `%`,
+      `^`,
+      `&`,
+      `(`,
+      `)`,
+      `-`,
+      `+`,
+      `=`,
+      `{`,
+      `}`,
+      `[`,
+      `]`,
+      `?`,
+      `,`,
+      `.`,
+    ].includes(messageText.substring(0, 1))
   )
     return
 
-  const messageText = message.content
+  const commandSymbol = await getCommandSymbol(message.guild.id)
 
-  if (messageText.substring(0, 1) === '!') {
-    const delimiter = messageText.split('').find(char => {
-        if ([` `, `\n`].includes(char)) return char
-        else return null
-      }),
-      command = delimiter
-        ? messageText.substring(1, messageText.indexOf(delimiter)).toLowerCase()
-        : messageText.substring(1).toLowerCase(),
-      args = delimiter
-        ? messageText.substring(messageText.indexOf(delimiter) + 1)
-        : null,
-      textCommand = textCommands.find(
-        textCommand => textCommand.baseName === command
-      )
+  if (messageText.substring(0, 1) !== commandSymbol) return
 
-    if (textCommand)
-      import(textCommand.fullPath).then(module => module.default(message, args))
-    else
-      message.reply(
-        `
-        Sorry, \`!${command}\` is not a valid command 😔\
-        \nUse the \`!help\` command to get a valid list of commands 🥰
+  const delimiter = messageText.split('').find(char => {
+      if ([` `, `\n`].includes(char)) return char
+      else return null
+    }),
+    command = delimiter
+      ? messageText.substring(1, messageText.indexOf(delimiter)).toLowerCase()
+      : messageText.substring(1).toLowerCase(),
+    args = delimiter
+      ? messageText.substring(messageText.indexOf(delimiter) + 1)
+      : null,
+    textCommand = textCommands.find(
+      textCommand => textCommand.baseName === command
+    )
+
+  if (textCommand)
+    import(textCommand.fullPath).then(module =>
+      module.default(message, commandSymbol, args)
+    )
+  else
+    message.reply(
       `
-      )
-  }
+        Sorry, \`${commandSymbol}${command}\` is not a valid command 😔\
+        \nUse the \`${commandSymbol}help\` command to get a valid list of commands 🥰
+      `
+    )
 }
 
 export function handleNewMember(member) {
@@ -199,4 +217,24 @@ export async function checkVoiceChannelValidity(voiceState) {
       removeVoiceChannelIfEmpty(voiceChannel)
     }, 30000)
   }
+}
+
+export async function getRoleByName(guildId, roleName) {
+  const guild = getBot().guilds.cache.get(guildId)
+  let role = guild.roles.cache.find(role => role.name === roleName)
+
+  if ([`undergoing verification`, `verified`].includes(roleName))
+    if (!role) {
+      await guild.roles
+        .create({
+          name: roleName,
+          permissions: [
+            Permissions.FLAGS.VIEW_CHANNEL,
+            Permissions.FLAGS.SEND_MESSAGES,
+          ],
+        })
+        .then(_role => (role = _role))
+    }
+
+  return role
 }

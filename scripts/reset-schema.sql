@@ -1,21 +1,26 @@
 --guilds
 drop table if exists guilds;
 
+drop type if exists command_symbol;
+
+create type command_symbol as enum ('!', '#', '$', '%', '^', '&', '(', ')', '-', '+', '=', '{', '}', '[', ']', '?', ',', '.');
+
 create table guilds (
   id text not null primary key,
   guild_name text not null,
-  joinable_system boolean not null default false,
+  command_symbol command_symbol,
   channel_sorting boolean not null default false,
+  rules text,
   admin_channel text,
   log_channel text,
   announcement_channel text,
-  verification_channel text,
-  tos_message text
+  verification_channel text
 );
 
 
 --channels
 drop table if exists channels;
+
 drop type if exists channel_type;
 drop type if exists command_level;
 

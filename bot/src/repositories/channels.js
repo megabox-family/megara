@@ -3,11 +3,16 @@ import camelize from 'camelize'
 import SQL from 'sql-template-strings'
 import { sortChannels } from '../utils/channels.js'
 
-export async function getIdForJoinableChannel(channel) {
+export async function getIdForJoinableChannel(channelName) {
   return await pgPool
     .query(
-      `select id from channels where name = $1 AND channel_type = 'joinable';`,
-      [channel]
+      SQL`
+        select 
+          id 
+        from channels 
+        where name = ${channelName} AND 
+          channel_type = 'joinable';
+      `
     )
     .then(res => (res.rows[0] ? res.rows[0].id : undefined))
 }
@@ -34,17 +39,30 @@ export async function getCommandLevelForChannel(channelId) {
     .then(res => (res.rows[0] ? camelize(res.rows[0]).commandLevel : {}))
 }
 
-export async function getUnrestrictedChannels() {
-  return await pgPool
+export async function getFormatedCommandChannels(guildId, commandLevel) {
+  let channelType
+
+  if (commandLevel.includes(`admin`))
+    channelType = [`private`, `public`, `joinable`]
+  else channelType = [`public`, `joinable`]
+  if (commandLevel.constructor === String) commandLevel = [commandLevel]
+
+  const commandChannels = await pgPool
     .query(
       SQL`
-      select
-        id
-      from channels
-      where command_level = 'unrestricted';
-    `
+        select
+          channels.id
+        from channels as categories, channels as channels
+        where categories.id = channels.category_id and
+          channels.channel_type = any(${channelType}) and
+          categories.guild_id = ${guildId} and
+          channels.command_level = any(${commandLevel})
+        order by categories.position, categories.id, channels.position;
+      `
     )
     .then(res => camelize(res.rows))
+
+  return commandChannels.map(record => `<#${record.id}>`).join(`, `)
 }
 
 export async function updateChannelMessageId(channelId, messageId) {
@@ -238,7 +256,8 @@ export async function getAlphabeticalCategories(guildId) {
       SQL`
         select id
         from channels 
-        where channel_type = 'category' and guild_id = ${guildId} 
+        where channel_type = 'category' and 
+          guild_id = ${guildId} 
         order by name
       `
     )
@@ -253,6 +272,23 @@ export async function getAlphabeticalChannelsByCategory(categoryId) {
         from channels 
         where category_id = ${categoryId}
         order by name
+      `
+    )
+    .then(res => camelize(res.rows))
+}
+
+export async function getJoinableChannelList(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select
+          categories.name as category_name,
+          channels.id as channel_id
+        from channels as categories, channels as channels
+        where categories.id = channels.category_id and
+          channels.channel_type = 'joinable' and
+          categories.guild_id = ${guildId}
+        order by categories.position, categories.id, channels.position;
       `
     )
     .then(res => camelize(res.rows))

@@ -1,6 +1,6 @@
 import { getBot } from '../cache-bot.js'
 import { announceNewChannel } from '../utils/general.js'
-import { getAdminChannelId } from '../repositories/guilds.js'
+import { getAdminChannelId, getChannelSorting } from '../repositories/guilds.js'
 import {
   createChannelRecord,
   updateChannelRecord,
@@ -78,6 +78,8 @@ export function setChannelVisibility(channel, channelType) {
 }
 
 export async function sortChannels(guildId) {
+  if (!(await getChannelSorting(guildId))) return
+
   const guild = getBot().guilds.cache.get(guildId),
     alphabeticalCategories = await getAlphabeticalCategories(guildId),
     alphabeticalBuckets = [alphabeticalCategories],

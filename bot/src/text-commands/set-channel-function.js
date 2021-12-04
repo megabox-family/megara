@@ -16,7 +16,7 @@ const setCommands = {
   verification: setVerificationChannel,
 }
 
-export default async function (message, args) {
+export default async function (message, commandSymbol, args) {
   if ((await getCommandLevelForChannel(message.channel.id)) !== `admin`) return
 
   const argArr = args.split(' ')

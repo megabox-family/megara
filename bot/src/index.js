@@ -9,7 +9,7 @@ import {
   handleInteraction,
 } from './utils/general.js'
 import { syncChannels, createChannel, modifyChannel } from './utils/channels.js'
-import { syncGuilds } from './repositories/guilds.js'
+import { syncGuilds, getCommandSymbol } from './repositories/guilds.js'
 import { deleteChannel } from './repositories/channels.js'
 
 const bot = new Client({

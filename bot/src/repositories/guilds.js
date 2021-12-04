@@ -195,14 +195,81 @@ export async function getVerificationChannel(guildId) {
     .then(res => (res.rows[0] ? res.rows[0].verification_channel : undefined))
 }
 
-export async function setTosMessage(guildId, TosMessage) {
+export async function setRules(guildId, rules) {
   return await pgPool.query(
     SQL`
         update guilds
         set
-          tos_message = ${TosMessage}
+          rules = ${rules}
         where id = ${guildId}
         returning *;
       `
   )
+}
+
+export async function getRules(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          rules
+        from guilds 
+        where id = ${guildId};
+      `
+    )
+    .then(res => (res.rows[0] ? camelize(res.rows[0].rules) : undefined))
+}
+
+export async function setChannelSorting(guildId, channelSorting) {
+  return await pgPool.query(
+    SQL`
+        update guilds
+        set
+          channel_sorting = ${channelSorting}
+        where id = ${guildId}
+        returning *;
+      `
+  )
+}
+
+export async function getChannelSorting(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          channel_sorting
+        from guilds 
+        where id = ${guildId};
+      `
+    )
+    .then(res =>
+      res.rows[0] ? camelize(res.rows[0].channel_sorting) : undefined
+    )
+}
+
+export async function setCommandSymbole(guildId, commandSymbol) {
+  return await pgPool.query(
+    SQL`
+        update guilds
+        set
+          command_symbol = ${commandSymbol}
+        where id = ${guildId}
+        returning *;
+      `
+  )
+}
+
+export async function getCommandSymbol(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          command_symbol
+        from guilds 
+        where id = ${guildId};
+      `
+    )
+    .then(res =>
+      res.rows[0] ? camelize(res.rows[0].command_symbol) : undefined
+    )
 }

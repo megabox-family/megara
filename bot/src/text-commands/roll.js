@@ -1,9 +1,8 @@
 import validator from 'validator'
-import { getCommandLevelForChannel } from '../repositories/channels.js'
 
 const { isNumeric } = validator
 
-const isRollValid = roll => {
+function isRollValid(roll) {
   const lowerCaseRoll = roll.toLowerCase()
   const factors = lowerCaseRoll.split('d')
   return (
@@ -13,10 +12,7 @@ const isRollValid = roll => {
   )
 }
 
-export default async function (message, roll) {
-  const commandLevel = await getCommandLevelForChannel(message.channel.id)
-  if (commandLevel === 'restricted') return
-
+export default async function (message, commandSymbol, roll) {
   if (isRollValid(roll)) {
     const [dieCount, die] = roll.toLowerCase().split('d')
     let total = 0
@@ -34,6 +30,6 @@ export default async function (message, roll) {
     )
   } else
     message.reply(
-      'Your roll was invalid. Correct syntax is: `[count]d[die]` e.g. `1d20`'
+      `Your roll was invalid. Correct syntax is: \`[count]d[die]\` e.g. \`${commandSymbol}roll 1d20\``
     )
 }
