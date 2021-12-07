@@ -1,6 +1,12 @@
+import camelize from 'camelize'
+import { basename } from 'path'
+import { fileURLToPath } from 'url'
 import { getBot } from '../cache-bot.js'
+import { logErrorMessageToChannel } from '../utils/general.js'
+import { getRoleByName } from '../utils/roles.js'
 import { getCommandLevelForChannel } from '../repositories/channels.js'
-import { logErrorMessageToChannel, getRoleByName } from '../utils/general.js'
+
+const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
 
 function isNicknameValid(nickname, allowedSymbols) {
   if (nickname.match(`^[A-Za-z]+$`)) return true
@@ -43,7 +49,7 @@ export default async function (message, commandSymbol, nickname) {
 
     message.reply(
       `
-        Sorry the \`${commandSymbol}name\` command is prohibited in this channel 😔\
+        Sorry the \`${commandSymbol}${command}\` command is prohibited in this channel 😔\
         \nBut here's a list of channels you can use it in: ${commandChannels}
       `
     )
@@ -54,7 +60,7 @@ export default async function (message, commandSymbol, nickname) {
   if (!nickname) {
     message.reply(
       `
-        Sorry the \`${commandSymbol}name\` command requires a name following the command (ex: \`${commandSymbol}name John\`) 😔\
+        Sorry the \`${commandSymbol}${command}\` command requires a name following the command (ex: \`${commandSymbol}${command} John\`) 😔\
       `
     )
 
@@ -71,7 +77,7 @@ export default async function (message, commandSymbol, nickname) {
         Sorry, names cannot contain numbers or most special characters. 😔\
         \nHere's a list of acceptable special characters: \`${allowedSymbolList}\` (not including commas)\
         \nAllowed special characters cannot be repeating, and spaces must follow periods.\
-        \nExample: \`${commandSymbol}name Jason\`, \`${commandSymbol}name Chris W.\`, \`${commandSymbol}name Dr. White\`, \`${commandSymbol}name Brett-Anne\`, \`${commandSymbol}name O'Brien\`
+        \nExample: \`${commandSymbol}${command} Jason\`, \`${commandSymbol}${command} Chris W.\`, \`${commandSymbol}${command} Dr. White\`, \`${commandSymbol}${command} Brett-Anne\`, \`${commandSymbol}${command} O'Brien\`
       `
     )
 

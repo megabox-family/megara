@@ -1,8 +1,13 @@
+import camelize from 'camelize'
+import { basename } from 'path'
+import { fileURLToPath } from 'url'
 import { getBot } from '../cache-bot.js'
 import {
   getIdForJoinableChannel,
   getCommandLevelForChannel,
 } from '../repositories/channels.js'
+
+const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
 
 export default async function (message, commandSymbol, channelName) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
@@ -15,7 +20,7 @@ export default async function (message, commandSymbol, channelName) {
 
     message.reply(
       `
-        Sorry the \`${commandSymbol}leave\` command is prohibited in this channel 😔\
+        Sorry the \`${commandSymbol}${command}\` command is prohibited in this channel 😔\
         \nBut here's a list of channels you can use it in: ${commandChannels}
       `
     )
@@ -26,7 +31,7 @@ export default async function (message, commandSymbol, channelName) {
   if (!channelName) {
     message.reply(
       `
-        Sorry the \`${commandSymbol}leave\` command requires a channel name (ex: \`${commandSymbol}leave minecraft\`) 😔\
+        Sorry the \`${commandSymbol}${command}\` command requires a channel name (ex: \`${commandSymbol}${command} minecraft\`) 😔\
       `
     )
 

@@ -1,14 +1,23 @@
 import { getBot } from '../cache-bot.js'
+import { cacheChannel } from '../cache-channels.js'
 import { announceNewChannel } from '../utils/general.js'
 import { getAdminChannelId, getChannelSorting } from '../repositories/guilds.js'
 import {
   createChannelRecord,
   updateChannelRecord,
-  deleteChannel,
+  deleteChannelRecord,
   getChannelTableByGuild,
   getAlphabeticalCategories,
   getAlphabeticalChannelsByCategory,
+  deleteAllGuildChannels,
 } from '../repositories/channels.js'
+
+Array.prototype.pushChannel = function (value) {
+  this.push(value)
+  if (this.length === 1) emptyChannelSortingQueue()
+}
+
+const channelSortingQueue = []
 
 export function checkType(channel) {
   if (channel.type === `GUILD_CATEGORY`) return `category`
@@ -142,7 +151,26 @@ export async function sortChannels(guildId) {
     )
   })
 
-  guild.channels.setPositions(finalChannelArr)
+  const currentChannelPosition = finalChannelArr.map(channel => {
+    const _channel = guild.channels.cache.get(channel.channel)
+
+    return { channel: _channel.id, position: _channel.position }
+  })
+
+  if (
+    JSON.stringify(finalChannelArr) !== JSON.stringify(currentChannelPosition)
+  )
+    await guild.channels.setPositions(finalChannelArr)
+}
+
+async function emptyChannelSortingQueue() {
+  if (channelSortingQueue.length === 0) return
+
+  await sortChannels(channelSortingQueue[0])
+
+  channelSortingQueue.shift()
+
+  emptyChannelSortingQueue()
 }
 
 export async function createChannel(channel, skipAnnouncementAndSort = false) {
@@ -162,7 +190,8 @@ export async function createChannel(channel, skipAnnouncementAndSort = false) {
   if (skipAnnouncementAndSort) {
     if (channelType === 'joinable') return channel.id
   } else {
-    sortChannels(channel.guild.id)
+    if (!channelSortingQueue.includes(channel.guild.id))
+      channelSortingQueue.pushChannel(channel.guild.id)
 
     if (channelType === 'joinable') announceNewChannel(channel)
   }
@@ -213,12 +242,14 @@ export async function modifyChannel(
         return newChannel.id
     } else {
       if (
-        oldPositionOverride !== newPositionOverride ||
-        oldChannel.position !== newChannel.position ||
-        (oldChannel?.rawPosition &&
-          oldChannel.rawPosition !== newChannel.rawPosition)
-      )
-        sortChannels(newChannel.guild.id)
+        !channelSortingQueue.includes(newChannel.guild.id) &&
+        (oldPositionOverride !== newPositionOverride ||
+          oldChannel.position !== newChannel.position ||
+          (oldChannel?.rawPosition &&
+            oldChannel.rawPosition !== newChannel.rawPosition))
+      ) {
+        channelSortingQueue.pushChannel(newChannel.guild.id)
+      }
 
       if (oldChannelType !== `joinable` && newChannelType === `joinable`)
         announceNewChannel(newChannel)
@@ -231,72 +262,91 @@ export async function modifyChannel(
   }
 }
 
-export async function syncChannels() {
-  getBot().guilds.cache.forEach(async guild => {
-    const channels = guild.channels.cache,
-      liveChannelIds = []
+export async function deleteChannel(channel, skipSort = false) {
+  let channelId
 
-    channels.forEach(channel => {
-      if (!channel.deleted) liveChannelIds.push(channel.id)
-    })
+  if (channel?.id) channelId = channel.id
+  else channelId = channel
 
-    const channelTable = await getChannelTableByGuild(guild.id),
-      tabledChannelIds = channelTable.map(row => row.id),
-      allIds = [...new Set([...liveChannelIds, ...tabledChannelIds])],
-      channelsToAnnounce = []
+  const guild = getBot().guilds.cache(await getChannelsGuildById(channelId))
 
-    let positionHasChanged = false
+  if (!skipSort) channelSortingQueue.pushChannel(guild.id)
 
-    await Promise.all(
-      allIds.map(async id => {
-        const channel = channels.get(id)
+  await deleteChannelRecord(channelId)
+}
 
-        if (liveChannelIds.includes(id) && !tabledChannelIds.includes(id)) {
-          positionHasChanged = true
+export async function syncChannels(guildId) {
+  const guild = getBot().guilds.cache.get(guildId)
 
-          const channelId = await createChannel(channel, true)
-          if (channelId) channelsToAnnounce.push(channelId)
-        } else if (
-          !liveChannelIds.includes(id) &&
-          tabledChannelIds.includes(id)
-        ) {
-          positionHasChanged = true
+  if (!guild) {
+    await deleteAllGuildChannels(guild)
 
-          deleteChannel({ id: id }, true)
-        } else {
-          const record = channelTable.find(row => {
-              return row.id === id
-            }),
-            livePositionalOverride = getPositionOverride(channel)
+    return
+  }
 
-          if (
-            record.positionOverride !== livePositionalOverride ||
-            record.positionHasChanged !== channel.position
-          )
-            positionHasChanged = true
+  const channels = guild.channels.cache,
+    liveChannelIds = []
 
-          const channelId = await modifyChannel(record, channel, true)
-
-          if (channelId) channelsToAnnounce.push(channelId)
-        }
-      })
-    )
-
-    if (positionHasChanged) sortChannels(guild.id)
-
-    if (channelsToAnnounce.length >= 5) {
-      const adminChannelId = await getAdminChannelId(guild.id)
-
-      if (!adminChannelId) return
-
-      guild.channels.cache.get(adminChannelId).send(
-        `Potential oopsie detected. More than five channels were marked for announcement:
-          ${channelsToAnnounce.join(', ')}`
-      )
-    } else {
-      channelsToAnnounce.forEach(channelToAnnounce => {
-        announceNewChannel(channelToAnnounce)
-      })
-    }
+  channels.forEach(channel => {
+    if (!channel.deleted) liveChannelIds.push(channel.id)
   })
+
+  const channelTable = await getChannelTableByGuild(guild.id),
+    tabledChannelIds = channelTable.map(row => row.id),
+    allIds = [...new Set([...liveChannelIds, ...tabledChannelIds])],
+    channelsToAnnounce = []
+
+  let positionHasChanged = false
+
+  await Promise.all(
+    allIds.map(async id => {
+      const channel = channels.get(id)
+
+      if (liveChannelIds.includes(id) && !tabledChannelIds.includes(id)) {
+        positionHasChanged = true
+
+        const channelId = await createChannel(channel, true)
+        if (channelId) channelsToAnnounce.push(channelId)
+      } else if (
+        !liveChannelIds.includes(id) &&
+        tabledChannelIds.includes(id)
+      ) {
+        positionHasChanged = true
+
+        deleteChannel({ id: id }, true)
+      } else {
+        const record = channelTable.find(row => {
+            return row.id === id
+          }),
+          livePositionalOverride = getPositionOverride(channel)
+
+        if (
+          record.positionOverride !== livePositionalOverride ||
+          record.positionHasChanged !== channel.position
+        )
+          positionHasChanged = true
+
+        const channelId = await modifyChannel(record, channel, true)
+
+        if (channelId) channelsToAnnounce.push(channelId)
+      }
+    })
+  )
+
+  if (positionHasChanged) channelSortingQueue.pushChannel(guild.id)
+
+  if (channelsToAnnounce.length >= 5) {
+    const adminChannelId = await getAdminChannelId(guild.id)
+
+    if (!adminChannelId) return
+
+    guild.channels.cache.get(adminChannelId).send(
+      `Potential oopsie detected. More than five channels were marked for announcement:
+          ${channelsToAnnounce.join(', ')}`
+    )
+  } else {
+    channelsToAnnounce.forEach(channelToAnnounce => {
+      announceNewChannel(channelToAnnounce)
+    })
+  }
 }

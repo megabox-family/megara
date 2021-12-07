@@ -1,11 +1,16 @@
+import camelize from 'camelize'
+import { basename } from 'path'
+import { fileURLToPath } from 'url'
 import { getCommandLevelForChannel } from '../repositories/channels.js'
 import { setRules } from '../repositories/guilds.js'
 
-export default async function (message, args) {
+const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
+
+export default async function (message, commandSymbol, args) {
   if ((await getCommandLevelForChannel(message.channel.id)) !== `admin`) {
     message.reply(
       `
-        Sorry, \`!setRules\` is not a valid command 😔\
+        Sorry, \`${commandSymbol}${command}\` is not a valid command 😔\
         \nUse the \`!help\` command to get a valid list of commands 🥰
       `
     )
@@ -14,9 +19,9 @@ export default async function (message, args) {
   } else if (!args) {
     message.reply(
       `
-        Invalid input, the \`!setRules\` command requires arguments 🤔\
+        Invalid input, the \`${commandSymbol}${command}\` command requires arguments 🤔\
         \nExample:\
-        \n\`\`\`!setRules\
+        \n\`\`\`${commandSymbol}${command}\
           \nTo continue you must accept [server names] rules\
           \n- No kicking\
           \n- No screamin\

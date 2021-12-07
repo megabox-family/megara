@@ -1,9 +1,14 @@
 import { getBot } from '../cache-bot.js'
+import { announceNewChannel } from '../utils/general.js'
+import { getAdminChannelId, getChannelSorting } from '../repositories/guilds.js'
+import { getBot } from '../cache-bot.js'
 import {
   getIdForJoinableChannel,
   getCommandLevelForChannel,
   getFormatedCommandChannels,
 } from '../repositories/channels.js'
+
+const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
 
 export default async function (message, commandSymbol, channelName) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
@@ -16,7 +21,7 @@ export default async function (message, commandSymbol, channelName) {
 
     message.reply(
       `
-        Sorry the \`${commandSymbol}join\` command is prohibited in this channel 😔\
+        Sorry the \`${commandSymbol}${command}\` command is prohibited in this channel 😔\
         \nBut here's a list of channels you can use it in: ${commandChannels}
       `
     )
@@ -27,7 +32,7 @@ export default async function (message, commandSymbol, channelName) {
   if (!channelName) {
     message.reply(
       `
-        Sorry the \`${commandSymbol}join\` command requires a channel name (ex: \`${commandSymbol}join minecraft\`) 😔\
+        Sorry the \`${commandSymbol}${command}\` command requires a channel name (ex: \`${commandSymbol}${command} minecraft\`) 😔\
         \nUse the \`${commandSymbol}channelList\` command to list joinable channels!
       `
     )

@@ -189,16 +189,12 @@ export async function updateChannelRecord(
     })
 }
 
-export async function deleteChannel(channel, skipAnnouncementAndSort = false) {
-  const guildId = await getChannelsGuildById(channel.id)
-
-  if (!skipAnnouncementAndSort) sortChannels(guildId)
-
+export async function deleteChannelRecord(channelId) {
   return await pgPool
     .query(
       SQL`
         delete from channels 
-        where id = ${channel.id} 
+        where id = ${channelId} 
         returning *;
       `
     )
@@ -270,7 +266,8 @@ export async function getAlphabeticalChannelsByCategory(categoryId) {
       SQL`
         select id
         from channels 
-        where category_id = ${categoryId}
+        where category_id = ${categoryId} and
+          channel_type != 'voice'
         order by name
       `
     )
@@ -292,4 +289,19 @@ export async function getJoinableChannelList(guildId) {
       `
     )
     .then(res => camelize(res.rows))
+}
+
+export async function deleteAllGuildChannels(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+      delete from channels 
+      where guild_id = ${guildId} 
+      returning *;
+    `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
 }

@@ -1,9 +1,12 @@
-import { MessageActionRow, MessageButton, Permissions } from 'discord.js'
-import { getBot } from '../cache-bot.js'
+import { MessageActionRow, MessageButton } from 'discord.js'
+import { cacheBot, getBot } from '../cache-bot.js'
 import { readdirSync, existsSync } from 'fs'
 import { basename, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { syncChannels } from './channels.js'
+import { syncRoles } from './roles.js'
 import {
+  syncGuilds,
   getCommandSymbol,
   getAnnouncementChannel,
   getLogChannelId,
@@ -25,6 +28,39 @@ const relativePath = dirname(fileURLToPath(import.meta.url)),
       fullPath: `${srcPath}/text-commands/${textCommandFile}`,
     }
   })
+
+export async function removeEmptyVoiceChannelsOnStartup() {
+  const activeVoiceChannels = await getActiveVoiceChannelIds()
+
+  activeVoiceChannels.forEach(channel => {
+    setTimeout(async () => {
+      const voiceChannel = await getBot().channels.cache.get(
+        channel.activeVoiceChannelId
+      )
+      removeVoiceChannelIfEmpty(voiceChannel)
+    }, 30000)
+  })
+}
+
+export async function startup(bot) {
+  console.log(`Logged in as ${bot.user.tag}!`)
+
+  // console.log(
+  //   bot.guilds.cache
+  //     .get(`711043006253367426`)
+  //     .roles.cache.get(`870734249370746911`).channels
+  // )
+
+  cacheBot(bot)
+  await syncGuilds()
+
+  bot.guilds.cache.forEach(async guild => {
+    await syncChannels(guild.id)
+    await syncRoles(guild.id)
+  })
+
+  await removeEmptyVoiceChannelsOnStartup()
+}
 
 export async function logMessageToChannel(message) {
   const logChannelId = getLogChannelId(message.guild.id)
@@ -190,19 +226,6 @@ export function handleInteraction(interaction) {
   }
 }
 
-export async function removeEmptyVoiceChannelsOnStartup() {
-  const activeVoiceChannels = await getActiveVoiceChannelIds()
-
-  activeVoiceChannels.forEach(channel => {
-    setTimeout(async () => {
-      const voiceChannel = await getBot().channels.cache.get(
-        channel.activeVoiceChannelId
-      )
-      removeVoiceChannelIfEmpty(voiceChannel)
-    }, 30000)
-  })
-}
-
 export async function checkVoiceChannelValidity(voiceState) {
   if (
     voiceState.channel &&
@@ -217,24 +240,4 @@ export async function checkVoiceChannelValidity(voiceState) {
       removeVoiceChannelIfEmpty(voiceChannel)
     }, 30000)
   }
-}
-
-export async function getRoleByName(guildId, roleName) {
-  const guild = getBot().guilds.cache.get(guildId)
-  let role = guild.roles.cache.find(role => role.name === roleName)
-
-  if ([`undergoing verification`, `verified`].includes(roleName))
-    if (!role) {
-      await guild.roles
-        .create({
-          name: roleName,
-          permissions: [
-            Permissions.FLAGS.VIEW_CHANNEL,
-            Permissions.FLAGS.SEND_MESSAGES,
-          ],
-        })
-        .then(_role => (role = _role))
-    }
-
-  return role
 }

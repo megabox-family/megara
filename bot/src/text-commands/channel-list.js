@@ -1,9 +1,14 @@
 import { MessageEmbed } from 'discord.js'
+import camelize from 'camelize'
+import { basename } from 'path'
+import { fileURLToPath } from 'url'
 import {
   getCommandLevelForChannel,
   getFormatedCommandChannels,
   getJoinableChannelList,
 } from '../repositories/channels.js'
+
+const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
 
 export default async function (message, commandSymbol) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
@@ -16,7 +21,7 @@ export default async function (message, commandSymbol) {
 
     message.reply(
       `
-        Sorry the \`${commandSymbol}channelList\` command is prohibited in this channel 😔\
+        Sorry the \`${commandSymbol}${command}\` command is prohibited in this channel 😔\
         \nBut here's a list of channels you can use it in: ${commandChannels}
       `
     )
@@ -37,6 +42,7 @@ export default async function (message, commandSymbol) {
       return { name: categoryName, value: channelList }
     }),
     channelListEmbed = new MessageEmbed()
+      .setColor('#ff8bdb')
       .setTitle(`Joinable channel list`)
       .addFields(embedChannelArray)
 

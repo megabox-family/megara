@@ -2,8 +2,11 @@ import { getBot } from '../cache-bot.js'
 import pgPool from '../pg-pool.js'
 import camelize from 'camelize'
 import SQL from 'sql-template-strings'
+import { syncChannels } from '../utils/channels.js'
 
-export async function createGuild(guild) {
+export async function createGuild(guild, syncBool = false) {
+  if (!syncBool) await syncChannels(guild.id)
+
   pgPool
     .query(
       SQL`
@@ -34,7 +37,16 @@ export async function modifyGuild(guild) {
     })
 }
 
-export async function deleteGuild(guildId) {
+export async function deleteGuild(guild, syncBool = false) {
+  let guildId
+
+  if (guild?.id) guildId = guild.id
+  else guildId = guild
+
+  if (!syncBool) {
+    await syncChannels(guildId)
+  }
+
   return await pgPool
     .query(
       SQL`
@@ -78,12 +90,12 @@ export async function syncGuilds() {
           liveGuildIds.includes(guildId) &&
           !tabledGuildIds.includes(guildId)
         ) {
-          createGuild(guild)
+          createGuild(guild, true)
         } else if (
           !liveGuildIds.includes(guildId) &&
           tabledGuildIds.includes(guildId)
         ) {
-          deleteGuild(guildId)
+          deleteGuild(guildId, true)
         } else {
           const guildRecord = rows.find(row => row.id === guildId)
 
@@ -245,6 +257,31 @@ export async function getChannelSorting(guildId) {
     .then(res =>
       res.rows[0] ? camelize(res.rows[0].channel_sorting) : undefined
     )
+}
+
+export async function setRoleSorting(guildId, roleSorting) {
+  return await pgPool.query(
+    SQL`
+        update guilds
+        set
+          role_sorting = ${roleSorting}
+        where id = ${guildId}
+        returning *;
+      `
+  )
+}
+
+export async function getRoleSorting(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select
+          role_sorting
+        from guilds
+        where id = ${guildId};
+      `
+    )
+    .then(res => (res.rows[0] ? camelize(res.rows[0].role_sorting) : undefined))
 }
 
 export async function setCommandSymbole(guildId, commandSymbol) {

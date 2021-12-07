@@ -1,6 +1,8 @@
-import validator from 'validator'
+import camelize from 'camelize'
+import { basename } from 'path'
+import { fileURLToPath } from 'url'
 
-const { isNumeric } = validator
+const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
 
 function isRollValid(roll) {
   const lowerCaseRoll = roll.toLowerCase()
@@ -8,7 +10,7 @@ function isRollValid(roll) {
   return (
     lowerCaseRoll.includes('d') &&
     factors.length === 2 &&
-    factors.every(x => isNumeric(x))
+    factors.every(x => x.match(`^[0-9]+$`))
   )
 }
 
@@ -30,6 +32,6 @@ export default async function (message, commandSymbol, roll) {
     )
   } else
     message.reply(
-      `Your roll was invalid. Correct syntax is: \`[count]d[die]\` e.g. \`${commandSymbol}roll 1d20\``
+      `Your roll was invalid. Correct syntax is: \`[count]d[die]\` e.g. \`${commandSymbol}${command} 1d20\``
     )
 }

@@ -1,16 +1,19 @@
 import { Client, Intents } from 'discord.js'
-import { cacheBot } from './cache-bot.js'
 import config from '../config.js'
 import {
-  removeEmptyVoiceChannelsOnStartup,
+  startup,
   checkVoiceChannelValidity,
   handleMessage,
   handleNewMember,
   handleInteraction,
 } from './utils/general.js'
-import { syncChannels, createChannel, modifyChannel } from './utils/channels.js'
-import { syncGuilds, getCommandSymbol } from './repositories/guilds.js'
-import { deleteChannel } from './repositories/channels.js'
+import {
+  createChannel,
+  modifyChannel,
+  deleteChannel,
+} from './utils/channels.js'
+import { createRole, modifyRole, deleteRole } from './utils/roles.js'
+import { createGuild, modifyGuild, deleteGuild } from './repositories/guilds.js'
 
 const bot = new Client({
   partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
@@ -28,19 +31,21 @@ const bot = new Client({
 
 bot.login(config.botToken)
 
-bot.on('ready', async () => {
-  console.log(`Logged in as ${bot.user.tag}!`)
-
-  cacheBot(bot)
-  await syncGuilds()
-  await syncChannels()
-  await removeEmptyVoiceChannelsOnStartup()
-})
-
-bot.on('voiceStateUpdate', checkVoiceChannelValidity)
-bot.on('messageCreate', handleMessage)
+bot.on('ready', startup)
+bot.on('guildCreate', createGuild)
+bot.on('guildCreate', modifyGuild)
+bot.on('guildDelete', deleteGuild)
 bot.on('guildMemberAdd', handleNewMember)
 bot.on('channelCreate', createChannel)
-bot.on('channelDelete', deleteChannel)
 bot.on('channelUpdate', modifyChannel)
+bot.on('channelDelete', deleteChannel)
+bot.on('roleCreate', createRole)
+bot.on('roleUpdate', modifyRole)
+bot.on('roleDelete', deleteRole)
+bot.on('messageCreate', handleMessage)
 bot.on('interactionCreate', handleInteraction)
+bot.on('voiceStateUpdate', checkVoiceChannelValidity)
+
+bot.on('rateLimit', rateLimitData => {
+  console.log(rateLimitData)
+})

@@ -1,7 +1,8 @@
-import {
-  getCommandLevelForChannel,
-  getChannelById,
-} from '../repositories/channels.js'
+import { getBot } from '../cache-bot.js'
+import camelize from 'camelize'
+import { basename } from 'path'
+import { fileURLToPath } from 'url'
+import { getCommandLevelForChannel } from '../repositories/channels.js'
 import {
   setAdminChannel,
   setLogChannel,
@@ -16,6 +17,8 @@ const setCommands = {
   verification: setVerificationChannel,
 }
 
+const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
+
 export default async function (message, commandSymbol, args) {
   if ((await getCommandLevelForChannel(message.channel.id)) !== `admin`) return
 
@@ -23,7 +26,7 @@ export default async function (message, commandSymbol, args) {
 
   if (argArr.length !== 2) {
     message.reply(
-      'The `!set` command requires exactly 2 parameters: `!set [channel function] [channel id]` 😔'
+      `The \`${commandSymbol}${command}\` command requires exactly 2 parameters: \`${commandSymbol}${command} [channel function] [channel id]\` 😔`
     )
     return
   } else if (
@@ -31,7 +34,7 @@ export default async function (message, commandSymbol, args) {
   ) {
     message.reply(`${argArr[0]} is not a valid channel function. 😔`)
     return
-  } else if (!(await getChannelById(argArr[1]))) {
+  } else if (!getBot().channels.cache.get(argArr[1])) {
     message.reply(`${argArr[1]} is not a valid channel id. 😔`)
     return
   }
