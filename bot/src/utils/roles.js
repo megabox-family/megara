@@ -1,5 +1,6 @@
 import { Permissions } from 'discord.js'
 import { getBot } from '../cache-bot.js'
+import { getUserRoleQueue, getChannelRoleQueue } from './required-role-queue.js'
 import { getRoleSorting, getAdminChannelId } from '../repositories/guilds.js'
 
 Array.prototype.pushRoll = function (value) {
@@ -28,24 +29,27 @@ const roleSortingQueue = [],
     `!position override: -5`,
   ]
 
-export function getRoleByName(guildId, roleName) {
-  return getBot()
-    .guilds.cache.get(guildId)
-    .roles.cache.find(role => role.name === roleName)
-}
+export function requiredRoleDifference(guild, oldRoles, newRoles) {
+  const _requiredRoles = guild.roles.cache.filter(guildRole =>
+    requiredRoles.includes(guildRole.name)
+  )
 
-function getRoleCountByName(guildId, roleName) {
-  return getBot()
-    .guilds.cache.get(guildId)
-    .roles.cache.filter(role => role.name === roleName).size
+  return _requiredRoles.find(_requriedRole => {
+    if (
+      oldRoles.includes(_requriedRole.id) &&
+      !newRoles.includes(_requriedRole.id)
+    )
+      return _requriedRole
+  })
 }
 
 export async function sortRoles(guildId) {
   if (!(await getRoleSorting(guildId))) return
 
   const guild = getBot().guilds.cache.get(guildId),
-    botName = getBot().user.username,
-    botRole = getRoleByName(guildId, botName),
+    botRole = guild.roles.cache.find(
+      role => role.name === getBot().user.username
+    ),
     roles = guild.roles.cache.filter(role => role.position < botRole.position)
 
   let colorRoles = [],
@@ -97,11 +101,9 @@ async function emptyRoleSortingQueue() {
   emptyRoleSortingQueue()
 }
 
-export async function syncRoles(guildId) {
-  const guild = getBot().guilds.cache.get(guildId)
-
+export async function syncRoles(guild) {
   requiredRoles.forEach(async requiredRole => {
-    if (getRoleCountByName(guildId, requiredRole) === 0)
+    if (guild.roles.cache.filter(role => role.name === requiredRole).size === 0)
       await guild.roles.create({
         name: requiredRole,
         permissions: [
@@ -109,7 +111,9 @@ export async function syncRoles(guildId) {
           Permissions.FLAGS.SEND_MESSAGES,
         ],
       })
-    else if (getRoleCountByName(guildId, requiredRole) > 1) {
+    else if (
+      guild.roles.cache.filter(role => role.name === requiredRole).size > 1
+    ) {
       const roles = guild.roles.cache.filter(role => {
         if (role.name === requiredRole) return role
       })
@@ -120,25 +124,30 @@ export async function syncRoles(guildId) {
     }
   })
 
-  roleSortingQueue.pushRoll(guildId)
+  roleSortingQueue.pushRoll(guild.id)
 }
 
 export function balanceDisrupted(role) {
   if (
     requiredRoles.includes(role.name) &&
-    getRoleCountByName(role.guild.id, role.name) !== 1
+    role.guild.roles.cache.filter(_role => _role.name === role.name).size !== 1
   )
     return true
 }
 
 export async function createRole(role) {
+  const guild = role.guild,
+    botRole = guild.roles.cache.find(
+      role => role.name === getBot().user.username
+    )
+
   if (balanceDisrupted(role)) {
     const roleName = role.name
 
     role.delete()
 
     const adminChannel = getBot().channels.cache.get(
-      await getAdminChannelId(role.guild.id)
+      await getAdminChannelId(guild.id)
     )
 
     if (adminChannel)
@@ -156,19 +165,20 @@ export async function createRole(role) {
     //update color list
   }
 
-  const botRole = getRoleByName(role.guild.id, getBot().user.username)
-
-  console.log(role.position < botRole.position)
-
   if (
     role.position < botRole.position &&
-    !roleSortingQueue.includes(role.guild.id)
+    !roleSortingQueue.includes(guild.id)
   ) {
-    roleSortingQueue.pushRoll(role.guild.id)
+    roleSortingQueue.pushRoll(guild.id)
   }
 }
 
 export async function modifyRole(oldRole, newRole) {
+  const guild = newRole.guild,
+    botRole = guild.roles.cache.find(
+      role => role.name === getBot().user.username
+    )
+
   if (
     oldRole.name !== newRole.name &&
     (balanceDisrupted(oldRole) || balanceDisrupted(newRole))
@@ -178,7 +188,7 @@ export async function modifyRole(oldRole, newRole) {
     newRole.setName(oldRole.name)
 
     const adminChannel = getBot().channels.cache.get(
-      await getAdminChannelId(newRole.guild.id)
+      await getAdminChannelId(guild.id)
     )
 
     if (adminChannel)
@@ -195,45 +205,71 @@ export async function modifyRole(oldRole, newRole) {
     //update color list
   }
 
-  const botRole = getRoleByName(newRole.guild.id, getBot().user.username)
-
   if (
     oldRole.rawPosition !== newRole.rawPosition &&
     newRole.position < botRole.position &&
-    !roleSortingQueue.includes(newRole.guild.id)
+    !roleSortingQueue.includes(guild.id)
   ) {
-    roleSortingQueue.pushRoll(newRole.guild.id)
+    roleSortingQueue.pushRoll(guild.id)
   }
 }
 
 export async function deleteRole(role) {
-  const guild = getBot().guilds.cache.get(role.guild.id)
+  const guild = role.guild,
+    botRole = guild.roles.cache.find(
+      role => role.name === getBot().user.username
+    )
 
   if (balanceDisrupted(role)) {
-    await guild.roles.create({
-      name: role.name,
-      permissions: [
-        Permissions.FLAGS.VIEW_CHANNEL,
-        Permissions.FLAGS.SEND_MESSAGES,
-      ],
-    })
+    const newRole = await guild.roles.create(role),
+      UserRoleQueue = getUserRoleQueue(),
+      userArray = UserRoleQueue
+        ? UserRoleQueue.filter(
+            record =>
+              record.guild === newRole.guild.id && record.role === newRole.name
+          ).map(record => record.user)
+        : null,
+      channelRoleQueue = getChannelRoleQueue(),
+      channelArray = channelRoleQueue
+        ? channelRoleQueue
+            .filter(
+              record =>
+                record.guild === newRole.guild.id &&
+                record.role === newRole.name
+            )
+            .map(record => {
+              return {
+                channelId: record.channel,
+                overwrite: record.permissionOverwrite,
+              }
+            })
+        : null
 
-    const botRole = getRoleByName(role.guild.id, getBot().user.username)
+    if (userArray)
+      userArray.forEach(user =>
+        guild.members.cache.get(user).roles.add(newRole)
+      )
 
-    if (
-      role.position < botRole.position &&
-      !roleSortingQueue.includes(role.guild.id)
-    )
-      roleSortingQueue.pushRoll(role.guild.id)
+    if (channelArray)
+      channelArray.forEach(channel => {
+        console.log(channel.overwrite)
 
-    if (role.name === `verified`) {
-      //add to public channels
-    } else if (`undergoing verification`) {
-      //add to verification channel
-    }
+        guild.channels.cache
+          .get(channel.channelId)
+          .permissionOverwrites.create(newRole.id, channel.overwrite)
+      })
 
-    //log admin
+    if (!roleSortingQueue.includes(guild.id))
+      roleSortingQueue.pushRoll(guild.id)
   } else if (role.name.match(`^~.+~$`)) {
     //update color list
   }
 }
+
+// if (role.name === `verified`) {
+//   //add to public channels
+// } else if (`undergoing verification`) {
+//   //add to verification channel
+// }
+
+// //log admin

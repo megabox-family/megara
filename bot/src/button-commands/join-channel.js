@@ -1,5 +1,4 @@
 import { MessageActionRow, MessageButton } from 'discord.js'
-import { getBot } from '../cache-bot.js'
 import {
   getChannelById,
   getChannelByName,
@@ -24,14 +23,14 @@ export default async function (interaction) {
 
   if (interactionChannelRecord.channelType === `joinable`) {
     if (
-      getBot()
-        .channels.cache.get(interactionChannelRecord.id)
+      interaction.guild.channels.cache
+        .get(interactionChannelRecord.id)
         .permissionOverwrites.cache.filter(
           permissionOverwrite => permissionOverwrite.id === interaction.user.id
         ).size < 1
     ) {
-      getBot()
-        .channels.cache.get(interactionChannelRecord.id)
+      interaction.guild.channels.cache
+        .get(interactionChannelRecord.id)
         .permissionOverwrites.create(interaction.user.id, {
           VIEW_CHANNEL: true,
         })

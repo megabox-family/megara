@@ -4,7 +4,8 @@ import { readdirSync, existsSync } from 'fs'
 import { basename, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { syncChannels } from './channels.js'
-import { syncRoles } from './roles.js'
+import { syncRoles, requiredRoleDifference } from './roles.js'
+import { pushUserToQueue } from './required-role-queue.js'
 import {
   syncGuilds,
   getCommandSymbol,
@@ -48,15 +49,16 @@ export async function startup(bot) {
   // console.log(
   //   bot.guilds.cache
   //     .get(`711043006253367426`)
-  //     .roles.cache.get(`870734249370746911`).channels
+  //     .channels.cache.get(`914280421448105985`)
+  //     .permissionOverwrites.cache.get(`917933076426928148`)
   // )
 
   cacheBot(bot)
-  await syncGuilds()
+  await syncGuilds(bot.guilds.cache)
 
   bot.guilds.cache.forEach(async guild => {
-    await syncChannels(guild.id)
-    await syncRoles(guild.id)
+    await syncChannels(guild)
+    await syncRoles(guild)
   })
 
   await removeEmptyVoiceChannelsOnStartup()
@@ -108,14 +110,13 @@ export function removeVoiceChannelIfEmpty(voiceChannel) {
 }
 
 export async function announceNewChannel(newChannel) {
-  const announcementChannelId = await getAnnouncementChannel(
-    newChannel.guild.id
-  )
+  const guild = newChannel.guild,
+    announcementChannelId = await getAnnouncementChannel(guild.id)
 
   if (!announcementChannelId) return
 
   const commandChannels = await getFormatedCommandChannels(
-    newChannel.guild.id,
+    guild.id,
     `unrestricted`
   )
 
@@ -126,17 +127,15 @@ export async function announceNewChannel(newChannel) {
         .setStyle('SUCCESS')
     ),
     categoryName = await getCategoryName(newChannel.parentId)
-  getBot()
-    .channels.cache.get(announcementChannelId)
-    .send({
-      content: `
+  guild.channels.cache.get(announcementChannelId).send({
+    content: `
         @everyone Hey guys! 😁\
         \nWe've added a new channel, <#${newChannel.id}>, in the '${categoryName}' category.\
         \nPress the button below, or use the \`!join\` command (ex: \`!join ${newChannel.name}\`) to join.\
         \nThe \`!join\` command can be used in these channels: ${commandChannels}
       `,
-      components: [joinButtonRow],
-    })
+    components: [joinButtonRow],
+  })
 }
 
 export async function handleMessage(message) {
@@ -213,6 +212,21 @@ export function handleNewMember(member) {
     content: `sup brah`,
     components: [tosButtonRow],
   })
+}
+
+export function modifyMember(oldMember, newMember) {
+  const requiredRole = requiredRoleDifference(
+    newMember.guild,
+    oldMember._roles,
+    newMember._roles
+  )
+
+  if (requiredRole)
+    pushUserToQueue({
+      guild: newMember.guild.id,
+      role: requiredRole.name,
+      user: newMember.id,
+    })
 }
 
 export function handleInteraction(interaction) {

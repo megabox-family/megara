@@ -23,14 +23,14 @@ export default async function (interaction) {
     )
 
   if (
-    getBot()
-      .channels.cache.get(interactionChannelRecord.id)
+    interaction.guild.channels.cache
+      .get(interactionChannelRecord.id)
       .permissionOverwrites.cache.filter(
         permissionOverwrite => permissionOverwrite.id === interaction.user.id
       ).size > 0
   ) {
-    getBot()
-      .channels.cache.get(interactionChannelRecord.id)
+    interaction.guild.channels.cache
+      .get(interactionChannelRecord.id)
       .permissionOverwrites.delete(interaction.user.id)
       .then(() =>
         interaction.user.send({

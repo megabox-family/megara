@@ -1,7 +1,6 @@
 import camelize from 'camelize'
 import { basename } from 'path'
 import { fileURLToPath } from 'url'
-import { getBot } from '../cache-bot.js'
 import {
   getIdForJoinableChannel,
   getCommandLevelForChannel,
@@ -39,7 +38,7 @@ export default async function (message, commandSymbol, channelName) {
   }
 
   const joinableChannelId = await getIdForJoinableChannel(channelName),
-    channel = getBot().channels.cache.get(joinableChannelId)
+    channel = message.guild.channels.cache.get(joinableChannelId)
 
   if (joinableChannelId) {
     if (

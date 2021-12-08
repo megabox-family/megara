@@ -3,9 +3,10 @@ import pgPool from '../pg-pool.js'
 import camelize from 'camelize'
 import SQL from 'sql-template-strings'
 import { syncChannels } from '../utils/channels.js'
+import { deleteAllGuildChannels } from './channels.js'
 
 export async function createGuild(guild, syncBool = false) {
-  if (!syncBool) await syncChannels(guild.id)
+  if (!syncBool) await syncChannels(guild)
 
   pgPool
     .query(
@@ -37,15 +38,13 @@ export async function modifyGuild(guild) {
     })
 }
 
-export async function deleteGuild(guild, syncBool = false) {
+export async function deleteGuild(guild) {
   let guildId
 
   if (guild?.id) guildId = guild.id
   else guildId = guild
 
-  if (!syncBool) {
-    await syncChannels(guildId)
-  }
+  await deleteAllGuildChannels(guildId)
 
   return await pgPool
     .query(
@@ -61,9 +60,8 @@ export async function deleteGuild(guild, syncBool = false) {
     })
 }
 
-export async function syncGuilds() {
-  const liveGuildIds = [],
-    guilds = getBot().guilds.cache
+export async function syncGuilds(guilds) {
+  const liveGuildIds = []
 
   guilds.forEach(guild => {
     if (!guild.deleted) liveGuildIds.push(guild.id)
@@ -84,7 +82,7 @@ export async function syncGuilds() {
         allGuildIds = [...new Set([...liveGuildIds, ...tabledGuildIds])]
 
       allGuildIds.forEach(guildId => {
-        const guild = getBot().guilds.cache.get(guildId)
+        const guild = guilds.get(guildId)
 
         if (
           liveGuildIds.includes(guildId) &&
@@ -95,7 +93,7 @@ export async function syncGuilds() {
           !liveGuildIds.includes(guildId) &&
           tabledGuildIds.includes(guildId)
         ) {
-          deleteGuild(guildId, true)
+          deleteGuild(guildId)
         } else {
           const guildRecord = rows.find(row => row.id === guildId)
 

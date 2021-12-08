@@ -1,6 +1,7 @@
 import { getBot } from '../cache-bot.js'
-import { cacheChannel } from '../cache-channels.js'
 import { announceNewChannel } from '../utils/general.js'
+import { requiredRoleDifference } from './roles.js'
+import { pushChannelToQueue } from './required-role-queue.js'
 import { getAdminChannelId, getChannelSorting } from '../repositories/guilds.js'
 import {
   createChannelRecord,
@@ -9,7 +10,6 @@ import {
   getChannelTableByGuild,
   getAlphabeticalCategories,
   getAlphabeticalChannelsByCategory,
-  deleteAllGuildChannels,
 } from '../repositories/channels.js'
 
 Array.prototype.pushChannel = function (value) {
@@ -23,9 +23,7 @@ export function checkType(channel) {
   if (channel.type === `GUILD_CATEGORY`) return `category`
   else if (channel.type === `GUILD_VOICE`) return `voice`
 
-  const roles = getBot().guilds.cache.get(
-      getBot().channels.cache.get(channel.id).guild.id
-    ).roles.cache,
+  const roles = channel.guild.roles.cache,
     permissions = channel.permissionOverwrites.cache.map(
       role => roles.get(role.id)?.name
     )
@@ -36,9 +34,7 @@ export function checkType(channel) {
 }
 
 export function getCommandLevel(channel) {
-  const roles = getBot().guilds.cache.get(
-      getBot().channels.cache.get(channel.id).guild.id
-    ).roles.cache,
+  const roles = channel.guild.roles.cache,
     channelPermissionOverwrites = channel.permissionOverwrites.cache,
     alphaPermissions = channelPermissionOverwrites.map(
       role => roles.get(role.id)?.name
@@ -53,9 +49,7 @@ export function getCommandLevel(channel) {
 }
 
 export function getPositionOverride(channel) {
-  const roles = getBot().guilds.cache.get(
-      getBot().channels.cache.get(channel.id).guild.id
-    ).roles.cache,
+  const roles = channel.guild.roles.cache,
     channelPermissionOverwrites = channel.permissionOverwrites.cache,
     alphaPermissions = channelPermissionOverwrites.map(
       role => roles.get(role.id)?.name
@@ -69,22 +63,7 @@ export function getPositionOverride(channel) {
   return positionOverride ? +positionOverride.match(`-?[0-9]+`)[0] : null
 }
 
-export function setChannelVisibility(channel, channelType) {
-  if (['public', 'voice'].includes(channelType))
-    channel.permissionOverwrites.edit(
-      getBot()
-        .guilds.cache.get(channel.guild.id)
-        .roles.cache.find(role => role.name === `@everyone`),
-      { VIEW_CHANNEL: true }
-    )
-  else
-    channel.permissionOverwrites.edit(
-      getBot()
-        .guilds.cache.get(channel.guild.id)
-        .roles.cache.find(role => role.name === `@everyone`),
-      { VIEW_CHANNEL: false }
-    )
-}
+export function setChannelVisibility(channel, channelType) {}
 
 export async function sortChannels(guildId) {
   if (!(await getChannelSorting(guildId))) return
@@ -185,7 +164,7 @@ export async function createChannel(channel, skipAnnouncementAndSort = false) {
     positionOverride
   )
 
-  setChannelVisibility(channel, channelType)
+  // setChannelVisibility(channel, channelType)
 
   if (skipAnnouncementAndSort) {
     if (channelType === 'joinable') return channel.id
@@ -202,6 +181,30 @@ export async function modifyChannel(
   newChannel,
   skipAnnouncementAndSort = false
 ) {
+  //queue stuffs
+  if (oldChannel?.permissionOverwrites) {
+    const requiredRole = requiredRoleDifference(
+      newChannel.guild,
+      oldChannel.permissionOverwrites.cache.map(
+        permissionOverwrite => permissionOverwrite.id
+      ),
+      newChannel.permissionOverwrites.cache.map(
+        permissionOverwrite => permissionOverwrite.id
+      )
+    )
+
+    if (requiredRole)
+      pushChannelToQueue({
+        guild: newChannel.guild.id,
+        role: requiredRole.name,
+        channel: newChannel.id,
+        permissionOverwrite: oldChannel.permissionOverwrites.cache.get(
+          requiredRole.id
+        ),
+      })
+  }
+
+  //other stuffs
   const oldCatergoryId = oldChannel.hasOwnProperty(`categoryId`)
       ? oldChannel.categoryId
       : oldChannel.parentId,
@@ -235,7 +238,7 @@ export async function modifyChannel(
       newPositionOverride
     )
 
-    setChannelVisibility(newChannel, newChannelType)
+    // setChannelVisibility(newChannel, newChannelType)
 
     if (skipAnnouncementAndSort) {
       if (oldChannelType !== `joinable` && newChannelType === `joinable`)
@@ -275,15 +278,7 @@ export async function deleteChannel(channel, skipSort = false) {
   await deleteChannelRecord(channelId)
 }
 
-export async function syncChannels(guildId) {
-  const guild = getBot().guilds.cache.get(guildId)
-
-  if (!guild) {
-    await deleteAllGuildChannels(guild)
-
-    return
-  }
-
+export async function syncChannels(guild) {
   const channels = guild.channels.cache,
     liveChannelIds = []
 

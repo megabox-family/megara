@@ -33,8 +33,8 @@ create table channels (
   name text not null,
   guild_id text not null,
   category_id text, 
-  channel_type channel_type default `private`,
-  command_level command_level default `prohibited`,
+  channel_type channel_type,
+  command_level command_level,
   position_override integer,
   position integer,
   active_voice_channel_id text

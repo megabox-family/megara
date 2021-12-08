@@ -1,9 +1,7 @@
 import camelize from 'camelize'
 import { basename } from 'path'
 import { fileURLToPath } from 'url'
-import { getBot } from '../cache-bot.js'
 import { logErrorMessageToChannel } from '../utils/general.js'
-import { getRoleByName } from '../utils/roles.js'
 import { getCommandLevelForChannel } from '../repositories/channels.js'
 
 const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
@@ -84,7 +82,7 @@ export default async function (message, commandSymbol, nickname) {
     return
   }
 
-  const guild = getBot().guilds.cache.get(message.guild.id)
+  const guild = message.guild
   let newNickname = nickname.toLowerCase()
 
   allowedSymbols.forEach(symbol => {
@@ -130,7 +128,9 @@ export default async function (message, commandSymbol, nickname) {
 
   // Attempt to set verified role
   try {
-    const verifiedRole = await getRoleByName(message.guild.id, `verified`)
+    const verifiedRole = guild.roles.cache.find(
+      role => role.name === `verified`
+    )
     let roleIsUpdated = false
     let attempts = 0
 

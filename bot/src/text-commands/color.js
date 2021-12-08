@@ -15,9 +15,8 @@ export default async function (message, colorCommand) {
     })
   else if (colorRoleId) {
     const colorRoles = await getColorRoleIds()
-    const guildMember = getBot()
-      .guilds.cache.get(message.guild.id)
-      .members.cache.get(message.author.id)
+    const guildMember = message.guild.members.cache.get(message.author.id)
+
     const currentRoles = Array.from(guildMember.roles.cache.values()).map(
       x => x.id
     )

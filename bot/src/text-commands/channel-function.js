@@ -34,7 +34,7 @@ export default async function (message, commandSymbol, args) {
   ) {
     message.reply(`${argArr[0]} is not a valid channel function. 😔`)
     return
-  } else if (!getBot().channels.cache.get(argArr[1])) {
+  } else if (!message.guild.channels.cache.get(argArr[1])) {
     message.reply(`${argArr[1]} is not a valid channel id. 😔`)
     return
   }

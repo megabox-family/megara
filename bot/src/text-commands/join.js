@@ -1,7 +1,6 @@
-import { getBot } from '../cache-bot.js'
-import { announceNewChannel } from '../utils/general.js'
-import { getAdminChannelId, getChannelSorting } from '../repositories/guilds.js'
-import { getBot } from '../cache-bot.js'
+import camelize from 'camelize'
+import { basename } from 'path'
+import { fileURLToPath } from 'url'
 import {
   getIdForJoinableChannel,
   getCommandLevelForChannel,
@@ -41,7 +40,7 @@ export default async function (message, commandSymbol, channelName) {
   }
 
   const joinableChannelId = await getIdForJoinableChannel(channelName),
-    channel = getBot().channels.cache.get(joinableChannelId)
+    channel = message.guild.channels.cache.get(joinableChannelId)
 
   if (joinableChannelId) {
     if (

@@ -5,6 +5,7 @@ import {
   checkVoiceChannelValidity,
   handleMessage,
   handleNewMember,
+  modifyMember,
   handleInteraction,
 } from './utils/general.js'
 import {
@@ -36,6 +37,7 @@ bot.on('guildCreate', createGuild)
 bot.on('guildCreate', modifyGuild)
 bot.on('guildDelete', deleteGuild)
 bot.on('guildMemberAdd', handleNewMember)
+bot.on('guildMemberUpdate', modifyMember)
 bot.on('channelCreate', createChannel)
 bot.on('channelUpdate', modifyChannel)
 bot.on('channelDelete', deleteChannel)
