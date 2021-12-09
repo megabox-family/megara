@@ -146,7 +146,7 @@ export async function createRole(role) {
 
     role.delete()
 
-    const adminChannel = getBot().channels.cache.get(
+    const adminChannel = guild.channels.cache.get(
       await getAdminChannelId(guild.id)
     )
 
@@ -215,10 +215,7 @@ export async function modifyRole(oldRole, newRole) {
 }
 
 export async function deleteRole(role) {
-  const guild = role.guild,
-    botRole = guild.roles.cache.find(
-      role => role.name === getBot().user.username
-    )
+  const guild = role.guild
 
   if (balanceDisrupted(role)) {
     const newRole = await guild.roles.create(role),
@@ -252,24 +249,45 @@ export async function deleteRole(role) {
 
     if (channelArray)
       channelArray.forEach(channel => {
-        console.log(channel.overwrite)
+        channel.overwrite.allow = channel.overwrite.allow.serialize()
+        channel.overwrite.deny = channel.overwrite.deny.serialize()
+
+        const permissionKeys = Object.keys(channel.overwrite.allow),
+          finalPermissionObject = {}
+
+        permissionKeys.forEach(key => {
+          if (channel.overwrite.allow[key] !== channel.overwrite.deny[key])
+            finalPermissionObject[key] = channel.overwrite.allow[key]
+        })
 
         guild.channels.cache
           .get(channel.channelId)
-          .permissionOverwrites.create(newRole.id, channel.overwrite)
+          .permissionOverwrites.create(newRole.id, finalPermissionObject)
       })
+
+    const adminChannel = guild.channels.cache.get(
+      await getAdminChannelId(guild.id)
+    )
+
+    if (adminChannel)
+      adminChannel.send(
+        `
+          \n@here\
+          \nSomeone tried deleting the \`${newRole.name}\` role, which I need to function 😡\
+
+          \nIt's okay, I forgive you guys 😇\
+          \nI did my best to restore the role and re-assign it to users and channels, but I may have missed something.\
+          
+          \nIf you recently removed this role from a user or channel it's possible that it was re-added, I'd peek around to make sure everything is okay 👀\
+        `
+      )
 
     if (!roleSortingQueue.includes(guild.id))
       roleSortingQueue.pushRoll(guild.id)
   } else if (role.name.match(`^~.+~$`)) {
     //update color list
+
+    if (!roleSortingQueue.includes(guild.id))
+      roleSortingQueue.pushRoll(guild.id)
   }
 }
-
-// if (role.name === `verified`) {
-//   //add to public channels
-// } else if (`undergoing verification`) {
-//   //add to verification channel
-// }
-
-// //log admin
