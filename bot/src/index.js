@@ -34,7 +34,7 @@ bot.login(config.botToken)
 
 bot.on('ready', startup)
 bot.on('guildCreate', createGuild)
-bot.on('guildCreate', modifyGuild)
+bot.on('guildUpdate', modifyGuild)
 bot.on('guildDelete', deleteGuild)
 bot.on('guildMemberAdd', handleNewMember)
 bot.on('guildMemberUpdate', modifyMember)

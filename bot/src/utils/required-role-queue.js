@@ -1,18 +1,11 @@
-Array.prototype.pushUserRole = function (value) {
-  this.push(value)
-  if (this.length === 1) setTimeout(() => (this.length = 0), 10000)
-}
-
-Array.prototype.pushChannelRole = function (value) {
-  this.push(value)
-  if (this.length === 1) setTimeout(() => (this.length = 0), 10000)
-}
-
 const UserRoleQueue = [],
   channelRoleQueue = []
 
 export function pushUserToQueue(record) {
-  UserRoleQueue.pushUserRole(JSON.parse(JSON.stringify(record)))
+  UserRoleQueue.push(JSON.parse(JSON.stringify(record)))
+
+  if (UserRoleQueue.length === 1)
+    setTimeout(() => (UserRoleQueue.length = 0), 10000)
 }
 
 export function getUserRoleQueue() {
@@ -20,7 +13,10 @@ export function getUserRoleQueue() {
 }
 
 export function pushChannelToQueue(record) {
-  channelRoleQueue.pushChannelRole(record)
+  channelRoleQueue.push(record)
+
+  if (channelRoleQueue.length === 1)
+    setTimeout(() => (channelRoleQueue.length = 0), 10000)
 }
 
 export function getChannelRoleQueue() {

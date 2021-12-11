@@ -2,7 +2,7 @@ import camelize from 'camelize'
 import { basename } from 'path'
 import { fileURLToPath } from 'url'
 import { getCommandLevelForChannel } from '../repositories/channels.js'
-import { setRules } from '../repositories/guilds.js'
+import { setNameGuidelines } from '../repositories/guilds.js'
 
 const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
 
@@ -22,10 +22,8 @@ export default async function (message, commandSymbol, args) {
         Invalid input, the \`${commandSymbol}${command}\` command requires arguments 🤔\
         \nExample:\
         \n\`\`\`${commandSymbol}${command}\
-          \nTo continue you must accept [server names] rules\
-          \n- No kicking\
-          \n- No screamin\
-          \n...\
+          \nWe reccomend setting your nickname to what people call you in real life.\
+          \nwe're all on a first name basis in this server.\
         \n\`\`\`\
       `
     )
@@ -33,12 +31,12 @@ export default async function (message, commandSymbol, args) {
     return
   } else if (args.toLowerCase() === `null`) args = null
 
-  await setRules(message.guild.id, args)
+  await setNameGuidelines(message.guild.id, args)
 
   message.reply(
     `
-      Your server's rules have been set! 😁\
-      \nIf you'd like to preview your rules use the \`${commandSymbol}rules\` command 👍
+      Your server's name guildlines have been set! 😁\
+      \nIf you'd like to preview your name guildlines use the \`!nameGuidelines\` command 👍\
     `
   )
 }

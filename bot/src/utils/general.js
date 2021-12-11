@@ -10,7 +10,10 @@ import {
   syncGuilds,
   getCommandSymbol,
   getAnnouncementChannel,
-  getLogChannelId,
+  getVerificationChannel,
+  getLogChannel,
+  getRules,
+  getNameGuidelines,
 } from '../repositories/guilds.js'
 import {
   removeActiveVoiceChannelId,
@@ -46,10 +49,11 @@ export async function removeEmptyVoiceChannelsOnStartup() {
 export async function startup(bot) {
   console.log(`Logged in as ${bot.user.tag}!`)
 
+  // const guild = bot.guilds.cache.get(`711043006253367426`)
+
   // console.log(
-  //   bot.guilds.cache
-  //     .get(`711043006253367426`)
-  //     .channels.cache.get(`914280421448105985`)
+  //   guild.channels.cache
+  //     .get(`914280421448105985`)
   //     .permissionOverwrites.cache.get(`917933076426928148`)
   // )
 
@@ -65,7 +69,7 @@ export async function startup(bot) {
 }
 
 export async function logMessageToChannel(message) {
-  const logChannelId = getLogChannelId(message.guild.id)
+  const logChannelId = getLogChannel(message.guild.id)
 
   if (!logChannelId) return
 
@@ -93,7 +97,7 @@ export async function logMessageToChannel(message) {
 }
 
 export async function logErrorMessageToChannel(errorMessage, guild) {
-  const logChannelId = await getLogChannelId(guild.id)
+  const logChannelId = await getLogChannel(guild.id)
 
   if (!logChannelId) return
 
@@ -139,12 +143,14 @@ export async function announceNewChannel(newChannel) {
 }
 
 export async function handleMessage(message) {
+  if (message.author.bot) return
+  if (!message?.guild) return
+
   const messageText = message.content
 
   if (
     ![
       `!`,
-      `#`,
       `$`,
       `%`,
       `^`,
@@ -196,22 +202,77 @@ export async function handleMessage(message) {
     )
 }
 
-export function handleNewMember(member) {
-  const tosButtonRow = new MessageActionRow().addComponents(
-    new MessageButton()
-      .setCustomId(`!accept-tos: ${member.guild.id}`)
-      .setLabel(`Accept`)
-      .setStyle('SUCCESS'),
-    new MessageButton()
-      .setCustomId(`!deny-tos: ${member.guild.id}`)
-      .setLabel(`Deny`)
-      .setStyle('DANGER')
-  )
+export async function sendVerificationInstructions(guildMember) {
+  const guild = guildMember.guild,
+    verificationChannelId = await getVerificationChannel(guild.id),
+    verificationChannel = guild.channels.cache.get(verificationChannelId),
+    undergoingVerificationRoleId = guild.roles.cache.find(
+      role => role.name === `undergoing verification`
+    )?.id,
+    commandSymbol = await getCommandSymbol(guild.id),
+    nameGuidelines = await getNameGuidelines(guild.id)
 
-  member.send({
-    content: `sup brah`,
-    components: [tosButtonRow],
-  })
+  if (!verificationChannel || !undergoingVerificationRoleId) return
+
+  await guildMember.roles.add(undergoingVerificationRoleId)
+
+  if (nameGuidelines)
+    verificationChannel.send(
+      `\
+          \n<@${guildMember.id}>\
+          \nBefore I can give you full access to the server you'll need to set your nickname, don't worry it's a piece of cake! 🍰\
+  
+          \nFirstly, please read over ${guild.name}'s name guidelines:\
+          \n${nameGuidelines}\
+  
+          \nLastly, set your name by using the \`${commandSymbol}name\` command like this \`${commandSymbol}name [your name]\`, ex: \`${commandSymbol}name John\`\
+
+          \n*Hint: if you're confused as to how this works, scroll up to see how others have been verified in this channel.*
+        `
+    )
+  else
+    verificationChannel.send(
+      `\
+          \n<@${guildMember.id}>\
+          \nBefore I can give you full access to the server you'll need to set your nickname, don't worry it's a piece of cake! 🍰\
+          \nTo set your name simply use the \`${commandSymbol}name\` command like this \`${commandSymbol}name [your name]\`, ex: \`${commandSymbol}name John\`\
+
+          \n*Hint: if you're confused as to how this works, scroll up to see how others have been verified in this channel.*
+        `
+    )
+}
+
+export async function handleNewMember(member) {
+  const guild = member.guild,
+    rules = await getRules(guild.id),
+    tosButtonRow = new MessageActionRow().addComponents(
+      new MessageButton()
+        .setCustomId(`!accept-rules: ${member.guild.id}`)
+        .setLabel(`Accept`)
+        .setStyle('SUCCESS'),
+      new MessageButton()
+        .setCustomId(`!deny-rules: ${member.guild.id}`)
+        .setLabel(`Deny`)
+        .setStyle('DANGER')
+    )
+
+  if (rules) {
+    member.send({
+      content: `\
+        \n👋 **You've been invited to join the ${guild.name} server!** 😄\
+
+        \nBefore I can give you full access to the server's full functionality you'll need to accept their rules:\
+        \n${rules}\
+
+        \nDo you accept or deny their rules? Note that if you deny their rules you will be removed from their server.\
+      `,
+      components: [tosButtonRow],
+    })
+
+    return
+  }
+
+  sendVerificationInstructions(member)
 }
 
 export function modifyMember(oldMember, newMember) {

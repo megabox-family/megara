@@ -2,12 +2,14 @@ import camelize from 'camelize'
 import { basename } from 'path'
 import { fileURLToPath } from 'url'
 import { logErrorMessageToChannel } from '../utils/general.js'
+import { getVerificationChannel } from '../repositories/guilds.js'
 import { getCommandLevelForChannel } from '../repositories/channels.js'
 
 const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
 
 function isNicknameValid(nickname, allowedSymbols) {
   if (nickname.match(`^[A-Za-z]+$`)) return true
+  if (nickname.length > 32) return false
 
   const charArr = nickname.split('')
   let lastValue
@@ -22,6 +24,11 @@ function isNicknameValid(nickname, allowedSymbols) {
     )
       return true
     else if (currentValue.match(`^[A-Za-z]$`) && lastValue === `.`) return true
+    else if (
+      ![' ', '-', "'", '.'].includes(currentValue) &&
+      !currentValue.match(`^[A-Za-z]$`)
+    )
+      return true
 
     lastValue = currentValue
   })
@@ -37,9 +44,15 @@ const timeout = ms => {
 }
 
 export default async function (message, commandSymbol, nickname) {
-  const commandLevel = await getCommandLevelForChannel(message.channel.id)
+  const guild = message.guild,
+    channel = message.channel,
+    commandLevel = await getCommandLevelForChannel(channel.id),
+    verificationChannelId = await getVerificationChannel(guild.id)
 
-  if ([`prohibited`, `restricted`].includes(commandLevel)) {
+  if (
+    [`prohibited`, `restricted`].includes(commandLevel) &&
+    channel.id !== verificationChannelId
+  ) {
     const commandChannels = await getFormatedCommandChannels(
       message.guild.id,
       `unrestricted`
@@ -72,7 +85,7 @@ export default async function (message, commandSymbol, nickname) {
 
     message.reply(
       `
-        Sorry, names cannot contain numbers or most special characters. 😔\
+        Sorry, names must be below 32 characters and cannot contain numbers or most special characters. 😔\
         \nHere's a list of acceptable special characters: \`${allowedSymbolList}\` (not including commas)\
         \nAllowed special characters cannot be repeating, and spaces must follow periods.\
         \nExample: \`${commandSymbol}${command} Jason\`, \`${commandSymbol}${command} Chris W.\`, \`${commandSymbol}${command} Dr. White\`, \`${commandSymbol}${command} Brett-Anne\`, \`${commandSymbol}${command} O'Brien\`
@@ -82,8 +95,8 @@ export default async function (message, commandSymbol, nickname) {
     return
   }
 
-  const guild = message.guild
   let newNickname = nickname.toLowerCase()
+  const guildMember = guild.members.cache.get(message.author.id)
 
   allowedSymbols.forEach(symbol => {
     newNickname = newNickname
@@ -104,13 +117,9 @@ export default async function (message, commandSymbol, nickname) {
         nicknameIsUpdated = true
       }
 
-      await Promise.all([
-        guild.members.cache.get(message.author.id).setNickname(newNickname),
-        timeout(1000),
-      ])
+      await Promise.all([guildMember.setNickname(newNickname), timeout(1000)])
 
-      let updatedNickname = await guild.members.cache.get(message.author.id)
-        .nickname
+      let updatedNickname = await guildMember.nickname
 
       nicknameIsUpdated = updatedNickname === newNickname
 
@@ -135,14 +144,11 @@ export default async function (message, commandSymbol, nickname) {
     let attempts = 0
 
     while (!roleIsUpdated) {
-      await Promise.all([
-        guild.members.cache.get(message.author.id).roles.add(verifiedRole.id),
-        timeout(1000),
-      ])
+      await Promise.all([guildMember.roles.add(verifiedRole.id), timeout(1000)])
 
-      roleIsUpdated = await guild.members.cache
-        .get(message.author.id)
-        .roles.cache.some(x => x.id === verifiedRole.id)
+      roleIsUpdated = await guildMember.roles.cache.some(
+        x => x.id === verifiedRole.id
+      )
 
       if (!roleIsUpdated) {
         attempts++
@@ -156,5 +162,29 @@ export default async function (message, commandSymbol, nickname) {
     handleNicknameFailure(error, guild)
   }
 
-  message.reply(`Your nickname has been changed to ${newNickname} 🥰`)
+  const undergoingVerificationRoleId = guild.roles.cache.find(
+      role => role.name === `undergoing verification`
+    ).id,
+    userUndergoingVerificationRole = guildMember.roles.cache.find(
+      role => role.id === undergoingVerificationRoleId
+    )
+
+  if (userUndergoingVerificationRole) {
+    message.reply(
+      `\
+        \nCongratulations! 🎉\
+        \nYour nickname has been changed to ${newNickname}, and you've been fully verified!\
+        \nI'd reccomend checking out ${guild.name}'s welcome channel for more information on what to do next.\
+
+        \nHeads up, you'll be removed from the <#${verificationChannelId}> channel in 30 seconds, have fun in ${guild.name}!\
+      `
+    )
+
+    setTimeout(
+      () => guildMember.roles.remove(undergoingVerificationRoleId),
+      30000
+    )
+  } else {
+    message.reply(`Your nickname has been changed to ${newNickname} 🥰`)
+  }
 }

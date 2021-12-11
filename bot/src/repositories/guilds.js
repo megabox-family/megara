@@ -153,7 +153,7 @@ export async function setVerificationChannel(guildId, channelId) {
   )
 }
 
-export async function getAdminChannelId(guildId) {
+export async function getAdminChannel(guildId) {
   return await pgPool
     .query(
       SQL`
@@ -166,7 +166,7 @@ export async function getAdminChannelId(guildId) {
     .then(res => (res.rows[0] ? res.rows[0].admin_channel : undefined))
 }
 
-export async function getLogChannelId(guildId) {
+export async function getLogChannel(guildId) {
   return await pgPool
     .query(
       SQL`
@@ -227,7 +227,7 @@ export async function getRules(guildId) {
         where id = ${guildId};
       `
     )
-    .then(res => (res.rows[0] ? camelize(res.rows[0].rules) : undefined))
+    .then(res => (res.rows[0] ? res.rows[0].rules : undefined))
 }
 
 export async function setChannelSorting(guildId, channelSorting) {
@@ -282,7 +282,7 @@ export async function getRoleSorting(guildId) {
     .then(res => (res.rows[0] ? camelize(res.rows[0].role_sorting) : undefined))
 }
 
-export async function setCommandSymbole(guildId, commandSymbol) {
+export async function setCommandSymbol(guildId, commandSymbol) {
   return await pgPool.query(
     SQL`
         update guilds
@@ -304,7 +304,46 @@ export async function getCommandSymbol(guildId) {
         where id = ${guildId};
       `
     )
-    .then(res =>
-      res.rows[0] ? camelize(res.rows[0].command_symbol) : undefined
+    .then(res => (res.rows[0] ? res.rows[0].command_symbol : undefined))
+}
+
+export async function getFunctionChannels(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+      select 
+        admin_channel,
+        log_channel,
+        announcement_channel,
+        verification_channel 
+      from guilds 
+      where id = ${guildId}
+    `
     )
+    .then(res => (res.rows[0] ? camelize(res.rows[0]) : undefined))
+}
+
+export async function setNameGuidelines(guildId, nameGuidelines) {
+  return await pgPool.query(
+    SQL`
+        update guilds
+        set
+          name_guidelines = ${nameGuidelines}
+        where id = ${guildId}
+        returning *;
+      `
+  )
+}
+
+export async function getNameGuidelines(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          name_guidelines
+        from guilds 
+        where id = ${guildId};
+      `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].name_guidelines : undefined))
 }

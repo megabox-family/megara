@@ -1,12 +1,7 @@
 import { Permissions } from 'discord.js'
 import { getBot } from '../cache-bot.js'
 import { getUserRoleQueue, getChannelRoleQueue } from './required-role-queue.js'
-import { getRoleSorting, getAdminChannelId } from '../repositories/guilds.js'
-
-Array.prototype.pushRoll = function (value) {
-  this.push(value)
-  if (this.length === 1) emptyRoleSortingQueue()
-}
+import { getRoleSorting, getAdminChannel } from '../repositories/guilds.js'
 
 const roleSortingQueue = [],
   requiredRoles = [
@@ -14,9 +9,9 @@ const roleSortingQueue = [],
     `undergoing verification`,
     `!channel type: public`,
     `!channel type: joinable`,
-    `!command Level: admin`,
-    `!command Level: unrestricted`,
-    `!command Level: restricted`,
+    `!command level: admin`,
+    `!command level: unrestricted`,
+    `!command level: restricted`,
     `!position override: 1`,
     `!position override: 2`,
     `!position override: 3`,
@@ -28,6 +23,22 @@ const roleSortingQueue = [],
     `!position override: -4`,
     `!position override: -5`,
   ]
+
+async function emptyRoleSortingQueue() {
+  if (roleSortingQueue.length === 0) return
+
+  await sortRoles(roleSortingQueue[0])
+
+  roleSortingQueue.shift()
+
+  emptyRoleSortingQueue()
+}
+
+function pushToRoleSortingQueue(GuildId) {
+  roleSortingQueue.push(GuildId)
+
+  if (roleSortingQueue.length === 1) emptyRoleSortingQueue()
+}
 
 export function requiredRoleDifference(guild, oldRoles, newRoles) {
   const _requiredRoles = guild.roles.cache.filter(guildRole =>
@@ -82,23 +93,13 @@ export async function sortRoles(guildId) {
       return { role: _role.id, position: _role.position }
     })
 
-  console.log(`tried`)
+  console.log(`tried sorting roles`)
 
   if (JSON.stringify(finalRoleArray) !== JSON.stringify(currentRolePositions)) {
-    console.log(`sorted`)
+    console.log(`sorted roles`)
 
     await guild.roles.setPositions(finalRoleArray)
   }
-}
-
-async function emptyRoleSortingQueue() {
-  if (roleSortingQueue.length === 0) return
-
-  await sortRoles(roleSortingQueue[0])
-
-  roleSortingQueue.shift()
-
-  emptyRoleSortingQueue()
 }
 
 export async function syncRoles(guild) {
@@ -109,6 +110,7 @@ export async function syncRoles(guild) {
         permissions: [
           Permissions.FLAGS.VIEW_CHANNEL,
           Permissions.FLAGS.SEND_MESSAGES,
+          Permissions.FLAGS.READ_MESSAGE_HISTORY,
         ],
       })
     else if (
@@ -124,7 +126,7 @@ export async function syncRoles(guild) {
     }
   })
 
-  roleSortingQueue.pushRoll(guild.id)
+  pushToRoleSortingQueue(guild.id)
 }
 
 export function balanceDisrupted(role) {
@@ -147,7 +149,7 @@ export async function createRole(role) {
     role.delete()
 
     const adminChannel = guild.channels.cache.get(
-      await getAdminChannelId(guild.id)
+      await getAdminChannel(guild.id)
     )
 
     if (adminChannel)
@@ -169,7 +171,7 @@ export async function createRole(role) {
     role.position < botRole.position &&
     !roleSortingQueue.includes(guild.id)
   ) {
-    roleSortingQueue.pushRoll(guild.id)
+    pushToRoleSortingQueue(guild.id)
   }
 }
 
@@ -188,7 +190,7 @@ export async function modifyRole(oldRole, newRole) {
     newRole.setName(oldRole.name)
 
     const adminChannel = getBot().channels.cache.get(
-      await getAdminChannelId(guild.id)
+      await getAdminChannel(guild.id)
     )
 
     if (adminChannel)
@@ -210,7 +212,7 @@ export async function modifyRole(oldRole, newRole) {
     newRole.position < botRole.position &&
     !roleSortingQueue.includes(guild.id)
   ) {
-    roleSortingQueue.pushRoll(guild.id)
+    pushToRoleSortingQueue(guild.id)
   }
 }
 
@@ -266,7 +268,7 @@ export async function deleteRole(role) {
       })
 
     const adminChannel = guild.channels.cache.get(
-      await getAdminChannelId(guild.id)
+      await getAdminChannel(guild.id)
     )
 
     if (adminChannel)
@@ -282,12 +284,10 @@ export async function deleteRole(role) {
         `
       )
 
-    if (!roleSortingQueue.includes(guild.id))
-      roleSortingQueue.pushRoll(guild.id)
+    if (!roleSortingQueue.includes(guild.id)) pushToRoleSortingQueue(guild.id)
   } else if (role.name.match(`^~.+~$`)) {
     //update color list
 
-    if (!roleSortingQueue.includes(guild.id))
-      roleSortingQueue.pushRoll(guild.id)
+    if (!roleSortingQueue.includes(guild.id)) pushToRoleSortingQueue(guild.id)
   }
 }

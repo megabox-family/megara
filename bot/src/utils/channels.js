@@ -2,7 +2,17 @@ import { getBot } from '../cache-bot.js'
 import { announceNewChannel } from '../utils/general.js'
 import { requiredRoleDifference } from './roles.js'
 import { pushChannelToQueue } from './required-role-queue.js'
-import { getAdminChannelId, getChannelSorting } from '../repositories/guilds.js'
+import {
+  getAdminChannel,
+  getFunctionChannels,
+  getChannelSorting,
+  setAdminChannel,
+  setLogChannel,
+  setAnnouncementChannel,
+  setVerificationChannel,
+  getAnnouncementChannel,
+  getVerificationChannel,
+} from '../repositories/guilds.js'
 import {
   createChannelRecord,
   updateChannelRecord,
@@ -10,14 +20,51 @@ import {
   getChannelTableByGuild,
   getAlphabeticalCategories,
   getAlphabeticalChannelsByCategory,
+  getChannelsGuildById,
 } from '../repositories/channels.js'
+import { Message } from 'discord.js'
 
-Array.prototype.pushChannel = function (value) {
-  this.push(value)
-  if (this.length === 1) emptyChannelSortingQueue()
+const setChannelFunction = {
+    adminChannel: setAdminChannel,
+    logChannel: setLogChannel,
+    announcementChannel: setAnnouncementChannel,
+    verificationChannel: setVerificationChannel,
+  },
+  channelVisibilityQueue = [],
+  channelSortingQueue = []
+
+async function emptyChannelVisibilityQueue() {
+  if (channelVisibilityQueue.length === 0) return
+
+  await setChannelVisibility(channelVisibilityQueue[0])
+
+  channelVisibilityQueue.shift()
+
+  emptyChannelVisibilityQueue()
 }
 
-const channelSortingQueue = []
+export function pushToChannelVisibilityQueue(channelId) {
+  if (!channelVisibilityQueue.includes(channelId))
+    channelVisibilityQueue.push(channelId)
+
+  if (channelVisibilityQueue.length === 1) emptyChannelVisibilityQueue()
+}
+
+async function emptyChannelSortingQueue() {
+  if (channelSortingQueue.length === 0) return
+
+  await sortChannels(channelSortingQueue[0])
+
+  channelSortingQueue.shift()
+
+  emptyChannelSortingQueue()
+}
+
+function pushToChannelSortingQueue(GuildId) {
+  channelSortingQueue.push(GuildId)
+
+  if (channelSortingQueue.length === 1) emptyChannelSortingQueue()
+}
 
 export function checkType(channel) {
   if (channel.type === `GUILD_CATEGORY`) return `category`
@@ -63,7 +110,96 @@ export function getPositionOverride(channel) {
   return positionOverride ? +positionOverride.match(`-?[0-9]+`)[0] : null
 }
 
-export function setChannelVisibility(channel, channelType) {}
+export async function setChannelVisibility(channelId) {
+  const channel = getBot().channels.cache.get(channelId),
+    channelType = checkType(channel),
+    guild = channel.guild,
+    announcementChannelId = await getAnnouncementChannel(guild.id),
+    verificationChannelId = await getVerificationChannel(guild.id),
+    joinableRoleId = guild.roles.cache.find(
+      role => role.name === `!channel type: joinable`
+    )?.id,
+    publicRoleId = guild.roles.cache.find(
+      role => role.name === `!channel type: public`
+    )?.id,
+    undergoingVerificationRoleId = guild.roles.cache.find(
+      role => role.name === `undergoing verification`
+    )?.id,
+    verifiedRoleId = guild.roles.cache.find(
+      role => role.name === `verified`
+    )?.id,
+    joinableOverwrite = channel.permissionOverwrites.cache.get(joinableRoleId),
+    publicOverwrite = channel.permissionOverwrites.cache.get(publicRoleId),
+    undergoingVerificationOverwrite = channel.permissionOverwrites.cache.get(
+      undergoingVerificationRoleId
+    ),
+    verifiedOverwrite = channel.permissionOverwrites.cache.get(verifiedRoleId)
+
+  if (channel.id === announcementChannelId) {
+    if (joinableOverwrite) await joinableOverwrite.delete()
+    if (undergoingVerificationOverwrite)
+      await undergoingVerificationRoleId.delete()
+    if (!publicOverwrite && publicRoleId)
+      channel.permissionOverwrites.create(publicRoleId, {})
+
+    if (verifiedOverwrite) {
+      const individualPermissions = verifiedOverwrite.allow.serialize()
+
+      if (
+        !individualPermissions.VIEW_CHANNEL ||
+        individualPermissions.SEND_MESSAGES ||
+        individualPermissions.SEND_MESSAGES_IN_THREADS ||
+        individualPermissions.CREATE_PUBLIC_THREADS ||
+        individualPermissions.CREATE_PRIVATE_THREADS ||
+        individualPermissions.ATTACH_FILES ||
+        !individualPermissions.READ_MESSAGE_HISTORY
+      ) {
+        await verifiedOverwrite.edit({
+          VIEW_CHANNEL: true,
+          SEND_MESSAGES: false,
+          SEND_MESSAGES_IN_THREADS: false,
+          CREATE_PUBLIC_THREADS: false,
+          CREATE_PRIVATE_THREADS: false,
+          ATTACH_FILES: false,
+          READ_MESSAGE_HISTORY: true,
+        })
+      }
+    } else
+      await channel.permissionOverwrites.create(verifiedRoleId, {
+        VIEW_CHANNEL: true,
+        SEND_MESSAGES: false,
+        SEND_MESSAGES_IN_THREADS: false,
+        CREATE_PUBLIC_THREADS: false,
+        CREATE_PRIVATE_THREADS: false,
+        ATTACH_FILES: false,
+        READ_MESSAGE_HISTORY: true,
+      })
+  } else if (channel.id === verificationChannelId) {
+    if (joinableOverwrite) await joinableOverwrite.delete()
+    if (publicOverwrite) await publicOverwrite.delete()
+    if (verifiedOverwrite) await verifiedOverwrite.delete()
+    if (!undergoingVerificationOverwrite && undergoingVerificationRoleId)
+      await channel.permissionOverwrites.create(undergoingVerificationRoleId, {
+        VIEW_CHANNEL: true,
+        SEND_MESSAGES: true,
+      })
+  } else if (channelType === `joinable`) {
+    if (undergoingVerificationOverwrite)
+      await undergoingVerificationOverwrite.delete()
+    if (verifiedOverwrite) await verifiedOverwrite.delete()
+  } else if (channelType === `public`) {
+    if (undergoingVerificationOverwrite)
+      await undergoingVerificationOverwrite.delete()
+    if (!verifiedOverwrite && verifiedRoleId)
+      await channel.permissionOverwrites.create(verifiedRoleId, {
+        VIEW_CHANNEL: true,
+      })
+  } else if (channelType === `private`) {
+    if (undergoingVerificationOverwrite)
+      await undergoingVerificationOverwrite.delete()
+    if (verifiedOverwrite) await verifiedOverwrite.delete()
+  }
+}
 
 export async function sortChannels(guildId) {
   if (!(await getChannelSorting(guildId))) return
@@ -136,20 +272,15 @@ export async function sortChannels(guildId) {
     return { channel: _channel.id, position: _channel.position }
   })
 
+  console.log(`tried sorting channels`)
+
   if (
     JSON.stringify(finalChannelArr) !== JSON.stringify(currentChannelPosition)
-  )
+  ) {
+    console.log(`sorted channels`)
+
     await guild.channels.setPositions(finalChannelArr)
-}
-
-async function emptyChannelSortingQueue() {
-  if (channelSortingQueue.length === 0) return
-
-  await sortChannels(channelSortingQueue[0])
-
-  channelSortingQueue.shift()
-
-  emptyChannelSortingQueue()
+  }
 }
 
 export async function createChannel(channel, skipAnnouncementAndSort = false) {
@@ -170,7 +301,7 @@ export async function createChannel(channel, skipAnnouncementAndSort = false) {
     if (channelType === 'joinable') return channel.id
   } else {
     if (!channelSortingQueue.includes(channel.guild.id))
-      channelSortingQueue.pushChannel(channel.guild.id)
+      pushToChannelSortingQueue(channel.guild.id)
 
     if (channelType === 'joinable') announceNewChannel(channel)
   }
@@ -203,6 +334,8 @@ export async function modifyChannel(
         ),
       })
   }
+
+  pushToChannelVisibilityQueue(newChannel.id)
 
   //other stuffs
   const oldCatergoryId = oldChannel.hasOwnProperty(`categoryId`)
@@ -237,9 +370,6 @@ export async function modifyChannel(
       newCommandLevel,
       newPositionOverride
     )
-
-    // setChannelVisibility(newChannel, newChannelType)
-
     if (skipAnnouncementAndSort) {
       if (oldChannelType !== `joinable` && newChannelType === `joinable`)
         return newChannel.id
@@ -251,7 +381,7 @@ export async function modifyChannel(
           (oldChannel?.rawPosition &&
             oldChannel.rawPosition !== newChannel.rawPosition))
       ) {
-        channelSortingQueue.pushChannel(newChannel.guild.id)
+        pushToChannelSortingQueue(newChannel.guild.id)
       }
 
       if (oldChannelType !== `joinable` && newChannelType === `joinable`)
@@ -271,9 +401,42 @@ export async function deleteChannel(channel, skipSort = false) {
   if (channel?.id) channelId = channel.id
   else channelId = channel
 
-  const guild = getBot().guilds.cache(await getChannelsGuildById(channelId))
+  const guild = getBot().guilds.cache.get(
+      await getChannelsGuildById(channelId)
+    ),
+    functionChannels = await getFunctionChannels(guild.id)
 
-  if (!skipSort) channelSortingQueue.pushChannel(guild.id)
+  Object.keys(functionChannels).forEach(key => {
+    const channelName = key.match(`^[a-z]+`)[0]
+
+    if (channelId === functionChannels[key]) {
+      setChannelFunction[key](guild.id, null)
+
+      if (key === `adminChannel`)
+        guild.members.cache.get(guild.ownerId).send(
+          `\
+            \n You're receiving this message because you are the owner of the ${guild.name} server.
+            \nThe channel that was set as the admin channel was deleted at some point 🤔\
+            \nTo receive important notifications from me in the server this needs to be set again.
+          `
+        )
+      else {
+        const adminChannel = guild.channels.cache.get(
+          functionChannels.adminChannel
+        )
+
+        if (adminChannel)
+          adminChannel.send(
+            `\
+              \nThe channel that was set as the ${channelName} channel was deleted at some point 🤔\
+              \nYou'll need to set this channel function again to gain its functionality.
+            `
+          )
+      }
+    }
+  })
+
+  if (!skipSort) pushToChannelSortingQueue(guild.id)
 
   await deleteChannelRecord(channelId)
 }
@@ -328,17 +491,16 @@ export async function syncChannels(guild) {
     })
   )
 
-  if (positionHasChanged) channelSortingQueue.pushChannel(guild.id)
+  if (positionHasChanged) pushToChannelSortingQueue(guild.id)
 
   if (channelsToAnnounce.length >= 5) {
-    const adminChannelId = await getAdminChannelId(guild.id)
+    const adminChannelId = await getAdminChannel(guild.id)
 
-    if (!adminChannelId) return
-
-    guild.channels.cache.get(adminChannelId).send(
-      `Potential oopsie detected. More than five channels were marked for announcement:
+    if (!adminChannelId)
+      guild.channels.cache.get(adminChannelId).send(
+        `Potential oopsie detected. More than five channels were marked for announcement:
           ${channelsToAnnounce.join(', ')}`
-    )
+      )
   } else {
     channelsToAnnounce.forEach(channelToAnnounce => {
       announceNewChannel(channelToAnnounce)

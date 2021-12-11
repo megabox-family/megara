@@ -3,7 +3,7 @@ drop table if exists guilds;
 
 drop type if exists command_symbol;
 
-create type command_symbol as enum ('!', '#', '$', '%', '^', '&', '(', ')', '-', '+', '=', '{', '}', '[', ']', '?', ',', '.');
+create type command_symbol as enum ('!', '$', '%', '^', '&', '(', ')', '-', '+', '=', '{', '}', '[', ']', '?', ',', '.');
 
 create table guilds (
   id text not null primary key,
@@ -12,6 +12,7 @@ create table guilds (
   channel_sorting boolean not null default false,
   role_sorting boolean not null default false,
   rules text,
+  name_guidelines text,
   admin_channel text,
   log_channel text,
   announcement_channel text,

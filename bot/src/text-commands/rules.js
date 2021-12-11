@@ -18,7 +18,7 @@ export default async function (message) {
       message.reply(
         `
           Sorry, rules have not been set for this server 😔\
-          \nTo set rules, use the \`!setRules\` command, example:\
+          \nTo set rules, use the \`${commandSymbol}setRules\` command, example:\
           \n\`\`\`!setRules\
             \nTo continue you must accept [server name]'s rules\
             \n- No kicking\
