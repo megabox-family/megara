@@ -2,10 +2,13 @@ import { getBot } from '../cache-bot.js'
 import pgPool from '../pg-pool.js'
 import camelize from 'camelize'
 import SQL from 'sql-template-strings'
+import { deleteNewRoles } from '../utils/general.js'
 import { syncChannels } from '../utils/channels.js'
 import { deleteAllGuildChannels } from './channels.js'
 
 export async function createGuild(guild, syncBool = false) {
+  await deleteNewRoles(guild)
+
   if (!syncBool) await syncChannels(guild)
 
   pgPool

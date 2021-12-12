@@ -46,6 +46,16 @@ export async function removeEmptyVoiceChannelsOnStartup() {
   })
 }
 
+export async function deleteNewRoles(guild) {
+  const newRole = guild.roles.cache.find(role => role.name === `new role`)
+
+  if (!newRole) return
+
+  await newRole.delete().catch()
+
+  await deleteNewRoles(guild)
+}
+
 export async function startup(bot) {
   console.log(`Logged in as ${bot.user.tag}!`)
 
@@ -61,6 +71,8 @@ export async function startup(bot) {
   await syncGuilds(bot.guilds.cache)
 
   bot.guilds.cache.forEach(async guild => {
+    await deleteNewRoles(guild)
+
     await syncChannels(guild)
     await syncRoles(guild)
   })

@@ -37,7 +37,7 @@ async function emptyRoleSortingQueue() {
 }
 
 export function pushToRoleSortingQueue(GuildId) {
-  roleSortingQueue.push(GuildId)
+  if (!roleSortingQueue.includes(GuildId)) roleSortingQueue.push(GuildId)
 
   if (roleSortingQueue.length === 1) emptyRoleSortingQueue()
 }
@@ -53,7 +53,7 @@ async function emptyColorUpdateQueue() {
 }
 
 function pushToColorUpdateQueue(GuildId) {
-  colorUpdateQueue.push(GuildId)
+  if (!colorUpdateQueue.includes(GuildId)) colorUpdateQueue.push(GuildId)
 
   if (colorUpdateQueue.length === 1) emptyColorUpdateQueue()
 }
@@ -154,13 +154,16 @@ export async function sortRoles(guildId) {
 
   const sortedRoleArray = [...functionalRoles, ...normalRoles, ...colorRoles],
     finalRoleArray = sortedRoleArray.map((sortedRole, index) => {
-      return { role: sortedRole.id, position: index + 1 }
+      return { role: sortedRole.id, position: index + 1, name: sortedRole.name }
     }),
     currentRolePositions = finalRoleArray.map(role => {
       const _role = guild.roles.cache.get(role.role)
 
-      return { role: _role.id, position: _role.position }
+      return { role: _role.id, position: _role.position, name: _role.name }
     })
+
+  // console.log(finalRoleArray, `\n\n`)
+  // console.log(finalRoleArray, currentRolePositions, `\n\n\n\n\n`)
 
   console.log(`tried sorting roles`)
 
@@ -210,9 +213,13 @@ export function balanceDisrupted(role) {
 
 export async function createRole(role) {
   const guild = role.guild,
-    botRole = guild.roles.cache.find(
-      role => role.name === getBot().user.username
-    )
+    roles = guild.roles.cache,
+    botRole = roles.find(role => role.name === getBot().user.username)
+
+  roles.forEach(async _role => {
+    if (_role.name === `new role` && _role.id !== role.id && !_role.deleted)
+      await _role.delete().catch(error => console.log(`it don't exist bruh`))
+  })
 
   if (balanceDisrupted(role)) {
     const roleName = role.name
@@ -240,7 +247,8 @@ export async function createRole(role) {
 
   if (
     role.position < botRole.position &&
-    !roleSortingQueue.includes(guild.id)
+    !roleSortingQueue.includes(guild.id) &&
+    role.name !== `new role`
   ) {
     pushToRoleSortingQueue(guild.id)
   }

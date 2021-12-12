@@ -61,7 +61,7 @@ async function emptyChannelSortingQueue() {
 }
 
 export function pushToChannelSortingQueue(GuildId) {
-  channelSortingQueue.push(GuildId)
+  if (!channelSortingQueue.includes(GuildId)) channelSortingQueue.push(GuildId)
 
   if (channelSortingQueue.length === 1) emptyChannelSortingQueue()
 }
