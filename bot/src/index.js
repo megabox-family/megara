@@ -1,121 +1,53 @@
-const Discord = require('discord.js')
-const bot = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION'] })
-const fs = require('fs')
+import { Client, Intents } from 'discord.js'
+import config from '../config.js'
+import {
+  startup,
+  checkVoiceChannelValidity,
+  handleMessage,
+  handleNewMember,
+  modifyMember,
+  handleInteraction,
+} from './utils/general.js'
+import {
+  createChannel,
+  modifyChannel,
+  deleteChannel,
+} from './utils/channels.js'
+import { createRole, modifyRole, deleteRole } from './utils/roles.js'
+import { createGuild, modifyGuild, deleteGuild } from './repositories/guilds.js'
 
-const config = require('../config')
-const { logMessageToChannel, removeVoiceChannelIfEmpty } = require('./utils')
-const {
-  getJoinableChannelsMessageIds,
-  channelWithVoiceChannelIsJoinable,
-  getActiveVoiceChannelIds,
-} = require('./repositories/channels')
-
-const textCommands = {
-  name: require('./commands/change-nickname'),
-  join: require('./commands/join-channel'),
-  leave: require('./commands/leave-channel'),
-  roll: require('./commands/dice-roller'),
-  color: require('./commands/set-color'),
-  ids: require('./commands/get-ids'),
-  channel: require('./commands/get-channel-info'),
-  sync: require('./commands/sync-missing-data'),
-  help: require('./commands/help'),
-  announce: require('./commands/announce-new-channels'),
-  skip: require('./commands/skip-channel-announcement'),
-  coords: require('./commands/minecraft-coordinates'),
-  generate: require('./commands/generate-channels-message'),
-  voice: require('./commands/voice'),
-}
-
-const reactionCommands = {
-  join: require('./commands/join-channel-via-reaction'),
-}
-
-bot.on('ready', async () => {
-  console.log(`Logged in as ${bot.user.tag}!`)
-
-  const activeVoiceChannels = await getActiveVoiceChannelIds()
-
-  activeVoiceChannels.forEach(channel => {
-    setTimeout(async () => {
-      const voiceChannel = await bot.guilds.cache
-        .get(config.guildId)
-        .channels.cache.get(channel.activeVoiceChannelId)
-      removeVoiceChannelIfEmpty(voiceChannel)
-    }, 30000)
-  })
-})
-
-bot.on('message', message => {
-  const messageText = message.content
-  const context = {
-    guild: bot.guilds.cache.get(config.guildId),
-    message,
-    isDirectMessage: !message.guild,
-  }
-
-  if (!context.isDirectMessage && message.guild.id !== config.guildId) return
-
-  if (context.isDirectMessage) logMessageToChannel(context, bot.user.id)
-
-  if (messageText.substring(0, 1) === '!') {
-    const command = messageText.includes(' ')
-      ? messageText.substring(1, messageText.indexOf(' '))
-      : messageText.substring(1)
-    const args = messageText.substring(messageText.indexOf(' ') + 1)
-
-    if (textCommands[command.toLowerCase()]) {
-      textCommands[command.toLowerCase()](args, context)
-    }
-  }
-})
-
-bot.on('guildMemberAdd', member => {
-  if (member.guild.id !== config.guildId) return
-
-  const welcomeMessage = fs.readFileSync(
-    __dirname + '/media/welcome-message.txt',
-    'utf8'
-  )
-
-  member.send(welcomeMessage)
-})
-
-bot.on('messageReactionAdd', async (reaction, user) => {
-  if (!reaction.message.guild || reaction.message.guild.id !== config.guildId)
-    return
-
-  const joinableChannelsMessageIds = await getJoinableChannelsMessageIds()
-
-  if (
-    !joinableChannelsMessageIds.includes(reaction.message.id) ||
-    user.id === bot.user.id
-  )
-    return
-  if (reaction.partial) {
-    try {
-      await reaction.fetch()
-    } catch (error) {
-      console.log('Something went wrong when fetching the message: ', error)
-    }
-  }
-  reactionCommands.join(reaction, user, bot.guilds.cache.get(config.guildId))
-})
-
-bot.on('voiceStateUpdate', async oldState => {
-  if (
-    oldState.channel &&
-    (await channelWithVoiceChannelIsJoinable(oldState.channelID)) &&
-    oldState.channel.members.size === 0
-  ) {
-    setTimeout(async () => {
-      if (!oldState.channel) return
-      const voiceChannel = await oldState.channel.guild.channels.cache.get(
-        oldState.channelID
-      )
-      removeVoiceChannelIfEmpty(voiceChannel)
-    }, 30000)
-  }
+const bot = new Client({
+  partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
+  intents: [
+    Intents.FLAGS.GUILDS,
+    Intents.FLAGS.GUILD_MEMBERS,
+    Intents.FLAGS.GUILD_VOICE_STATES,
+    Intents.FLAGS.GUILD_PRESENCES,
+    Intents.FLAGS.GUILD_MESSAGES,
+    Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+    Intents.FLAGS.DIRECT_MESSAGES,
+    Intents.FLAGS.DIRECT_MESSAGE_REACTIONS,
+  ],
 })
 
 bot.login(config.botToken)
+
+bot.on('ready', startup)
+bot.on('guildCreate', createGuild)
+bot.on('guildUpdate', modifyGuild)
+bot.on('guildDelete', deleteGuild)
+bot.on('guildMemberAdd', handleNewMember)
+bot.on('guildMemberUpdate', modifyMember)
+bot.on('channelCreate', createChannel)
+bot.on('channelUpdate', modifyChannel)
+bot.on('channelDelete', deleteChannel)
+bot.on('roleCreate', createRole)
+bot.on('roleUpdate', modifyRole)
+bot.on('roleDelete', deleteRole)
+bot.on('messageCreate', handleMessage)
+bot.on('interactionCreate', handleInteraction)
+bot.on('voiceStateUpdate', checkVoiceChannelValidity)
+
+bot.on('rateLimit', rateLimitData => {
+  console.log(rateLimitData)
+})

@@ -1,13 +1,15 @@
 'use strict'
 
-const dotenv = require('dotenv')
+// const dotenv = require('dotenv')
+import dotenv from 'dotenv'
+
 dotenv.config()
 
 const e = process.env
 
 const isDevelopment = e.NODE_ENV === 'development'
 
-module.exports = {
+export default {
   pg: {
     host: e.POSTGRES_HOST,
     user: e.POSTGRES_USER,
@@ -25,4 +27,11 @@ module.exports = {
       },
   guildId: isDevelopment ? '711043006253367426' : '146109488745807873',
   logChannelId: isDevelopment ? '822941461695299624' : '822942175460720641',
+  adminChannelId: isDevelopment ? '711043006295179350' : '567378960623861761',
+  announcementChannelID: isDevelopment
+    ? '711043006781849685'
+    : '639903044636639252',
+  botCommandsChannelID: isDevelopment
+    ? '691712074740662403'
+    : '711043006781849687',
 }

@@ -3,19 +3,24 @@
   "version": "1.0.2",
   "description": "Megabox Discord bot",
   "main": "src/index.js",
+  "type": "module",
   "scripts": {
     "start": "nodemon src/index.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@discordjs/voice": "^0.7.5",
     "camelize": "^1.0.0",
     "chai": "^4.2.0",
     "change-case": "^4.1.2",
-    "discord.js": "^12.5.1",
+    "discord.js": "^13.3.1",
     "dotenv": "^8.2.0",
+    "esm": "^3.2.25",
+    "fluent-ffmpeg": "^2.1.2",
     "mocha": "^7.1.2",
     "pg": "^8.2.1",
+    "sql-template-strings": "^2.2.2",
     "uuid": "^8.3.0",
     "validator": "^12.0.0"
   }

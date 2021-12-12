@@ -1,5 +1,4 @@
-const pg = require('pg')
-const config = require('../config')
-const pgPool = new pg.Pool(config.pg)
+import pg from 'pg'
+import config from '../config.js'
 
-module.exports = pgPool
+export default new pg.Pool(config.pg)
