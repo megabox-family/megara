@@ -60,7 +60,7 @@ async function emptyChannelSortingQueue() {
   emptyChannelSortingQueue()
 }
 
-function pushToChannelSortingQueue(GuildId) {
+export function pushToChannelSortingQueue(GuildId) {
   channelSortingQueue.push(GuildId)
 
   if (channelSortingQueue.length === 1) emptyChannelSortingQueue()

@@ -1,9 +1,10 @@
 import camelize from 'camelize'
 import { basename } from 'path'
 import { fileURLToPath } from 'url'
+import { pushToChannelSortingQueue } from '../utils/channels.js'
+import { pushToRoleSortingQueue } from '../utils/roles.js'
 import { setChannelSorting, setRoleSorting } from '../repositories/guilds.js'
 import { getCommandLevelForChannel } from '../repositories/channels.js'
-import { sortChannels } from '../utils/channels.js'
 
 const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
 
@@ -33,13 +34,14 @@ export default async function (message, commandSymbol, args) {
     return
   }
 
-  const argArr = args.split(` `)
+  const guild = message.guild,
+    argArr = args.split(` `)
 
   argArr[1] = argArr[1] === `true` ? true : false
 
   if (argArr[0].toLowerCase() === `channels`)
-    await setChannelSorting(message.guild.id, argArr[1])
-  else await setRoleSorting(message.guild.id, argArr[1])
+    await setChannelSorting(guild.id, argArr[1])
+  else await setRoleSorting(guild.id, argArr[1])
 
   const formatedSortingType = `${argArr[0].charAt(0).toUpperCase()}${argArr[0]
     .substring(1, argArr[0].length - 1)
@@ -50,7 +52,9 @@ export default async function (message, commandSymbol, args) {
       `${formatedSortingType} sorting has been enabled, watch em sort! 🤩`
     )
 
-    if (argArr[0].toLowerCase === `channels`) sortChannels(message.guild.id)
+    if (argArr[0].toLowerCase() === `channels`)
+      pushToChannelSortingQueue(guild.id)
+    else pushToRoleSortingQueue(guild.id)
   } else
     message.reply(
       `${formatedSortingType} sorting has been disabled, have fun sorting them yourself 😜`

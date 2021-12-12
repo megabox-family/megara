@@ -36,7 +36,7 @@ async function emptyRoleSortingQueue() {
   emptyRoleSortingQueue()
 }
 
-function pushToRoleSortingQueue(GuildId) {
+export function pushToRoleSortingQueue(GuildId) {
   roleSortingQueue.push(GuildId)
 
   if (roleSortingQueue.length === 1) emptyRoleSortingQueue()
