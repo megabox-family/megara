@@ -1,15 +1,15 @@
 import camelize from 'camelize'
 import { basename } from 'path'
 import { fileURLToPath } from 'url'
-import {
-  getCommandLevelForChannel,
-  pushToChannelVisibilityQueue,
-} from '../repositories/channels.js'
+import { pushToChannelVisibilityQueue } from '../utils/channels.js'
+import { getCommandLevelForChannel } from '../repositories/channels.js'
 import {
   setAdminChannel,
   setLogChannel,
   setAnnouncementChannel,
   setVerificationChannel,
+  setWelcomeChannel,
+  getFunctionChannels,
 } from '../repositories/guilds.js'
 
 const setCommands = {
@@ -17,12 +17,14 @@ const setCommands = {
   log: setLogChannel,
   announcement: setAnnouncementChannel,
   verification: setVerificationChannel,
+  welcome: setWelcomeChannel,
 }
 
 const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
 
 export default async function (message, commandSymbol, args) {
-  const failureMessage = `
+  const guild = message.guild,
+    failureMessage = `
     The \`${commandSymbol}${command}\` command requires exactly 2 parameters: \`${commandSymbol}${command} [channel function] [channel id]\` 😔\
     \nNote: \`null\` can be set in place of the channel id to remove a function from a channel, ex: \`${commandSymbol}${command} admin null\`
   `
@@ -42,32 +44,44 @@ export default async function (message, commandSymbol, args) {
     return
   }
 
-  const argArr = args.split(' ')
+  const argArr = args.split(' '),
+    setCommandsKeys = Object.keys(setCommands),
+    functionChannels = await getFunctionChannels(guild.id),
+    isAlreadyFunctionChannel = Object.keys(functionChannels).find(
+      key => functionChannels[key] === argArr[1]
+    ),
+    existingChannelFunction = isAlreadyFunctionChannel
+      ? isAlreadyFunctionChannel.match(`^[a-z]+`)[0]
+      : null
 
   if (argArr.length !== 2) {
     message.reply(failureMessage)
+
     return
-  } else if (
-    ![`admin`, `log`, `announcement`, `verification`].includes(argArr[0])
-  ) {
+  } else if (!setCommandsKeys.includes(argArr[0])) {
     message.reply(`${argArr[0]} is not a valid channel function. 😔`)
+
     return
-  } else if (
-    !message.guild.channels.cache.get(argArr[1]) &&
-    argArr[1] !== `null`
-  ) {
+  } else if (!guild.channels.cache.get(argArr[1]) && argArr[1] !== `null`) {
     message.reply(`${argArr[1]} is not a valid channel id. 😔`)
+
+    return
+  } else if (isAlreadyFunctionChannel) {
+    message.reply(
+      `<#${argArr[1]}> is already set as the ${existingChannelFunction} channel, and any given channel can only have one function 😔`
+    )
+
     return
   }
 
   if (argArr[1] === `null`) {
-    await setCommands[argArr[0]](message.guild.id, null)
+    await setCommands[argArr[0]](guild.id, null)
 
     message.reply(
       `The ${argArr[0]} channel is no longer set in this server by your command 😬`
     )
   } else {
-    await setCommands[argArr[0]](message.guild.id, argArr[1])
+    await setCommands[argArr[0]](guild.id, argArr[1])
 
     pushToChannelVisibilityQueue(argArr[1])
 

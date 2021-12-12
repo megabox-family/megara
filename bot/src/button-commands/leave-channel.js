@@ -1,63 +1,45 @@
-import { MessageActionRow, MessageButton } from 'discord.js'
 import { getBot } from '../cache-bot.js'
-import {
-  getChannelById,
-  getChannelByName,
-  getUnrestrictedChannels,
-} from '../repositories/channels.js'
+import { MessageActionRow, MessageButton } from 'discord.js'
+import { getCommandSymbol } from '../repositories/guilds.js'
+import { getFormatedCommandChannels } from '../repositories/channels.js'
 
 export default async function (interaction) {
-  const interactionChannelRecord = await getChannelById(
-      `${interaction.customId.match(`(?!:)[0-9]+`)[0]}`
+  const interactionChannel = getBot().channels.cache.get(
+      interaction.customId.match(`(?!:)[0-9]+`)[0]
     ),
-    botCommandsChannelRecord = await getChannelByName(`bot-commands`),
+    guild = interactionChannel.guild,
+    userOverwrite = interactionChannel.permissionOverwrites.cache.find(
+      permissionOverwrite => permissionOverwrite.id === interaction.user.id
+    ),
+    commandSymbol = await getCommandSymbol(guild.id),
+    commandChannels = await getFormatedCommandChannels(
+      guild.id,
+      `unrestricted`
+    ),
     joinButtonRow = new MessageActionRow().addComponents(
       new MessageButton()
-        .setCustomId(`!join-channel: ${interactionChannelRecord.id}`)
-        .setLabel(`Join ${interactionChannelRecord.name}`)
+        .setCustomId(`!join-channel: ${interactionChannel.id}`)
+        .setLabel(`Join ${interactionChannel.name}`)
         .setStyle('SUCCESS')
-    ),
-    unrestrictedChannels = await getUnrestrictedChannels(),
-    compatibleChannels = unrestrictedChannels.map(
-      unrestrictedChannel => `<#${unrestrictedChannel.id}>`
     )
 
-  if (
-    interaction.guild.channels.cache
-      .get(interactionChannelRecord.id)
-      .permissionOverwrites.cache.filter(
-        permissionOverwrite => permissionOverwrite.id === interaction.user.id
-      ).size > 0
-  ) {
-    interaction.guild.channels.cache
-      .get(interactionChannelRecord.id)
-      .permissionOverwrites.delete(interaction.user.id)
-      .then(() =>
-        interaction.user.send({
-          content: `
-              You have been removed from <#${interactionChannelRecord.id}>! 👋\
-              \nIf you left by accident press the button below, or use the \`!join\` command (ex: \`!join ${
-                interactionChannelRecord.name
-              }\`) to re-join.\
-              \nThe \`!join\` command works in these channels: ${compatibleChannels.join(
-                `, `
-              )}
-            `,
-          components: [joinButtonRow],
-        })
-      )
+  if (userOverwrite) {
+    userOverwrite.delete()
+
+    interaction.user.send({
+      content: `
+          You have been removed from <#${interactionChannel.id}> in the ${guild.name} server! 👋\
+          \nIf you left by accident press the button below, or use the \`${commandSymbol}join\` command (ex: \`${commandSymbol}join ${interactionChannel.name}\`) to re-join.\
+          \nThe \`${commandSymbol}join\` command works in these channels: ${commandChannels}
+        `,
+      components: [joinButtonRow],
+    })
   } else
     interaction.user.send({
       content: `
-          You tried to leave a channel you aren't a part of, <#${
-            interactionChannelRecord.id
-          }> 🤔\
-          \nIf you'd like to join press the button below, or use the \`!join\` command (ex: \`!join ${
-            interactionChannelRecord.name
-          }\`).\
-          \nThe \`!join\` command works in these channels: ${compatibleChannels.join(
-            `, `
-          )}
+          You tried to leave a channel you aren't a part of, <#${interactionChannel.id}> in the ${guild.name} server 🤔\
+          \nIf you'd like to join press the button below, or use the \`${commandSymbol}join\` command (ex: \`${commandSymbol}join ${interactionChannel.name}\`).\
+          \nThe \`${commandSymbol}join\` command works in these channels: ${commandChannels}
         `,
       components: [joinButtonRow],
     })

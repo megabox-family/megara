@@ -9,7 +9,8 @@ import {
 const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
 
 export default async function (message, commandSymbol, args) {
-  const commandLevel = await getCommandLevelForChannel(message.channel.id)
+  const guild = message.guild,
+    commandLevel = await getCommandLevelForChannel(message.channel.id)
 
   if ([`prohibited`, `restricted`].includes(commandLevel)) {
     const commandChannels = await getFormatedCommandChannels(
@@ -40,13 +41,15 @@ export default async function (message, commandSymbol, args) {
   }
 
   if (args === `list`) {
-    message.reply(`Your wish is my command 🪄`)
+    message.channel.send({
+      content: `Your wish is my command 🪄`,
+      files: [`/app/src/media/${guild.id}.png`],
+    })
 
     return
   }
 
-  const guild = message.guild,
-    colors = guild.roles.cache
+  const colors = guild.roles.cache
       .filter(role => role.name.match(`^~.+~$`))
       .map(role => {
         return {

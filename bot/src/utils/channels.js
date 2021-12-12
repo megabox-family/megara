@@ -12,6 +12,7 @@ import {
   setVerificationChannel,
   getAnnouncementChannel,
   getVerificationChannel,
+  getWelcomeChannel,
 } from '../repositories/guilds.js'
 import {
   createChannelRecord,
@@ -22,7 +23,6 @@ import {
   getAlphabeticalChannelsByCategory,
   getChannelsGuildById,
 } from '../repositories/channels.js'
-import { Message } from 'discord.js'
 
 const setChannelFunction = {
     adminChannel: setAdminChannel,
@@ -116,6 +116,7 @@ export async function setChannelVisibility(channelId) {
     guild = channel.guild,
     announcementChannelId = await getAnnouncementChannel(guild.id),
     verificationChannelId = await getVerificationChannel(guild.id),
+    welcomeChannelId = await getWelcomeChannel(guild.id),
     joinableRoleId = guild.roles.cache.find(
       role => role.name === `!channel type: joinable`
     )?.id,
@@ -135,7 +136,7 @@ export async function setChannelVisibility(channelId) {
     ),
     verifiedOverwrite = channel.permissionOverwrites.cache.get(verifiedRoleId)
 
-  if (channel.id === announcementChannelId) {
+  if ([announcementChannelId, welcomeChannelId].includes(channel.id)) {
     if (joinableOverwrite) await joinableOverwrite.delete()
     if (undergoingVerificationOverwrite)
       await undergoingVerificationRoleId.delete()
@@ -153,7 +154,7 @@ export async function setChannelVisibility(channelId) {
         individualPermissions.CREATE_PRIVATE_THREADS ||
         individualPermissions.ATTACH_FILES ||
         !individualPermissions.READ_MESSAGE_HISTORY
-      ) {
+      )
         await verifiedOverwrite.edit({
           VIEW_CHANNEL: true,
           SEND_MESSAGES: false,
@@ -163,7 +164,6 @@ export async function setChannelVisibility(channelId) {
           ATTACH_FILES: false,
           READ_MESSAGE_HISTORY: true,
         })
-      }
     } else
       await channel.permissionOverwrites.create(verifiedRoleId, {
         VIEW_CHANNEL: true,
@@ -386,11 +386,6 @@ export async function modifyChannel(
 
       if (oldChannelType !== `joinable` && newChannelType === `joinable`)
         announceNewChannel(newChannel)
-    }
-
-    if (oldChannelType !== `joinable` && newChannelType === `joinable`) {
-      if (skipAnnouncementAndSort) return newChannel.id
-      else announceNewChannel(newChannel)
     }
   }
 }

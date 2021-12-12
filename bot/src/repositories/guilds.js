@@ -153,6 +153,18 @@ export async function setVerificationChannel(guildId, channelId) {
   )
 }
 
+export async function setWelcomeChannel(guildId, channelId) {
+  return await pgPool.query(
+    SQL`
+        update guilds
+        set
+          welcome_channel = ${channelId}
+        where id = ${guildId}
+        returning *;
+      `
+  )
+}
+
 export async function getAdminChannel(guildId) {
   return await pgPool
     .query(
@@ -203,6 +215,19 @@ export async function getVerificationChannel(guildId) {
       `
     )
     .then(res => (res.rows[0] ? res.rows[0].verification_channel : undefined))
+}
+
+export async function getWelcomeChannel(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          welcome_channel 
+        from guilds 
+        where id = ${guildId}
+      `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].welcome_channel : undefined))
 }
 
 export async function setRules(guildId, rules) {
@@ -315,7 +340,8 @@ export async function getFunctionChannels(guildId) {
         admin_channel,
         log_channel,
         announcement_channel,
-        verification_channel 
+        verification_channel,
+        welcome_channel
       from guilds 
       where id = ${guildId}
     `

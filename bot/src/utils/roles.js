@@ -1,10 +1,10 @@
 import { Permissions } from 'discord.js'
 import { getBot } from '../cache-bot.js'
+import ffmpeg from 'fluent-ffmpeg'
 import { getUserRoleQueue, getChannelRoleQueue } from './required-role-queue.js'
 import { getRoleSorting, getAdminChannel } from '../repositories/guilds.js'
 
-const roleSortingQueue = [],
-  requiredRoles = [
+const requiredRoles = [
     `verified`,
     `undergoing verification`,
     `!channel type: public`,
@@ -22,7 +22,9 @@ const roleSortingQueue = [],
     `!position override: -3`,
     `!position override: -4`,
     `!position override: -5`,
-  ]
+  ],
+  roleSortingQueue = [],
+  colorUpdateQueue = []
 
 async function emptyRoleSortingQueue() {
   if (roleSortingQueue.length === 0) return
@@ -40,6 +42,22 @@ function pushToRoleSortingQueue(GuildId) {
   if (roleSortingQueue.length === 1) emptyRoleSortingQueue()
 }
 
+async function emptyColorUpdateQueue() {
+  if (colorUpdateQueue.length === 0) return
+
+  await updateColorList(colorUpdateQueue[0])
+
+  colorUpdateQueue.shift()
+
+  emptyColorUpdateQueue()
+}
+
+function pushToColorUpdateQueue(GuildId) {
+  colorUpdateQueue.push(GuildId)
+
+  if (colorUpdateQueue.length === 1) emptyColorUpdateQueue()
+}
+
 export function requiredRoleDifference(guild, oldRoles, newRoles) {
   const _requiredRoles = guild.roles.cache.filter(guildRole =>
     requiredRoles.includes(guildRole.name)
@@ -52,6 +70,57 @@ export function requiredRoleDifference(guild, oldRoles, newRoles) {
     )
       return _requriedRole
   })
+}
+
+export async function updateColorList(guildId) {
+  const guild = getBot().guilds.cache.get(guildId),
+    colorRoles = guild.roles.cache.filter(role => role.name.match(`^~.+~`))
+
+  if (colorRoles.size === 0) return
+
+  const colorRolesFormatted = colorRoles.map(colorRole => {
+    return {
+      name: colorRole.name.match(`(?!~).+(?=~)`)[0],
+      color: colorRole.hexColor,
+    }
+  })
+
+  colorRolesFormatted.sort((a, b) => (a.name < b.name ? -1 : 1))
+
+  let widthArray = [],
+    height = 6,
+    drawTextFilterArray = []
+
+  colorRolesFormatted.forEach(colorRole => {
+    let width = 12
+
+    width += colorRole.name.length * 14
+    widthArray.push(width)
+
+    const escapedName = colorRole.name
+      .replaceAll(`\\`, `\\\\\\\\\\\\\\\\`)
+      .replaceAll(`%`, '\\\\\\\\$&')
+      .replace(/'|"|,|:|;/g, `\\\\\\$&`)
+
+    drawTextFilterArray.push(
+      `drawtext=fontfile=/app/src/media/RobotoMono-Bold.ttf:text=${escapedName}:x=6:y=${height}:fontsize=24:fontcolor=${colorRole.color}`
+    )
+
+    height += 30
+  })
+
+  widthArray.sort((a, b) => a - b)
+
+  const resolution = `${widthArray.pop()}x${height}`
+
+  ffmpeg()
+    .input(`color=color=black@0.0:size=${resolution},format=rgba`)
+    .inputFormat(`lavfi`)
+    .inputOption(`-y`)
+    .outputOption(`-vf`, drawTextFilterArray.join(`,`))
+    .outputOption(`-vframes 1`)
+    .outputOption(`-q:v 2`)
+    .save(`/app/src/media/${guild.id}.png`)
 }
 
 export async function sortRoles(guildId) {
@@ -126,6 +195,8 @@ export async function syncRoles(guild) {
     }
   })
 
+  pushToColorUpdateQueue(guild.id)
+
   pushToRoleSortingQueue(guild.id)
 }
 
@@ -164,7 +235,7 @@ export async function createRole(role) {
       )
     return
   } else if (role.name.match(`^~.+~$`)) {
-    //update color list
+    pushToColorUpdateQueue(guild.id)
   }
 
   if (
@@ -203,8 +274,15 @@ export async function modifyRole(oldRole, newRole) {
           \nBut I had to rename said role back to what it was.
         `
       )
-  } else if (oldRole.name.match(`^~.+~$`) || newRole.name.match(`^~.+~$`)) {
-    //update color list
+  } else if (
+    (!oldRole.name.match(`^~.+~$`) && newRole.name.match(`^~.+~$`)) ||
+    (oldRole.name.match(`^~.+~$`) && !newRole.name.match(`^~.+~$`)) ||
+    (oldRole.name.match(`^~.+~$`) &&
+      newRole.name.match(`^~.+~$`) &&
+      oldRole.name !== newRole.name) ||
+    oldRole.color !== newRole.color
+  ) {
+    pushToColorUpdateQueue(guild.id)
   }
 
   if (
@@ -286,7 +364,7 @@ export async function deleteRole(role) {
 
     if (!roleSortingQueue.includes(guild.id)) pushToRoleSortingQueue(guild.id)
   } else if (role.name.match(`^~.+~$`)) {
-    //update color list
+    pushToColorUpdateQueue(guild.id)
 
     if (!roleSortingQueue.includes(guild.id)) pushToRoleSortingQueue(guild.id)
   }

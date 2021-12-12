@@ -32,7 +32,7 @@ export default async function (message, commandSymbol, channelName) {
     message.reply(
       `
         Sorry the \`${commandSymbol}${command}\` command requires a channel name (ex: \`${commandSymbol}${command} minecraft\`) 😔\
-        \nUse the \`${commandSymbol}channelList\` command to list joinable channels!
+        \nUse the \`${commandSymbol}channels\` command to list joinable channels!
       `
     )
 
@@ -60,7 +60,7 @@ export default async function (message, commandSymbol, channelName) {
     message.reply(
       `
       Sorry, ${channelName} does not exist 😔\
-      \nUse the \`${commandSymbol}channelList\` command to list joinable channels!
+      \nUse the \`${commandSymbol}channels\` command to list joinable channels!
       `
     )
 }

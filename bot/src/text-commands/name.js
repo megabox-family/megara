@@ -2,7 +2,10 @@ import camelize from 'camelize'
 import { basename } from 'path'
 import { fileURLToPath } from 'url'
 import { logErrorMessageToChannel } from '../utils/general.js'
-import { getVerificationChannel } from '../repositories/guilds.js'
+import {
+  getVerificationChannel,
+  getWelcomeChannel,
+} from '../repositories/guilds.js'
 import { getCommandLevelForChannel } from '../repositories/channels.js'
 
 const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
@@ -167,23 +170,28 @@ export default async function (message, commandSymbol, nickname) {
     ).id,
     userUndergoingVerificationRole = guildMember.roles.cache.find(
       role => role.id === undergoingVerificationRoleId
-    )
+    ),
+    welcomeChannelId = await getWelcomeChannel(guild.id)
 
   if (userUndergoingVerificationRole) {
-    message.reply(
-      `\
+    if (welcomeChannelId)
+      await message.reply(
+        `\
         \nCongratulations! 🎉\
         \nYour nickname has been changed to ${newNickname}, and you've been fully verified!\
-        \nI'd reccomend checking out ${guild.name}'s welcome channel for more information on what to do next.\
-
-        \nHeads up, you'll be removed from the <#${verificationChannelId}> channel in 30 seconds, have fun in ${guild.name}!\
+        \nI'd reccomend checking out the <#${welcomeChannelId}> channel for more information on what to do next.\
       `
-    )
+      )
+    else
+      await message.reply(
+        `\
+      \nCongratulations! 🎉\
+      \nYour nickname has been changed to ${newNickname}, and you've been fully verified!\
+      \nThis server doesn't have a welcome channel officially set, so if I were you I'd just take a look around 👀\
+    `
+      )
 
-    setTimeout(
-      () => guildMember.roles.remove(undergoingVerificationRoleId),
-      30000
-    )
+    guildMember.roles.remove(undergoingVerificationRoleId)
   } else {
     message.reply(`Your nickname has been changed to ${newNickname} 🥰`)
   }

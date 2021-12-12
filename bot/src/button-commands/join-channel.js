@@ -1,49 +1,44 @@
+import { getBot } from '../cache-bot.js'
 import { MessageActionRow, MessageButton } from 'discord.js'
+import { getCommandSymbol } from '../repositories/guilds.js'
 import {
-  getChannelById,
-  getChannelByName,
-  getUnrestrictedChannels,
+  getFormatedCommandChannels,
+  getChannelType,
 } from '../repositories/channels.js'
 
 export default async function (interaction) {
-  const interactionChannelRecord = await getChannelById(
-      `${interaction.customId.match(`(?!:)[0-9]+`)[0]}`
+  const interactionChannel = getBot().channels.cache.get(
+      interaction.customId.match(`(?!:)[0-9]+`)[0]
     ),
-    botCommandsChannelRecord = await getChannelByName(`bot-commands`),
+    guild = interactionChannel.guild,
+    channelType = await getChannelType(interactionChannel.id),
+    userOverwrite = interactionChannel.permissionOverwrites.cache.find(
+      permissionOverwrite => permissionOverwrite.id === interaction.user.id
+    ),
+    commandSymbol = await getCommandSymbol(guild.id),
+    commandChannels = await getFormatedCommandChannels(
+      guild.id,
+      `unrestricted`
+    ),
     leaveButtonRow = new MessageActionRow().addComponents(
       new MessageButton()
-        .setCustomId(`!leave-channel: ${interactionChannelRecord.id}`)
-        .setLabel(`Leave ${interactionChannelRecord.name}`)
+        .setCustomId(`!leave-channel: ${interactionChannel.id}`)
+        .setLabel(`Leave ${interactionChannel.name}`)
         .setStyle('DANGER')
-    ),
-    unrestrictedChannels = await getUnrestrictedChannels(),
-    compatibleChannels = unrestrictedChannels.map(
-      unrestrictedChannel => `<#${unrestrictedChannel.id}>`
     )
 
-  if (interactionChannelRecord.channelType === `joinable`) {
-    if (
-      interaction.guild.channels.cache
-        .get(interactionChannelRecord.id)
-        .permissionOverwrites.cache.filter(
-          permissionOverwrite => permissionOverwrite.id === interaction.user.id
-        ).size < 1
-    ) {
-      interaction.guild.channels.cache
-        .get(interactionChannelRecord.id)
-        .permissionOverwrites.create(interaction.user.id, {
+  if (channelType === `joinable`) {
+    if (!userOverwrite) {
+      interactionChannel.permissionOverwrites
+        .create(interaction.user.id, {
           VIEW_CHANNEL: true,
         })
         .then(() =>
           interaction.user.send({
             content: `
-              You have been added to <#${interactionChannelRecord.id}>! 😁\
-              \nIf you joined by accident press the button below, or use the \`!leave\` command (ex: \`!leave ${
-                interactionChannelRecord.name
-              }\`) to leave.\
-              \nThe \`!leave\` command works in these channels: ${compatibleChannels.join(
-                `, `
-              )}
+              You have been added to <#${interactionChannel.id}> in the ${guild.name} server! 😁\
+              \nIf you joined by accident press the button below, or use the \`${commandSymbol}leave\` command (ex: \`${commandSymbol}leave ${interactionChannel.name}\`) to leave.\
+              \nThe \`${commandSymbol}leave\` command works in these channels: ${commandChannels}
             `,
             components: [leaveButtonRow],
           })
@@ -51,18 +46,14 @@ export default async function (interaction) {
     } else
       interaction.user.send({
         content: `
-          You already have access to <#${interactionChannelRecord.id}> 👍\
-          \nIf you'd like to leave press the button below, or use the \`!leave\` command (ex: \`!leave ${
-            interactionChannelRecord.name
-          }\`).\
-          \nThe \`!leave\` command works in these channels: ${compatibleChannels.join(
-            `, `
-          )}
+          You already have access to <#${interactionChannel.id} in the ${guild.name} server> 👍\
+          \nIf you'd like to leave press the button below, or use the \`!leave\` command (ex: \`${commandSymbol}leave ${interactionChannel.name}\`).\
+          \nThe \`${commandSymbol}leave\` command works in these channels: ${commandChannels}
         `,
         components: [leaveButtonRow],
       })
   } else
     interaction.user.send(
-      `Sorry, ${interactionChannelRecord.name} is not a joinable channel 🥺`
+      `Sorry, ${interactionChannel.name} is not a joinable channel in the ${guild.name} server 🥺`
     )
 }

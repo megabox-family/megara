@@ -304,3 +304,32 @@ export async function deleteAllGuildChannels(guildId) {
       console.log(error)
     })
 }
+
+export async function getChannelType(channelId) {
+  return await pgPool
+    .query(
+      SQL`
+    select 
+      channel_type
+    from channels 
+    where id = ${channelId};
+  `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].channel_type : undefined))
+}
+
+export async function getAllVoiceChannelIds(guildId) {
+  const query = await pgPool
+    .query(
+      SQL`
+        select 
+          id
+        from channels 
+        where guild_id = ${guildId} and
+        channel_type = 'voice';
+      `
+    )
+    .then(res => (res.rows[0] ? camelize(res.rows) : undefined))
+
+  return query.map(record => record.id)
+}

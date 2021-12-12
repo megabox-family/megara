@@ -120,26 +120,28 @@ export async function announceNewChannel(newChannel) {
   if (!announcementChannelId) return
 
   const commandChannels = await getFormatedCommandChannels(
-    guild.id,
-    `unrestricted`
-  )
-
-  const joinButtonRow = new MessageActionRow().addComponents(
+      guild.id,
+      `unrestricted`
+    ),
+    joinButtonRow = new MessageActionRow().addComponents(
       new MessageButton()
         .setCustomId(`!join-channel: ${newChannel.id}`)
         .setLabel(`Join ${newChannel.name}`)
         .setStyle('SUCCESS')
     ),
-    categoryName = await getCategoryName(newChannel.parentId)
-  guild.channels.cache.get(announcementChannelId).send({
-    content: `
+    categoryName = await getCategoryName(newChannel.parentId),
+    announcementChannel = guild.channels.cache.get(announcementChannelId)
+
+  if (announcementChannel)
+    announcementChannel.send({
+      content: `
         @everyone Hey guys! 😁\
         \nWe've added a new channel, <#${newChannel.id}>, in the '${categoryName}' category.\
         \nPress the button below, or use the \`!join\` command (ex: \`!join ${newChannel.name}\`) to join.\
         \nThe \`!join\` command can be used in these channels: ${commandChannels}
       `,
-    components: [joinButtonRow],
-  })
+      components: [joinButtonRow],
+    })
 }
 
 export async function handleMessage(message) {
@@ -265,6 +267,8 @@ export async function handleNewMember(member) {
         \n${rules}\
 
         \nDo you accept or deny their rules? Note that if you deny their rules you will be removed from their server.\
+
+        \n*Hint: click one of the buttons below to accept or deny ${guild.name}'s rules.*
       `,
       components: [tosButtonRow],
     })
@@ -299,6 +303,8 @@ export function handleInteraction(interaction) {
     if (existsSync(buttonFunctionPath))
       import(buttonFunctionPath).then(module => module.default(interaction))
   }
+
+  interaction.update({})
 }
 
 export async function checkVoiceChannelValidity(voiceState) {
