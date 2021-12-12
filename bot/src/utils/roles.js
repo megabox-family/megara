@@ -286,7 +286,8 @@ export async function modifyRole(oldRole, newRole) {
   }
 
   if (
-    oldRole.rawPosition !== newRole.rawPosition &&
+    (oldRole.rawPosition !== newRole.rawPosition ||
+      oldRole.name !== newRole.name) &&
     newRole.position < botRole.position &&
     !roleSortingQueue.includes(guild.id)
   ) {

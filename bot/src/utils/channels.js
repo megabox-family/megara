@@ -379,7 +379,8 @@ export async function modifyChannel(
         (oldPositionOverride !== newPositionOverride ||
           oldChannel.position !== newChannel.position ||
           (oldChannel?.rawPosition &&
-            oldChannel.rawPosition !== newChannel.rawPosition))
+            oldChannel.rawPosition !== newChannel.rawPosition) ||
+          oldChannel.name !== newChannel.name)
       ) {
         pushToChannelSortingQueue(newChannel.guild.id)
       }
