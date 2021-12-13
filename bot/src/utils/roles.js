@@ -297,7 +297,7 @@ export async function modifyRole(oldRole, newRole) {
       oldRole.name !== newRole.name) ||
     oldRole.color !== newRole.color
   ) {
-    pushToColorUpdateQueue(guild.id)
+    setTimeout(() => pushToColorUpdateQueue(guild.id), 1000)
   }
 
   if (
