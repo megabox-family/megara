@@ -95,7 +95,7 @@ export default async function (message, commandSymbol) {
     {
       name: `\`${commandSymbol}name <Your name here>\``,
       value: `\
-        \nUse this command to set your nickname within Megabox.\
+        \nUse this command to set your nickname within this server.\
         \nTypically this is only done once when you join the server.\
         \nExample: \`${commandSymbol}name John\`\
       `,
