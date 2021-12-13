@@ -92,7 +92,12 @@ export async function updateColorList(guildId) {
     drawTextFilterArray = []
 
   colorRolesFormatted.forEach(colorRole => {
-    let width = 12
+    let width = 12,
+      padding = 0
+
+    if (!colorRole.name.match(`[tdfhjklb]`)) {
+      padding += 3
+    }
 
     width += colorRole.name.length * 14
     widthArray.push(width)
@@ -103,7 +108,9 @@ export async function updateColorList(guildId) {
       .replace(/'|"|,|:|;/g, `\\\\\\$&`)
 
     drawTextFilterArray.push(
-      `drawtext=fontfile=/app/src/media/RobotoMono-Bold.ttf:text=${escapedName}:x=6:y=${height}:fontsize=24:fontcolor=${colorRole.color}`
+      `drawtext=fontfile=/app/src/media/RobotoMono-Bold.ttf:text=${escapedName}:x=6:y=${
+        height + padding
+      }:fontsize=24:fontcolor=${colorRole.color}`
     )
 
     height += 30
