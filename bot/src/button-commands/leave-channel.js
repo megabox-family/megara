@@ -28,7 +28,7 @@ export default async function (interaction) {
 
     interaction.user.send({
       content: `
-          You have been removed from <#${interactionChannel.id}> in the ${guild.name} server! 👋\
+          You have been removed from <#${interactionChannel.id}> in the ${guild.name} server 👋\
           \nIf you left by accident press the button below, or use the \`${commandSymbol}join\` command (ex: \`${commandSymbol}join ${interactionChannel.name}\`) to re-join.\
           \nThe \`${commandSymbol}join\` command works in these channels: ${commandChannels}
         `,
