@@ -299,7 +299,7 @@ export async function modifyRole(oldRole, newRole) {
     newRole.position < botRole.position &&
     !roleSortingQueue.includes(guild.id)
   ) {
-    pushToRoleSortingQueue(guild.id)
+    setTimeout(() => pushToRoleSortingQueue(guild.id), 1000)
   }
 }
 
