@@ -269,6 +269,8 @@ export async function sortChannels(guildId) {
   const currentChannelPosition = finalChannelArr.map(channel => {
     const _channel = guild.channels.cache.get(channel.channel)
 
+    if (!_channel) console.log(channel.channel)
+
     return { channel: _channel.id, position: _channel.position }
   })
 
@@ -432,7 +434,7 @@ export async function deleteChannel(channel, skipSort = false) {
     }
   })
 
-  if (!skipSort) pushToChannelSortingQueue(guild.id)
+  // if (!skipSort) pushToChannelSortingQueue(guild.id) //I'm not sure why this is needed
 
   await deleteChannelRecord(channelId)
 }
