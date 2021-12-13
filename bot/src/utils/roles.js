@@ -382,6 +382,6 @@ export async function deleteRole(role) {
   } else if (role.name.match(`^~.+~$`)) {
     pushToColorUpdateQueue(guild.id)
 
-    if (!roleSortingQueue.includes(guild.id)) pushToRoleSortingQueue(guild.id)
+    // if (!roleSortingQueue.includes(guild.id)) pushToRoleSortingQueue(guild.id) //I'm not sure why this is needed
   }
 }
