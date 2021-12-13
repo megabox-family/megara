@@ -166,7 +166,12 @@ export async function sortRoles(guildId) {
     currentRolePositions = finalRoleArray.map(role => {
       const _role = guild.roles.cache.get(role.role)
 
-      return { role: _role.id, position: _role.position, name: _role.name }
+      if (!_role)
+        console.log(
+          `This role is deleted but we're trying to sort it: ${role.role}`
+        )
+
+      return { role: _role?.id, position: _role?.position, name: _role?.name }
     })
 
   // console.log(finalRoleArray, `\n\n`)
@@ -177,7 +182,11 @@ export async function sortRoles(guildId) {
   if (JSON.stringify(finalRoleArray) !== JSON.stringify(currentRolePositions)) {
     console.log(`sorted roles`)
 
-    await guild.roles.setPositions(finalRoleArray)
+    await guild.roles
+      .setPositions(finalRoleArray)
+      .catch(error =>
+        console.log(`role sorting failed, see error below:\n`, error)
+      )
   }
 }
 

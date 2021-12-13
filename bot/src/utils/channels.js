@@ -269,9 +269,12 @@ export async function sortChannels(guildId) {
   const currentChannelPosition = finalChannelArr.map(channel => {
     const _channel = guild.channels.cache.get(channel.channel)
 
-    if (!_channel) console.log(channel.channel)
+    if (!_channel)
+      console.log(
+        `This channel is deleted but we're trying to sort it: ${channel.channel}`
+      )
 
-    return { channel: _channel.id, position: _channel.position }
+    return { channel: _channel?.id, position: _channel?.position }
   })
 
   console.log(`tried sorting channels`)
@@ -281,7 +284,11 @@ export async function sortChannels(guildId) {
   ) {
     console.log(`sorted channels`)
 
-    await guild.channels.setPositions(finalChannelArr)
+    await guild.channels
+      .setPositions(finalChannelArr)
+      .catch(error =>
+        console.log(`channel sorting failed, see error below:\n`, error)
+      )
   }
 }
 
@@ -434,9 +441,9 @@ export async function deleteChannel(channel, skipSort = false) {
     }
   })
 
-  // if (!skipSort) pushToChannelSortingQueue(guild.id) //I'm not sure why this is needed
-
   await deleteChannelRecord(channelId)
+
+  // if (!skipSort) pushToChannelSortingQueue(guild.id) //I'm not sure why this is needed
 }
 
 export async function syncChannels(guild) {
