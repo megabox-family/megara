@@ -3,10 +3,12 @@ import camelize from 'camelize'
 import SQL from 'sql-template-strings'
 import { deleteNewRoles } from '../utils/general.js'
 import { syncChannels } from '../utils/channels.js'
+import { syncRoles } from '../utils/roles.js'
 import { deleteAllGuildChannels } from './channels.js'
 
 export async function createGuild(guild, syncBool = false) {
   await deleteNewRoles(guild)
+  await syncRoles(guild)
 
   if (!syncBool) await syncChannels(guild)
 
