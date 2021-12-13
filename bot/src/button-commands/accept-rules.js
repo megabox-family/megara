@@ -1,5 +1,8 @@
 import { getBot } from '../cache-bot.js'
-import { getVerificationChannel } from '../repositories/guilds.js'
+import {
+  getVerificationChannel,
+  getWelcomeChannel,
+} from '../repositories/guilds.js'
 import { sendVerificationInstructions } from '../utils/general.js'
 
 export default async function (interaction) {
@@ -14,7 +17,8 @@ export default async function (interaction) {
     userUndergoingVerificationRole = guildMember.roles.cache.get(
       undergoingVerificationRole.id
     ),
-    userVerifiedRole = guildMember.roles.cache.get(verifiedRole.id)
+    userVerifiedRole = guildMember.roles.cache.get(verifiedRole.id),
+    welcomeChannelId = await getWelcomeChannel(guild.id)
 
   if (userUndergoingVerificationRole)
     guildMember.send(
@@ -40,13 +44,24 @@ export default async function (interaction) {
   } else if (verifiedRole) {
     guildMember.roles.add(verifiedRole.id)
 
-    guildMember.send(
-      `\
+    if (welcomeChannelId)
+      guildMember.send(
+        `\
         \nThank you for accepting ${guild.name}'s rules 😄\
         
-        \nYou have now been verified and have full access to the ${guild.name} server! 🤗
+        \nYou have now been verified and have full access to the ${guild.name} server! 🤗\
+        \nI'd reccomend checking out the <#${welcomeChannelId}> channel for more information on what to do next.\
       `
-    )
+      )
+    else
+      guildMember.send(
+        `\
+        \nThank you for accepting ${guild.name}'s rules 😄\
+        
+        \nYou have now been verified and have full access to the ${guild.name} server! 🤗\
+        \nThis server doesn't have a welcome channel officially set, so if I were you I'd just take a look around 👀\
+      `
+      )
   } else {
     guildMember.send(
       `Unfortunately something went wrong, try pressing the desired button again.`
