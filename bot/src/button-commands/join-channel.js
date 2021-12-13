@@ -46,7 +46,7 @@ export default async function (interaction) {
     } else
       interaction.user.send({
         content: `
-          You already have access to <#${interactionChannel.id} in the ${guild.name} server> 👍\
+          You already have access to <#${interactionChannel.id}> in the ${guild.name} server 🤔\
           \nIf you'd like to leave press the button below, or use the \`!leave\` command (ex: \`${commandSymbol}leave ${interactionChannel.name}\`).\
           \nThe \`${commandSymbol}leave\` command works in these channels: ${commandChannels}
         `,
