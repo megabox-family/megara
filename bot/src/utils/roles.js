@@ -96,7 +96,7 @@ export async function updateColorList(guildId) {
       padding = 0
 
     if (!colorRole.name.match(`[tdfhjklb]`)) {
-      padding += 3
+      padding += 4
     }
 
     width += colorRole.name.length * 14
