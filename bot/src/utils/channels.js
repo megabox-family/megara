@@ -111,8 +111,17 @@ export function getPositionOverride(channel) {
 }
 
 export async function setChannelVisibility(channelId) {
-  const channel = getBot().channels.cache.get(channelId),
-    channelType = checkType(channel),
+  const channel = getBot().channels.cache.get(channelId)
+
+  if (!channel) {
+    console.log(
+      `We tried setting the channel visibility of a channel that no longer exists.`
+    )
+
+    return
+  }
+
+  const channelType = checkType(channel),
     guild = channel.guild,
     announcementChannelId = await getAnnouncementChannel(guild.id),
     verificationChannelId = await getVerificationChannel(guild.id),
