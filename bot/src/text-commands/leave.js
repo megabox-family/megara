@@ -9,11 +9,12 @@ import {
 const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
 
 export default async function (message, commandSymbol, channelName) {
-  const commandLevel = await getCommandLevelForChannel(message.channel.id)
+  const guild = message.guild,
+    commandLevel = await getCommandLevelForChannel(message.channel.id)
 
   if ([`prohibited`, `restricted`].includes(commandLevel)) {
     const commandChannels = await getFormatedCommandChannels(
-      message.guild.id,
+      guild.id,
       `unrestricted`
     )
 
@@ -37,10 +38,13 @@ export default async function (message, commandSymbol, channelName) {
     return
   }
 
-  const joinableChannelId = await getIdForJoinableChannel(channelName),
-    channel = message.guild.channels.cache.get(joinableChannelId)
+  const joinableChannelId = await getIdForJoinableChannel(
+      guild.id,
+      channelName
+    ),
+    channel = guild.channels.cache.get(joinableChannelId)
 
-  if (joinableChannelId) {
+  if (channel) {
     if (
       channel.permissionOverwrites.cache.filter(
         permissionOverwrite => permissionOverwrite.id === message.author.id

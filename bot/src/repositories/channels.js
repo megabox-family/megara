@@ -2,14 +2,15 @@ import pgPool from '../pg-pool.js'
 import camelize from 'camelize'
 import SQL from 'sql-template-strings'
 
-export async function getIdForJoinableChannel(channelName) {
+export async function getIdForJoinableChannel(guildId, channelName) {
   return await pgPool
     .query(
       SQL`
         select 
           id 
         from channels 
-        where name = ${channelName} AND 
+        where guild_id = ${guildId} AND
+          name = ${channelName} AND 
           channel_type = 'joinable';
       `
     )
