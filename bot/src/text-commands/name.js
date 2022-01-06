@@ -179,7 +179,7 @@ export default async function (message, commandSymbol, nickname) {
         `\
         \nCongratulations! 🎉\
         \nYour nickname has been changed to ${newNickname}, and you've been fully verified!\
-        \nI'd reccomend checking out the <#${welcomeChannelId}> channel for more information on what to do next.\
+        \nI'd recommend checking out the <#${welcomeChannelId}> channel for more information on what to do next.\
       `
       )
     else

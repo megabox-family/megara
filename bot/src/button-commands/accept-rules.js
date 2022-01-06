@@ -50,7 +50,7 @@ export default async function (interaction) {
         \nThank you for accepting ${guild.name}'s rules 😄\
         
         \nYou have now been verified and have full access to the ${guild.name} server! 🤗\
-        \nI'd reccomend checking out the <#${welcomeChannelId}> channel for more information on what to do next.\
+        \nI'd recommend checking out the <#${welcomeChannelId}> channel for more information on what to do next.\
       `
       )
     else

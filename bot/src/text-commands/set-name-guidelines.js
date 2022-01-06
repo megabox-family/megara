@@ -22,7 +22,7 @@ export default async function (message, commandSymbol, args) {
         Invalid input, the \`${commandSymbol}${command}\` command requires arguments 🤔\
         \nExample:\
         \n\`\`\`${commandSymbol}${command}\
-          \nWe reccomend setting your nickname to what people call you in real life.\
+          \nWe recommend setting your nickname to what people call you in real life.\
           \nwe're all on a first name basis in this server.\
         \n\`\`\`\
       `

@@ -21,7 +21,7 @@ export default async function (message) {
           \nTo set name guidelines, use the \`${commandSymbol}setNameGuidelines\` command, example:\
           \nExample:\
           \n\`\`\`${commandSymbol}setNameGuidelines\
-            \nWe reccomend setting your nickname to what people call you in real life.\
+            \nWe recommend setting your nickname to what people call you in real life.\
             \nwe're all on a first name basis in this server.\
           \n\`\`\`\
         `

@@ -117,7 +117,7 @@ export default async function (message, commandSymbol) {
         \nAllows you to set the servers rules, also enables that a user accepts your rules before gaining full access to the server.\
         \nExample:\
         \n\`\`\`${commandSymbol}${command}\
-          \nWe reccomend setting your nickname to what people call you in real life.\
+          \nWe recommend setting your nickname to what people call you in real life.\
           \nwe're all on a first name basis in this server.\
         \n\`\`\`\
       `,
