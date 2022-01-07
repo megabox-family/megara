@@ -3,6 +3,7 @@ import { cacheBot, getBot } from '../cache-bot.js'
 import { readdirSync, existsSync } from 'fs'
 import { basename, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { directMessageError } from '../utils/error-logging.js'
 import { syncChannels } from './channels.js'
 import { syncRoles, requiredRoleDifference } from './roles.js'
 import { pushUserToQueue } from './required-role-queue.js'
@@ -256,23 +257,24 @@ export async function sendVerificationInstructions(guildMember) {
     )
 }
 
-export async function handleNewMember(member) {
-  const guild = member.guild,
+export async function handleNewMember(guildMember) {
+  const guild = guildMember.guild,
     rules = await getRules(guild.id),
     tosButtonRow = new MessageActionRow().addComponents(
       new MessageButton()
-        .setCustomId(`!accept-rules: ${member.guild.id}`)
+        .setCustomId(`!accept-rules: ${guildMember.guild.id}`)
         .setLabel(`Accept`)
         .setStyle('SUCCESS'),
       new MessageButton()
-        .setCustomId(`!deny-rules: ${member.guild.id}`)
+        .setCustomId(`!deny-rules: ${guildMember.guild.id}`)
         .setLabel(`Deny`)
         .setStyle('DANGER')
     )
 
   if (rules) {
-    member.send({
-      content: `\
+    guildMember
+      .send({
+        content: `\
         \n👋 **You've been invited to join the ${guild.name} server!** 😄\
 
         \nBefore I can give you full access to the server's full functionality you'll need to accept their rules:\
@@ -282,13 +284,14 @@ export async function handleNewMember(member) {
 
         \n*Hint: click one of the buttons below to accept or deny ${guild.name}'s rules.*
       `,
-      components: [tosButtonRow],
-    })
+        components: [tosButtonRow],
+      })
+      .catch(error => directMessageError(error, guildMember))
 
     return
   }
 
-  sendVerificationInstructions(member)
+  sendVerificationInstructions(guildMember)
 }
 
 export function modifyMember(oldMember, newMember) {
