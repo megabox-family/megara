@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url'
 import {
   getIdForJoinableChannel,
   getCommandLevelForChannel,
+  getFormatedCommandChannels,
 } from '../repositories/channels.js'
 
 const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))

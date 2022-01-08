@@ -6,7 +6,10 @@ import {
   getVerificationChannel,
   getWelcomeChannel,
 } from '../repositories/guilds.js'
-import { getCommandLevelForChannel } from '../repositories/channels.js'
+import {
+  getCommandLevelForChannel,
+  getFormatedCommandChannels,
+} from '../repositories/channels.js'
 
 const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
 
