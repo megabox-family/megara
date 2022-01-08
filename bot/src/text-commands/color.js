@@ -3,8 +3,6 @@ import { getCommandName, commandLevelCheck } from '../utils/text-commands.js'
 const command = getCommandName(import.meta.url)
 
 export default async function (message, commandSymbol, args) {
-  const guild = message.guild
-
   if (!(await commandLevelCheck(message, commandSymbol, command))) return
 
   if (args === null) {
@@ -18,6 +16,8 @@ export default async function (message, commandSymbol, args) {
 
     return
   }
+
+  const guild = message.guild
 
   if (args === `list`) {
     message.channel.send({
