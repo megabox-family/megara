@@ -1,33 +1,11 @@
 import { MessageEmbed } from 'discord.js'
-import camelize from 'camelize'
-import { basename } from 'path'
-import { fileURLToPath } from 'url'
-import {
-  getCommandLevelForChannel,
-  getFormatedCommandChannels,
-  getJoinableChannelList,
-} from '../repositories/channels.js'
+import { getCommandName, commandLevelCheck } from '../utils/text-commands.js'
+import { getJoinableChannelList } from '../repositories/channels.js'
 
-const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
+const command = getCommandName(import.meta.url)
 
 export default async function (message, commandSymbol) {
-  const commandLevel = await getCommandLevelForChannel(message.channel.id)
-
-  if ([`prohibited`, `restricted`].includes(commandLevel)) {
-    const commandChannels = await getFormatedCommandChannels(
-      message.guild.id,
-      `unrestricted`
-    )
-
-    message.reply(
-      `
-        Sorry the \`${commandSymbol}${command}\` command is prohibited in this channel 😔\
-        \nBut here's a list of channels you can use it in: ${commandChannels}
-      `
-    )
-
-    return
-  }
+  if (!(await commandLevelCheck(message, commandSymbol, command))) return
 
   const joinableChannelList = await getJoinableChannelList(message.guild.id),
     categoryArray = [
@@ -46,5 +24,8 @@ export default async function (message, commandSymbol) {
       .setTitle(`Joinable channel list`)
       .addFields(embedChannelArray)
 
-  message.reply({ embeds: [channelListEmbed] })
+  message.reply({
+    content: `Use the ${commandSymbol}join command to join the channels in this list:`,
+    embeds: [channelListEmbed],
+  })
 }

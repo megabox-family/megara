@@ -1,33 +1,10 @@
-import camelize from 'camelize'
-import { basename } from 'path'
-import { fileURLToPath } from 'url'
-import {
-  getIdForJoinableChannel,
-  getCommandLevelForChannel,
-  getFormatedCommandChannels,
-} from '../repositories/channels.js'
+import { getCommandName, commandLevelCheck } from '../utils/text-commands.js'
+import { getIdForJoinableChannel } from '../repositories/channels.js'
 
-const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
+const command = getCommandName(import.meta.url)
 
 export default async function (message, commandSymbol, channelName) {
-  const guild = message.guild,
-    commandLevel = await getCommandLevelForChannel(message.channel.id)
-
-  if ([`prohibited`, `restricted`].includes(commandLevel)) {
-    const commandChannels = await getFormatedCommandChannels(
-      guild.id,
-      `unrestricted`
-    )
-
-    message.reply(
-      `
-        Sorry the \`${commandSymbol}${command}\` command is prohibited in this channel 😔\
-        \nBut here's a list of channels you can use it in: ${commandChannels}
-      `
-    )
-
-    return
-  }
+  if (!(await commandLevelCheck(message, commandSymbol, command))) return
 
   if (!channelName) {
     message.reply(
@@ -39,10 +16,8 @@ export default async function (message, commandSymbol, channelName) {
     return
   }
 
-  const joinableChannelId = await getIdForJoinableChannel(
-      guild.id,
-      channelName
-    ),
+  const guild = message.guild,
+    joinableChannelId = await getIdForJoinableChannel(guild.id, channelName),
     channel = guild.channels.cache.get(joinableChannelId)
 
   if (channel) {

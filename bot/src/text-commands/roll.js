@@ -1,8 +1,6 @@
-import camelize from 'camelize'
-import { basename } from 'path'
-import { fileURLToPath } from 'url'
+import { getCommandName } from '../utils/text-commands.js'
 
-const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
+const command = getCommandName(import.meta.url)
 
 function isRollValid(roll) {
   const lowerCaseRoll = roll.toLowerCase()
@@ -15,6 +13,17 @@ function isRollValid(roll) {
 }
 
 export default async function (message, commandSymbol, roll) {
+  if (!roll) {
+    message.reply(
+      `
+        Invalid input, the ${commandSymbol}${command} command requires arguments.\
+        \nExample: \`${commandSymbol}${command} 1d20\`
+      `
+    )
+
+    return
+  }
+
   if (isRollValid(roll)) {
     const [dieCount, die] = roll.toLowerCase().split('d')
     let total = 0

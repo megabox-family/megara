@@ -1,7 +1,4 @@
-import camelize from 'camelize'
-import { basename } from 'path'
-import { fileURLToPath } from 'url'
-import { getCommandLevelForChannel } from '../repositories/channels.js'
+import { getCommandName, commandLevelCheck } from '../utils/text-commands.js'
 import {
   getAllCoordinates,
   coordinateExistsByName,
@@ -12,7 +9,7 @@ import {
 } from '../repositories/coordinates.js'
 import validator from 'validator'
 
-const command = camelize(basename(fileURLToPath(import.meta.url), '.js')),
+const command = getCommandName(import.meta.url),
   { isInt } = validator,
   isCoordinateSetValid = coordinates => {
     return coordinates.every(coordinate => {
@@ -21,25 +18,13 @@ const command = camelize(basename(fileURLToPath(import.meta.url), '.js')),
   }
 
 export default async function (message, commandSymbol, args) {
+  message.reply(
+    `Sorry, the coords command is undergoing maintenance and cannot be used.`
+  )
+
   return
 
-  const commandLevel = await getCommandLevelForChannel(message.channel.id)
-
-  if ([`prohibited`, `restricted`].includes(commandLevel)) {
-    const commandChannels = await getFormatedCommandChannels(
-      message.guild.id,
-      `unrestricted`
-    )
-
-    message.reply(
-      `
-        Sorry the \`${commandSymbol}${command}\` command is prohibited in this channel 😔\
-        \nBut here's a list of channels you can use it in: ${commandChannels}
-      `
-    )
-
-    return
-  }
+  if (!(await commandLevelCheck(message, commandSymbol, command))) return
 
   const formatCoordinateList = coordinates => {
     return coordinates

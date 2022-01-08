@@ -1,17 +1,11 @@
-import camelize from 'camelize'
-import { basename } from 'path'
-import { fileURLToPath } from 'url'
 import { logErrorMessageToChannel } from '../utils/general.js'
+import { getCommandName, commandLevelCheck } from '../utils/text-commands.js'
 import {
   getVerificationChannel,
   getWelcomeChannel,
 } from '../repositories/guilds.js'
-import {
-  getCommandLevelForChannel,
-  getFormatedCommandChannels,
-} from '../repositories/channels.js'
 
-const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
+const command = getCommandName(import.meta.url)
 
 function isNicknameValid(nickname, allowedSymbols) {
   if (nickname.match(`^[A-Za-z]+$`)) return true
@@ -52,27 +46,10 @@ const timeout = ms => {
 export default async function (message, commandSymbol, nickname) {
   const guild = message.guild,
     channel = message.channel,
-    commandLevel = await getCommandLevelForChannel(channel.id),
     verificationChannelId = await getVerificationChannel(guild.id)
 
-  if (
-    [`prohibited`, `restricted`].includes(commandLevel) &&
-    channel.id !== verificationChannelId
-  ) {
-    const commandChannels = await getFormatedCommandChannels(
-      message.guild.id,
-      `unrestricted`
-    )
-
-    message.reply(
-      `
-        Sorry the \`${commandSymbol}${command}\` command is prohibited in this channel 😔\
-        \nBut here's a list of channels you can use it in: ${commandChannels}
-      `
-    )
-
-    return
-  }
+  if (channel.id !== verificationChannelId)
+    if (!(await commandLevelCheck(message, commandSymbol, command))) return
 
   if (!nickname) {
     message.reply(
@@ -101,7 +78,8 @@ export default async function (message, commandSymbol, nickname) {
     return
   }
 
-  let newNickname = nickname.toLowerCase()
+  let newNickname = nickname.toLowerCase(),
+    failed = false
   const guildMember = guild.members.cache.get(message.author.id)
 
   allowedSymbols.forEach(symbol => {
@@ -138,7 +116,12 @@ export default async function (message, commandSymbol, nickname) {
       }
     }
   } catch (error) {
+    failed = true
     handleNicknameFailure(error, guild)
+
+    message.reply(
+      `Sorry I wasn't able to change your nickname, you may have a role that is above mine, which prevents me from doing so.`
+    )
   }
 
   // Attempt to set verified role
@@ -165,7 +148,12 @@ export default async function (message, commandSymbol, nickname) {
       }
     }
   } catch (error) {
+    failed = true
     handleNicknameFailure(error, guild)
+
+    message.reply(
+      `Sorry I wasn't able to change your nickname, you may have a role that is above mine, which prevents me from doing so.`
+    )
   }
 
   const undergoingVerificationRoleId = guild.roles.cache.find(
@@ -195,7 +183,7 @@ export default async function (message, commandSymbol, nickname) {
       )
 
     guildMember.roles.remove(undergoingVerificationRoleId)
-  } else {
+  } else if (!failed) {
     message.reply(`Your nickname has been changed to ${newNickname} 🥰`)
   }
 }

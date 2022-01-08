@@ -266,7 +266,7 @@ export async function createRole(role) {
     !roleSortingQueue.includes(guild.id) &&
     role.name !== `new role`
   ) {
-    pushToRoleSortingQueue(guild.id)
+    setTimeout(() => pushToRoleSortingQueue(guild.id), 3000)
   }
 }
 
@@ -306,7 +306,7 @@ export async function modifyRole(oldRole, newRole) {
       oldRole.name !== newRole.name) ||
     oldRole.color !== newRole.color
   ) {
-    setTimeout(() => pushToColorUpdateQueue(guild.id), 1000)
+    setTimeout(() => pushToColorUpdateQueue(guild.id), 3000)
   }
 
   if (
@@ -315,7 +315,7 @@ export async function modifyRole(oldRole, newRole) {
     newRole.position < botRole.position &&
     !roleSortingQueue.includes(guild.id)
   ) {
-    setTimeout(() => pushToRoleSortingQueue(guild.id), 1000)
+    setTimeout(() => pushToRoleSortingQueue(guild.id), 3000)
   }
 }
 
@@ -387,10 +387,9 @@ export async function deleteRole(role) {
         `
       )
 
-    if (!roleSortingQueue.includes(guild.id)) pushToRoleSortingQueue(guild.id)
+    if (!roleSortingQueue.includes(guild.id))
+      setTimeout(() => pushToRoleSortingQueue(guild.id), 3000)
   } else if (role.name.match(`^~.+~$`)) {
-    pushToColorUpdateQueue(guild.id)
-
-    // if (!roleSortingQueue.includes(guild.id)) pushToRoleSortingQueue(guild.id) //I'm not sure why this is needed
+    setTimeout(() => pushToColorUpdateQueue(guild.id), 3000)
   }
 }

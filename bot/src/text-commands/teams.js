@@ -1,19 +1,9 @@
-import camelize from 'camelize'
-import { basename } from 'path'
-import { fileURLToPath } from 'url'
+import { getCommandName } from '../utils/text-commands.js'
 import { getAllVoiceChannelIds } from '../repositories/channels.js'
 
-const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
+const command = getCommandName(import.meta.url)
 
 export default async function (message, commandSymbol, numberOfTeams) {
-  if (!numberOfTeams || !numberOfTeams.match(`^[2-9]$|^[1-9][0-9]+$`)) {
-    message.reply(
-      `Invalid input, the value following \`${commandSymbol}${command}\` must be a number greater than 1 (ex: \`${commandSymbol}${command} 2\`) 🤔`
-    )
-
-    return
-  }
-
   const guild = message.guild,
     voiceChannelIds = await getAllVoiceChannelIds(guild.id),
     voiceChannels = voiceChannelIds.map(voiceChannelId =>
@@ -33,6 +23,12 @@ export default async function (message, commandSymbol, numberOfTeams) {
   if (!voiceChannelMemberNames) {
     message.reply(
       `You must be in a call to use the \`${commandSymbol}${command}\` command 🤔`
+    )
+
+    return
+  } else if (!numberOfTeams || !numberOfTeams.match(`^[2-9]$|^[1-9][0-9]+$`)) {
+    message.reply(
+      `Invalid input, the value following \`${commandSymbol}${command}\` must be a number greater than 1 (ex: \`${commandSymbol}${command} 2\`) 🤔`
     )
 
     return

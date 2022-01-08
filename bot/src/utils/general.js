@@ -34,6 +34,26 @@ const relativePath = dirname(fileURLToPath(import.meta.url)),
     }
   })
 
+export const validCommandSymbols = [
+  `!`,
+  `$`,
+  `%`,
+  `^`,
+  `&`,
+  `(`,
+  `)`,
+  `-`,
+  `+`,
+  `=`,
+  `{`,
+  `}`,
+  `[`,
+  `]`,
+  `?`,
+  `,`,
+  `.`,
+]
+
 export async function removeEmptyVoiceChannelsOnStartup() {
   const activeVoiceChannels = await getActiveVoiceChannelIds()
 
@@ -73,7 +93,6 @@ export async function startup(bot) {
 
   bot.guilds.cache.forEach(async guild => {
     await deleteNewRoles(guild)
-
     await syncChannels(guild)
     await syncRoles(guild)
   })
@@ -163,28 +182,7 @@ export async function handleMessage(message) {
 
   const messageText = message.content
 
-  if (
-    ![
-      `!`,
-      `$`,
-      `%`,
-      `^`,
-      `&`,
-      `(`,
-      `)`,
-      `-`,
-      `+`,
-      `=`,
-      `{`,
-      `}`,
-      `[`,
-      `]`,
-      `?`,
-      `,`,
-      `.`,
-    ].includes(messageText.substring(0, 1))
-  )
-    return
+  if (!validCommandSymbols.includes(messageText.substring(0, 1))) return
 
   const commandSymbol = await getCommandSymbol(message.guild.id)
 

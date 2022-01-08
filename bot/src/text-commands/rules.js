@@ -1,13 +1,16 @@
+import { getCommandName } from '../utils/text-commands.js'
 import { getRules } from '../repositories/guilds.js'
 import {
   getCommandLevelForChannel,
   getFormatedCommandChannels,
 } from '../repositories/channels.js'
 
-export default async function (message) {
-  const tosMessage = await getRules(message.guild.id)
+const command = getCommandName(import.meta.url)
 
-  if (tosMessage) message.reply(tosMessage)
+export default async function (message, commandSymbol) {
+  const rules = await getRules(message.guild.id)
+
+  if (rules) message.reply(rules)
   else {
     if ((await getCommandLevelForChannel(message.channel.id)) === `admin`) {
       const commandChannels = await getFormatedCommandChannels(
@@ -18,14 +21,14 @@ export default async function (message) {
       message.reply(
         `
           Sorry, rules have not been set for this server 😔\
-          \nTo set rules, use the \`${commandSymbol}setRules\` command, example:\
-          \n\`\`\`!setRules\
+          \nTo set rules, use the \`${commandSymbol}${command}\` command, example:\
+          \n\`\`\`!${command}\
             \nTo continue you must accept [server name]'s rules\
             \n- No kicking\
             \n- No screamin\
           \n...\
           \n\`\`\`\
-          \nThe \`!setRules\` command can be used in these channels: ${commandChannels}
+          \nThe \`!${command}\` command can be used in these channels: ${commandChannels}
         `
       )
     } else message.reply(`Sorry, rules have not been set for this server 😔`)

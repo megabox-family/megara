@@ -1,24 +1,14 @@
-import camelize from 'camelize'
-import { basename } from 'path'
-import { fileURLToPath } from 'url'
+import { getCommandName, adminCheck } from '../utils/text-commands.js'
 import { pushToChannelSortingQueue } from '../utils/channels.js'
 import { pushToRoleSortingQueue } from '../utils/roles.js'
 import { setChannelSorting, setRoleSorting } from '../repositories/guilds.js'
-import { getCommandLevelForChannel } from '../repositories/channels.js'
 
-const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
+const command = getCommandName(import.meta.url)
 
 export default async function (message, commandSymbol, args) {
-  if ((await getCommandLevelForChannel(message.channel.id)) !== `admin`) {
-    message.reply(
-      `
-        Sorry, \`${commandSymbol}${command}\` is not a valid command 😔\
-        \nUse the \`${commandSymbol}help\` command to get a valid list of commands 🥰
-      `
-    )
+  if (!(await adminCheck(message, commandSymbol, command))) return
 
-    return
-  } else if (
+  if (
     !args ||
     ![`channels true`, `channels false`, `roles true`, `roles false`].includes(
       args.toLowerCase()

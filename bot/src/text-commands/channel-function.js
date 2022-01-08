@@ -1,8 +1,5 @@
-import camelize from 'camelize'
-import { basename } from 'path'
-import { fileURLToPath } from 'url'
 import { pushToChannelVisibilityQueue } from '../utils/channels.js'
-import { getCommandLevelForChannel } from '../repositories/channels.js'
+import { getCommandName, adminCheck } from '../utils/text-commands.js'
 import {
   setAdminChannel,
   setLogChannel,
@@ -20,25 +17,18 @@ const setCommands = {
   welcome: setWelcomeChannel,
 }
 
-const command = camelize(basename(fileURLToPath(import.meta.url), '.js'))
+const command = getCommandName(import.meta.url)
 
 export default async function (message, commandSymbol, args) {
+  if (!(await adminCheck(message, commandSymbol, command))) return
+
   const guild = message.guild,
     failureMessage = `
     The \`${commandSymbol}${command}\` command requires exactly 2 parameters: \`${commandSymbol}${command} [channel function] [channel id]\` 😔\
     \nNote: \`null\` can be set in place of the channel id to remove a function from a channel, ex: \`${commandSymbol}${command} admin null\`
   `
 
-  if ((await getCommandLevelForChannel(message.channel.id)) !== `admin`) {
-    message.reply(
-      `
-        Sorry, \`${commandSymbol}${command}\` is not a valid command 😔\
-        \nUse the \`${commandSymbol}help\` command to get a valid list of commands 🥰
-      `
-    )
-
-    return
-  } else if (!args) {
+  if (!args) {
     message.reply(failureMessage)
 
     return
