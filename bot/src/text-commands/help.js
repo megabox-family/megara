@@ -1,6 +1,7 @@
 import { getBot } from '../cache-bot.js'
 import { MessageEmbed } from 'discord.js'
 import { getCommandName, commandLevelCheck } from '../utils/text-commands.js'
+import { getCommandLevelForChannel } from '../repositories/channels.js'
 
 const command = getCommandName(import.meta.url)
 
@@ -150,6 +151,7 @@ export default async function (message, commandSymbol) {
   ]
 
   //full command list is filtered using the admin commands array
+  const commandLevel = await getCommandLevelForChannel(message.channel.id)
   let filteredCommandArray
 
   if (commandLevel === `admin`) {
