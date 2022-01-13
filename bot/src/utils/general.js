@@ -169,7 +169,9 @@ export async function announceNewChannel(newChannel) {
       content: `
         @everyone Hey guys! 😁\
         \nWe've added a new channel, <#${newChannel.id}>, in the '${categoryName}' category.\
-        \nPress the button below, or use the \`!join\` command (ex: \`!join ${newChannel.name}\`) to join.\
+        \nPress the button below, or use the \`!join\` command to join.\
+        \nExample: \`!join ${newChannel.name}\`\
+
         \nThe \`!join\` command can be used in these channels: ${commandChannels}
       `,
       components: [joinButtonRow],
