@@ -70,6 +70,8 @@ export function checkType(channel) {
   if (channel.type === `GUILD_CATEGORY`) return `category`
   else if (channel.type === `GUILD_VOICE`) return `voice`
 
+  console.log(channel.name)
+
   const roles = channel.guild.roles.cache,
     permissions = channel.permissionOverwrites.cache.map(
       role => roles.get(role.id)?.name
@@ -111,7 +113,7 @@ export function getPositionOverride(channel) {
 }
 
 export async function setChannelVisibility(channelId) {
-  const channel = getBot().channels.cache.get(channelId) //bruh
+  const channel = getBot().channels.cache.get(channelId)
 
   if (!channel) {
     console.log(
