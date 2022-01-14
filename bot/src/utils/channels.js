@@ -111,7 +111,7 @@ export function getPositionOverride(channel) {
 }
 
 export async function setChannelVisibility(channelId) {
-  const channel = getBot().channels.cache.get(channelId)
+  const channel = getBot().channels.cache.get(channelId) //bruh
 
   if (!channel) {
     console.log(
