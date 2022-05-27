@@ -4,8 +4,15 @@ import { getVerificationChannel } from '../repositories/guilds.js'
 export default async function (interaction) {
   const guildId = interaction.customId.match(`[0-9]+`)[0],
     guild = getBot().guilds.cache.get(guildId),
-    guildMember = guild.members.cache.get(interaction.user.id),
-    undergoingVerificationRole = guild.roles.cache.find(
+    guildMember = guild.members.cache.get(interaction.user.id)
+
+    if(!guildMember){
+      interaction.user.send(`You're not a part of ${guild.name} anymore, you'll need to be re-added before you can deny their rules.`)
+
+      return
+    }
+
+    const undergoingVerificationRole = guild.roles.cache.find(
       role => role.name === `undergoing verification`
     ),
     verifiedRole = guild.roles.cache.find(role => role.name === `verified`),

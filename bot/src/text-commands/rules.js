@@ -22,13 +22,13 @@ export default async function (message, commandSymbol) {
         `
           Sorry, rules have not been set for this server 😔\
           \nTo set rules, use the \`${commandSymbol}${command}\` command, example:\
-          \n\`\`\`!${command}\
+          \n\`\`\`!setRules\
             \nTo continue you must accept [server name]'s rules\
             \n- No kicking\
             \n- No screamin\
           \n...\
           \n\`\`\`\
-          \nThe \`!${command}\` command can be used in these channels: ${commandChannels}
+          \nThe \`!setRules\` command can be used in these channels: ${commandChannels}
         `
       )
     } else message.reply(`Sorry, rules have not been set for this server 😔`)

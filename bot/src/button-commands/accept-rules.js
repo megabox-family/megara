@@ -9,8 +9,15 @@ import { sendVerificationInstructions } from '../utils/general.js'
 export default async function (interaction) {
   const guildId = interaction.customId.match(`[0-9]+`)[0],
     guild = getBot().guilds.cache.get(guildId),
-    guildMember = guild.members.cache.get(interaction.user.id),
-    verificationChannelId = await getVerificationChannel(guild.id),
+    guildMember = guild.members.cache.get(interaction.user.id)
+
+    if(!guildMember){
+      interaction.user.send(`You're not a part of ${guild.name} anymore, you'll need to be re-added before you can accept their rules.`)
+
+      return
+    }
+
+    const verificationChannelId = await getVerificationChannel(guild.id),
     undergoingVerificationRole = guild.roles.cache.find(
       role => role.name === `undergoing verification`
     ),
