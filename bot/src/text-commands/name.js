@@ -91,37 +91,35 @@ export default async function (message, commandSymbol, nickname) {
 
   await guild.members.fetch()
 
-  // Attempt to set nickname
-  try {
-    let nicknameIsUpdated = false
-    let attempts = 0
+  if (newNickname !== message.author.username) {
+    // Attempt to set nickname
+    try {
+      let nicknameIsUpdated = false
+      let attempts = 0
 
-    while (!nicknameIsUpdated) {
-      if (newNickname === message.author.username) {
-        nicknameIsUpdated = true
+      while (!nicknameIsUpdated) {
+        await Promise.all([guildMember.setNickname(newNickname), timeout(1000)])
+
+        let updatedNickname = await guildMember.nickname
+
+        nicknameIsUpdated = updatedNickname === newNickname
+
+        if (!nicknameIsUpdated) {
+          attempts++
+          logErrorMessageToChannel(
+            `Failed to update nickname after ${attempts} second(s), retrying...`,
+            guild
+          )
+        }
       }
+    } catch (error) {
+      failed = true
+      handleNicknameFailure(error, guild)
 
-      await Promise.all([guildMember.setNickname(newNickname), timeout(1000)])
-
-      let updatedNickname = await guildMember.nickname
-
-      nicknameIsUpdated = updatedNickname === newNickname
-
-      if (!nicknameIsUpdated) {
-        attempts++
-        logErrorMessageToChannel(
-          `Failed to update nickname after ${attempts} second(s), retrying...`,
-          guild
-        )
-      }
+      message.reply(
+        `Sorry I wasn't able to change your nickname, you may have a role that is above mine, which prevents me from doing so.`
+      )
     }
-  } catch (error) {
-    failed = true
-    handleNicknameFailure(error, guild)
-
-    message.reply(
-      `Sorry I wasn't able to change your nickname, you may have a role that is above mine, which prevents me from doing so.`
-    )
   }
 
   // Attempt to set verified role
