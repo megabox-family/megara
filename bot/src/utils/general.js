@@ -143,31 +143,64 @@ export async function announceNewChannel(newChannel) {
 
   if (!announcementChannelId) return
 
-  const commandChannels = await getFormatedCommandChannels(
+  const channelNotificationSquad = guild.roles.cache.find(
+      role => role.name === `channel notification squad`
+    ),
+    commandChannels = await getFormatedCommandChannels(
       guild.id,
       `unrestricted`
     ),
-    joinButtonRow = new MessageActionRow().addComponents(
+    buttonRow = new MessageActionRow().addComponents(
       new MessageButton()
         .setCustomId(`!join-channel: ${newChannel.id}`)
         .setLabel(`Join ${newChannel.name}`)
-        .setStyle('SUCCESS')
+        .setStyle('SUCCESS'),
+      new MessageButton()
+        .setCustomId(`!subscribe: ${channelNotificationSquad.id}`)
+        .setLabel(`Subscribe to channel notifications`)
+        .setStyle('PRIMARY'),
+      new MessageButton()
+        .setCustomId(`!unsubscribe: ${channelNotificationSquad.id}`)
+        .setLabel(`Unsubscribe from channel notifications`)
+        .setStyle('DANGER')
     ),
     categoryName = await getCategoryName(newChannel.parentId),
-    announcementChannel = guild.channels.cache.get(announcementChannelId)
+    announcementChannel = guild.channels.cache.get(announcementChannelId),
+    commandSymbol = getCommandSymbol(guild.id)
 
   if (announcementChannel)
     announcementChannel.send({
       content: `
-        @everyone Hey guys! 😁\
+        ${channelNotificationSquad} Hey guys! 😁\
         \nWe've added a new channel, <#${newChannel.id}>, in the '${categoryName}' category.\
-        \nPress the button below, or use the \`!join\` command to join.\
-        \nExample: \`!join ${newChannel.name}\`\
+        \nPress the button below, or use the \`${commandSymbol}join\` command to join.\
+        \nExample: \`${commandSymbol}join ${newChannel.name}\`\
 
-        \nThe \`!join\` command can be used in these channels: ${commandChannels}
+        \nThe \`${commandSymbol}join\` command can be used in these channels: ${commandChannels}
       `,
-      components: [joinButtonRow],
+      components: [buttonRow],
     })
+}
+
+function sendServerSubscriptionMessage(announcementChannel) {
+  const guild = announcementChannel.guild,
+    serverNotificationSquad = guild.roles.cache.find(
+      role => role.name === `server notification squad`
+    ),
+    buttonRow = new MessageActionRow().addComponents(
+      new MessageButton()
+        .setCustomId(`!subscribe: ${serverNotificationSquad.id}`)
+        .setLabel(`Subscribe to server notifications`)
+        .setStyle('PRIMARY'),
+      new MessageButton()
+        .setCustomId(`!unsubscribe: ${serverNotificationSquad.id}`)
+        .setLabel(`Unsubscribe from server notifications`)
+        .setStyle('DANGER')
+    )
+
+  announcementChannel.send({
+    components: [buttonRow],
+  })
 }
 
 export async function handleMessage(message) {
@@ -175,6 +208,16 @@ export async function handleMessage(message) {
   if (!message?.guild) return
 
   const messageText = message.content
+
+  if (messageText.substring(0, 3) === `<@&`) {
+    const channel = message.channel,
+      announcementChannelId = await getAnnouncementChannel(message.guild.id)
+
+    if (announcementChannelId === channel.id)
+      sendServerSubscriptionMessage(channel)
+
+    return
+  }
 
   if (!validCommandSymbols.includes(messageText.substring(0, 1))) return
 

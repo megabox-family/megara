@@ -1,8 +1,14 @@
-import { Permissions } from 'discord.js'
+import { Permissions, MessageActionRow, MessageButton } from 'discord.js'
 import { getBot } from '../cache-bot.js'
 import ffmpeg from 'fluent-ffmpeg'
 import { getUserRoleQueue, getChannelRoleQueue } from './required-role-queue.js'
-import { getRoleSorting, getAdminChannel } from '../repositories/guilds.js'
+import {
+  getRoleSorting,
+  getAdminChannel,
+  getAnnouncementChannel,
+  getCommandSymbol,
+} from '../repositories/guilds.js'
+import { getFormatedCommandChannels } from '../repositories/channels.js'
 
 const requiredRoles = [
     `verified`,
@@ -34,6 +40,7 @@ async function emptyRoleSortingQueue() {
   if (roleSortingQueue.length === 0) return
 
   await sortRoles(roleSortingQueue[0])
+  // await new Promise(resolve => setTimeout(resolve, 3000))
 
   roleSortingQueue.shift()
 
@@ -124,7 +131,7 @@ export async function updateColorList(guildId) {
 
   const resolution = `${widthArray.pop()}x${height}`
 
-  ffmpeg()
+  await ffmpeg()
     .input(`color=color=black@0.0:size=${resolution},format=rgba`)
     .inputFormat(`lavfi`)
     .inputOption(`-y`)
@@ -231,6 +238,80 @@ export function balanceDisrupted(role) {
     return true
 }
 
+async function verifyColorListFinishedUpdating(guildId) {
+  if (!colorUpdateQueue.includes(guildId)) return
+  else {
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    await verifyColorListFinishedUpdating(guildId)
+  }
+}
+
+async function announceColorChange(oldRole, newRole) {
+  const guild = oldRole.guild,
+    announcementChannelId = await getAnnouncementChannel(guild.id)
+
+  if (!announcementChannelId) return
+
+  const announcementChannel = guild.channels.cache.get(announcementChannelId),
+    colorNotificationSquad = guild.roles.cache.find(
+      role => role.name === `color notification squad`
+    ),
+    buttonRow = new MessageActionRow().addComponents(
+      new MessageButton()
+        .setCustomId(`!subscribe: ${colorNotificationSquad.id}`)
+        .setLabel(`Subscribe to color notifications`)
+        .setStyle('PRIMARY'),
+      new MessageButton()
+        .setCustomId(`!unsubscribe: ${colorNotificationSquad.id}`)
+        .setLabel(`Unsubscribe from color notifications`)
+        .setStyle('DANGER')
+    ),
+    commandSymbol = await getCommandSymbol(guild.id),
+    commandChannels = await getFormatedCommandChannels(
+      guild.id,
+      `unrestricted`
+    ),
+    isRoleDeleted = guild.roles.cache.find(role => role.id === oldRole.id),
+    oldRoleName = oldRole.name.replaceAll(`~`, ``),
+    newRoleName = newRole?.name.replaceAll(`~`, ``)
+
+  let message = `${colorNotificationSquad} Hey guys! 😁`
+
+  if (!isRoleDeleted)
+    message += `\
+      \nThe **${oldRoleName}** color role has been removed from the server, you can view the updated color list by using the \`${commandSymbol}color list\` command.\
+      \nThe \`${commandSymbol}color list\` command can be used in these channels: ${commandChannels}
+    `
+  else if (newRole == null || oldRoleName === `new role`)
+    message += `\
+      \nA new color role has been created - **${newRoleName}**, go check it out by using the \`${commandSymbol}color\` command.\
+      \nThe \`${commandSymbol}color\` command can be used in these channels: ${commandChannels}
+    `
+  else if (oldRoleName !== newRoleName && oldRole.hexColor !== newRole.hexColor)
+    message += `\
+      \nThe **${oldRoleName} (${oldRole.hexColor})** color role's name & hue has been changed to **${newRoleName} (${newRole.hexColor})**, go check it out by using the \`${commandSymbol}color\` command.\
+      \nThe \`${commandSymbol}color\` command can be used in these channels: ${commandChannels}
+    `
+  else if (oldRoleName !== newRoleName)
+    message += `\
+      \nThe **${oldRoleName}** color role's name has been changed to **${newRoleName}**, go check it out by using the \`${commandSymbol}color\` command.\
+      \nThe \`${commandSymbol}color\` command can be used in these channels: ${commandChannels}
+    `
+  else
+    message += `\
+      \nThe **${oldRoleName}** color role's hue has been changed from **${oldRole.hexColor}** to **${newRole.hexColor}**, go check it out by using the \`${commandSymbol}color\` command.\
+      \nThe \`${commandSymbol}color\` command can be used in these channels: ${commandChannels}
+    `
+
+  await verifyColorListFinishedUpdating(guild.id)
+
+  announcementChannel.send({
+    content: message,
+    files: [`/app/src/media/${guild.id}.png`],
+    components: [buttonRow],
+  })
+}
+
 export async function createRole(role) {
   const guild = role.guild,
     roles = guild.roles.cache,
@@ -263,6 +344,7 @@ export async function createRole(role) {
     return
   } else if (role.name.match(`^~.+~$`)) {
     pushToColorUpdateQueue(guild.id)
+    announceColorChange(role)
   }
 
   if (
@@ -308,9 +390,13 @@ export async function modifyRole(oldRole, newRole) {
     (oldRole.name.match(`^~.+~$`) &&
       newRole.name.match(`^~.+~$`) &&
       oldRole.name !== newRole.name) ||
-    oldRole.color !== newRole.color
+    (oldRole.name.match(`^~.+~$`) &&
+      newRole.name.match(`^~.+~$`) &&
+      oldRole.color !== newRole.color)
   ) {
-    setTimeout(() => pushToColorUpdateQueue(guild.id), 3000)
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    pushToColorUpdateQueue(guild.id)
+    announceColorChange(oldRole, newRole)
   }
 
   if (
@@ -394,6 +480,8 @@ export async function deleteRole(role) {
     if (!roleSortingQueue.includes(guild.id))
       setTimeout(() => pushToRoleSortingQueue(guild.id), 3000)
   } else if (role.name.match(`^~.+~$`)) {
-    setTimeout(() => pushToColorUpdateQueue(guild.id), 3000)
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    pushToColorUpdateQueue(guild.id)
+    announceColorChange(role)
   }
 }
