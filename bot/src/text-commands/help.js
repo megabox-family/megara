@@ -54,6 +54,13 @@ export default async function (message, commandSymbol) {
       `,
     },
     {
+      name: `\`${commandSymbol}episode <season #> <episode # / name>\``,
+      value: `
+        Generates a private thread within a cinema channel to discuss spoilers in relation to a specific episode.\
+        \nExample: \`${commandSymbol}episode 3 7\`, \`${commandSymbol}episode 1 Pilot\`, \`${commandSymbol}episode 4 Finale\`
+      `,
+    },
+    {
       name: `\`${commandSymbol}join <channel>\``,
       value: `
         \nAdds you to the specified channel, if it's joinable.\
