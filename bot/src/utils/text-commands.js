@@ -25,6 +25,28 @@ export async function adminCheck(message, commandSymbol, command) {
   return true
 }
 
+export async function cinemaCheck(message, commandSymbol, command) {
+  const commandLevel = await getCommandLevelForChannel(message.channel.id)
+
+  if ([`prohibited`, `restricted`, `unrestricted`].includes(commandLevel)) {
+    const commandChannels = await getFormatedCommandChannels(
+      message.guild.id,
+      `cinema`
+    )
+
+    message.reply(
+      `
+        Sorry the \`${commandSymbol}${command}\` command is prohibited in this channel 😔\
+        \nBut here's a list of channels you can use it in: ${commandChannels}
+      `
+    )
+
+    return false
+  }
+
+  return true
+}
+
 export async function commandLevelCheck(message, commandSymbol, command) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
 

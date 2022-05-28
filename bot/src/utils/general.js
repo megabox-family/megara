@@ -80,14 +80,6 @@ export async function deleteNewRoles(guild) {
 export async function startup(bot) {
   console.log(`Logged in as ${bot.user.tag}!`)
 
-  // const guild = bot.guilds.cache.get(`711043006253367426`)
-
-  // console.log(
-  //   guild.channels.cache
-  //     .get(`914280421448105985`)
-  //     .permissionOverwrites.cache.get(`917933076426928148`)
-  // )
-
   cacheBot(bot)
   await syncGuilds(bot.guilds.cache)
 

@@ -28,7 +28,7 @@ drop type if exists channel_type;
 drop type if exists command_level;
 
 create type channel_type as enum('category', 'joinable', 'private', 'public', 'voice');
-create type command_level as enum('admin', 'unrestricted', 'restricted', 'prohibited');
+create type command_level as enum('admin', 'unrestricted', 'cinema', 'restricted', 'prohibited');
 
 create table channels (
   id text not null primary key,

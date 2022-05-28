@@ -67,8 +67,16 @@ export function pushToChannelSortingQueue(GuildId) {
 }
 
 export function checkType(channel) {
-  if (channel.type === `GUILD_CATEGORY`) return `category`
-  else if (channel.type === `GUILD_VOICE`) return `voice`
+  switch (channel.type) {
+    case `GUILD_CATEGORY`:
+      return `category`
+    case `GUILD_VOICE`:
+      return `voice`
+    case `GUILD_PUBLIC_THREAD`:
+      return `public thread`
+    case `GUILD_PRIVATE_THREAD`:
+      return `private thread`
+  }
 
   const roles = channel.guild.roles.cache,
     permissions = channel.permissionOverwrites.cache.map(
@@ -90,6 +98,7 @@ export function getCommandLevel(channel) {
   if (alphaPermissions.includes(`!command level: admin`)) return `admin`
   else if (alphaPermissions.includes(`!command level: unrestricted`))
     return `unrestricted`
+  else if (alphaPermissions.includes(`!command level: cinema`)) return `cinema`
   else if (alphaPermissions.includes(`!command level: restricted`))
     return `restricted`
   else return `prohibited`
@@ -121,8 +130,11 @@ export async function setChannelVisibility(channelId) {
     return
   }
 
-  const channelType = checkType(channel),
-    guild = channel.guild,
+  const channelType = checkType(channel)
+
+  if ([`public thread`, `private thread`].includes(channelType)) return
+
+  const guild = channel.guild,
     announcementChannelId = await getAnnouncementChannel(guild.id),
     verificationChannelId = await getVerificationChannel(guild.id),
     welcomeChannelId = await getWelcomeChannel(guild.id),
@@ -214,6 +226,10 @@ export async function sortChannels(guildId) {
   if (!(await getChannelSorting(guildId))) return
 
   const guild = getBot().guilds.cache.get(guildId),
+    channels = guild.channels.cache.filter(
+      channel =>
+        ![`GUILD_PUBLIC_THREAD`, `GUILD_PRIVATE_THREAD`].includes(channel.type)
+    ),
     alphabeticalCategories = await getAlphabeticalCategories(guildId),
     alphabeticalBuckets = [alphabeticalCategories],
     finalChannelArr = []
@@ -232,7 +248,7 @@ export async function sortChannels(guildId) {
       channelsWithPositiveOverrides = [],
       channelsWithNegativeOverrides = []
 
-    guild.channels.cache.forEach(channel => {
+    channels.forEach(channel => {
       const positionOverride = getPositionOverride(channel)
 
       if (positionOverride)
@@ -276,7 +292,7 @@ export async function sortChannels(guildId) {
   })
 
   const currentChannelPosition = finalChannelArr.map(channel => {
-    const _channel = guild.channels.cache.get(channel.channel)
+    const _channel = channels.get(channel.channel)
 
     if (!_channel)
       console.log(
@@ -302,8 +318,11 @@ export async function sortChannels(guildId) {
 }
 
 export async function createChannel(channel, skipAnnouncementAndSort = false) {
-  const channelType = checkType(channel),
-    commandLevel = getCommandLevel(channel),
+  const channelType = checkType(channel)
+
+  if ([`public thread`, `private thread`].includes(channelType)) return
+
+  const commandLevel = getCommandLevel(channel),
     positionOverride = getPositionOverride(channel)
 
   await createChannelRecord(
@@ -330,6 +349,12 @@ export async function modifyChannel(
   newChannel,
   skipAnnouncementAndSort = false
 ) {
+  const oldChannelType = oldChannel.hasOwnProperty(`channelType`)
+    ? oldChannel.channelType
+    : checkType(oldChannel)
+
+  if ([`public thread`, `private thread`].includes(oldChannelType)) return
+
   //queue stuffs
   if (oldChannel?.permissionOverwrites) {
     const requiredRole = requiredRoleDifference(
@@ -359,9 +384,6 @@ export async function modifyChannel(
   const oldCatergoryId = oldChannel.hasOwnProperty(`categoryId`)
       ? oldChannel.categoryId
       : oldChannel.parentId,
-    oldChannelType = oldChannel.hasOwnProperty(`channelType`)
-      ? oldChannel.channelType
-      : checkType(oldChannel),
     oldCommandLevel = oldChannel.hasOwnProperty(`commandLevel`)
       ? oldChannel.commandLevel
       : getCommandLevel(oldChannel),
@@ -460,7 +482,11 @@ export async function syncChannels(guild) {
     liveChannelIds = []
 
   channels.forEach(channel => {
-    if (!channel.deleted) liveChannelIds.push(channel.id)
+    if (
+      !channel.deleted &&
+      ![`GUILD_PUBLIC_THREAD`, `GUILD_PRIVATE_THREAD`].includes(channel.type)
+    )
+      liveChannelIds.push(channel.id)
   })
 
   const channelTable = await getChannelTableByGuild(guild.id),
