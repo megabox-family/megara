@@ -125,13 +125,28 @@ export default async function (message, commandSymbol, nickname) {
   // Attempt to set verified role
   try {
     const verifiedRole = guild.roles.cache.find(
-      role => role.name === `verified`
-    )
+        role => role.name === `verified`
+      ),
+      serverNotificationRole = guild.roles.cache.find(
+        role => role.name === `server notification squad`
+      ),
+      channelNotificationRole = guild.roles.cache.find(
+        role => role.name === `channel notification squad`
+      ),
+      colorNotificationRole = guild.roles.cache.find(
+        role => role.name === `color notification squad`
+      )
+
     let roleIsUpdated = false
     let attempts = 0
 
     while (!roleIsUpdated) {
-      await Promise.all([guildMember.roles.add(verifiedRole.id), timeout(1000)])
+      await Promise.all([
+        await guildMember.roles.add(verifiedRole.id),
+        await guildMember.roles.add(serverNotificationRole.id),
+        await guildMember.roles.add(channelNotificationRole.id),
+        await guildMember.roles.add(colorNotificationRole.id),
+      ])
 
       roleIsUpdated = await guildMember.roles.cache.some(
         x => x.id === verifiedRole.id
