@@ -254,7 +254,14 @@ export async function setChannelVisibility(channelId) {
       }
     }
 
-    everyoneOverwrite.edit({ VIEW_CHANNEL: true, SEND_MESSAGES: true })
+    const individualPermissions = everyoneOverwrite.allow.serialize()
+
+    if (
+      !individualPermissions.VIEW_CHANNEL ||
+      !individualPermissions.SEND_MESSAGES
+    ) {
+      everyoneOverwrite.edit({ VIEW_CHANNEL: true, SEND_MESSAGES: true })
+    }
   } else if (
     categoryName.toUpperCase() === `ARCHIVED` ||
     channelType === `archived`
