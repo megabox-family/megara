@@ -17,6 +17,7 @@ const requiredRoles = [
     `channel notification squad`,
     `color notification squad`,
     `!channel type: archived`,
+    `!channel type: hidden`,
     `!channel type: joinable`,
     `!channel type: public`,
     `!command level: admin`,

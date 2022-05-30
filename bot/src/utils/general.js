@@ -154,7 +154,7 @@ export async function announceNewChannel(newChannel) {
 
   const channelType = await getChannelType(newChannel.id)
 
-  if ([`category`, `voice`, `private`].includes(channelType)) return
+  if ([`category`, `hidden`, `private`, `voice`].includes(channelType)) return
 
   const channelNotificationSquad = guild.roles.cache.find(
       role => role.name === `channel notification squad`
