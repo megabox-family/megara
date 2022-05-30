@@ -83,7 +83,8 @@ export function checkType(channel) {
       role => roles.get(role.id)?.name
     )
 
-  if (permissions.includes(`!channel type: joinable`)) return `joinable`
+  if (permissions.includes(`!channel type: archived`)) return `archived`
+  else if (permissions.includes(`!channel type: joinable`)) return `joinable`
   else if (permissions.includes(`!channel type: public`)) return `public`
   else return `private`
 }
@@ -138,6 +139,12 @@ export async function setChannelVisibility(channelId) {
     announcementChannelId = await getAnnouncementChannel(guild.id),
     verificationChannelId = await getVerificationChannel(guild.id),
     welcomeChannelId = await getWelcomeChannel(guild.id),
+    categoryName = channel.parentId
+      ? guild.channels.cache.get(channel.parentId).name
+      : ``,
+    archivedRoleId = guild.roles.cache.find(
+      role => role.name === `!channel type: archived`
+    )?.id,
     joinableRoleId = guild.roles.cache.find(
       role => role.name === `!channel type: joinable`
     )?.id,
@@ -150,14 +157,27 @@ export async function setChannelVisibility(channelId) {
     verifiedRoleId = guild.roles.cache.find(
       role => role.name === `verified`
     )?.id,
-    joinableOverwrite = channel.permissionOverwrites.cache.get(joinableRoleId),
-    publicOverwrite = channel.permissionOverwrites.cache.get(publicRoleId),
-    undergoingVerificationOverwrite = channel.permissionOverwrites.cache.get(
-      undergoingVerificationRoleId
-    ),
-    verifiedOverwrite = channel.permissionOverwrites.cache.get(verifiedRoleId)
+    everyoneRoleId = guild.roles.cache.find(
+      role => role.name === `@everyone`
+    )?.id,
+    archivedOverwrite = archivedRoleId
+      ? channel.permissionOverwrites.cache.get(archivedRoleId)
+      : null,
+    joinableOverwrite = joinableRoleId
+      ? channel.permissionOverwrites.cache.get(joinableRoleId)
+      : null,
+    publicOverwrite = publicRoleId
+      ? channel.permissionOverwrites.cache.get(publicRoleId)
+      : null,
+    undergoingVerificationOverwrite = undergoingVerificationRoleId
+      ? channel.permissionOverwrites.cache.get(undergoingVerificationRoleId)
+      : null,
+    verifiedOverwrite = verifiedRoleId
+      ? channel.permissionOverwrites.cache.get(verifiedRoleId)
+      : null
 
   if ([announcementChannelId, welcomeChannelId].includes(channel.id)) {
+    if (archivedOverwrite) await archivedOverwrite.delete()
     if (joinableOverwrite) await joinableOverwrite.delete()
     if (undergoingVerificationOverwrite)
       await undergoingVerificationRoleId.delete()
@@ -196,6 +216,7 @@ export async function setChannelVisibility(channelId) {
         READ_MESSAGE_HISTORY: true,
       })
   } else if (channel.id === verificationChannelId) {
+    if (archivedOverwrite) await archivedOverwrite.delete()
     if (joinableOverwrite) await joinableOverwrite.delete()
     if (publicOverwrite) await publicOverwrite.delete()
     if (verifiedOverwrite) await verifiedOverwrite.delete()
@@ -204,10 +225,42 @@ export async function setChannelVisibility(channelId) {
         VIEW_CHANNEL: true,
         SEND_MESSAGES: true,
       })
+  } else if (
+    categoryName.toUpperCase() === `ARCHIVED` ||
+    channelType === `archived`
+  ) {
+    if (joinableOverwrite) await joinableOverwrite.delete()
+    if (publicOverwrite) await publicOverwrite.delete()
+    if (undergoingVerificationOverwrite)
+      await undergoingVerificationOverwrite.delete()
+    if (verifiedOverwrite) await verifiedOverwrite.delete()
+
+    if (!archivedOverwrite && archivedRoleId)
+      await channel.permissionOverwrites.create(archivedRoleId, {})
+
+    channel.permissionOverwrites.cache.forEach(async permissionOverwrite => {
+      const individualPermissions = permissionOverwrite.allow.serialize()
+
+      if (
+        permissionOverwrite.id !== everyoneRoleId &&
+        individualPermissions.SEND_MESSAGES
+      )
+        await permissionOverwrite.edit({ SEND_MESSAGES: false })
+    })
   } else if (channelType === `joinable`) {
     if (undergoingVerificationOverwrite)
       await undergoingVerificationOverwrite.delete()
     if (verifiedOverwrite) await verifiedOverwrite.delete()
+
+    channel.permissionOverwrites.cache.forEach(async permissionOverwrite => {
+      const individualPermissions = permissionOverwrite.allow.serialize()
+
+      if (
+        permissionOverwrite.id !== everyoneRoleId &&
+        !individualPermissions.SEND_MESSAGES
+      )
+        await permissionOverwrite.edit({ SEND_MESSAGES: true })
+    })
   } else if (channelType === `public`) {
     if (undergoingVerificationOverwrite)
       await undergoingVerificationOverwrite.delete()
@@ -335,13 +388,13 @@ export async function createChannel(channel, skipAnnouncementAndSort = false) {
   // setChannelVisibility(channel, channelType)
 
   if (skipAnnouncementAndSort) {
-    if (channelType === 'joinable') return channel.id
-  } else {
-    if (!channelSortingQueue.includes(channel.guild.id))
-      pushToChannelSortingQueue(channel.guild.id)
-
-    if (channelType === 'joinable') announceNewChannel(channel)
+    return channel.id
   }
+
+  if (!channelSortingQueue.includes(channel.guild.id))
+    pushToChannelSortingQueue(channel.guild.id)
+
+  announceNewChannel(channel)
 }
 
 export async function modifyChannel(
@@ -411,8 +464,7 @@ export async function modifyChannel(
       newPositionOverride
     )
     if (skipAnnouncementAndSort) {
-      if (oldChannelType !== `joinable` && newChannelType === `joinable`)
-        return newChannel.id
+      if (oldChannelType !== newChannelType) return newChannel.id
     } else {
       if (
         !channelSortingQueue.includes(newChannel.guild.id) &&
@@ -425,8 +477,7 @@ export async function modifyChannel(
         pushToChannelSortingQueue(newChannel.guild.id)
       }
 
-      if (oldChannelType !== `joinable` && newChannelType === `joinable`)
-        announceNewChannel(newChannel)
+      if (oldChannelType !== newChannelType) announceNewChannel(newChannel)
     }
   }
 }

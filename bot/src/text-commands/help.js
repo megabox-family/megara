@@ -10,6 +10,7 @@ export default async function (message, commandSymbol) {
 
   //admin commands go here
   const adminCommands = [
+    `${commandSymbol}buttons`,
     `${commandSymbol}channelFunction`,
     `${commandSymbol}commandSymbol`,
     `${commandSymbol}setNameGuidelines`,
@@ -20,6 +21,20 @@ export default async function (message, commandSymbol) {
 
   //full command list goes here
   const commandArray = [
+    {
+      name: `\`${commandSymbol}buttons notification <channel id>\``,
+      value: `\
+        \nSends message containing buttons that allow members to subsribe and unsubscribe from notification groups.\
+        \nExample: \`${commandSymbol}buttons notification 822941461695299624\`\
+      `,
+    },
+    {
+      name: `\`${commandSymbol}buttons public <channel id>\``,
+      value: `\
+        \nSends message containing buttons that allow members to join / leave public channels within the server.\
+        \nExample: \`${commandSymbol}buttons public 822941461695299624\`\
+      `,
+    },
     {
       name: `\`${commandSymbol}channelFunction <channel id>\``,
       value: `\
@@ -32,6 +47,14 @@ export default async function (message, commandSymbol) {
     {
       name: `\`${commandSymbol}channels\``,
       value: `Displays the list of joinable channels.`,
+    },
+    {
+      name: `\`${commandSymbol}channels archived\``,
+      value: `Displays the list of archived channels that you can join / leave.`,
+    },
+    {
+      name: `\`${commandSymbol}channels public\``,
+      value: `Displays the list of public channels that you can join / leave.`,
     },
     {
       name: `\`${commandSymbol}color list\``,

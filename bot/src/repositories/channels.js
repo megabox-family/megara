@@ -1,17 +1,22 @@
 import pgPool from '../pg-pool.js'
 import camelize from 'camelize'
 import SQL from 'sql-template-strings'
+import { getWelcomeChannel } from './guilds.js'
 
 export async function getIdForJoinableChannel(guildId, channelName) {
+  const welcomeChannelId = await getWelcomeChannel(guildId)
+
   return await pgPool
     .query(
       SQL`
         select 
           id 
         from channels 
-        where guild_id = ${guildId} AND
-          name = ${channelName} AND 
-          channel_type = 'joinable';
+        where guild_id = ${guildId} and
+          name = ${channelName} and 
+          channel_type in ('archived', 'joinable', 'public') and
+          id != ${welcomeChannelId} and
+          channels.name not like 'room%'
       `
     )
     .then(res => (res.rows[0] ? res.rows[0].id : undefined))
@@ -291,12 +296,51 @@ export async function getJoinableChannelList(guildId) {
     .then(res => camelize(res.rows))
 }
 
+export async function getArchivedChannelList(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select
+          categories.name as category_name,
+          channels.id as channel_id
+        from channels as categories, channels as channels
+        where categories.id = channels.category_id and
+          channels.channel_type = 'archived' and
+          categories.guild_id = ${guildId}
+        order by categories.position, categories.id, channels.position;
+      `
+    )
+    .then(res => camelize(res.rows))
+}
+
+export async function getPublicChannelList(guildId, welcomeChannelId) {
+  if (welcomeChannelId == null) welcomeChannelId = ''
+
+  return await pgPool
+    .query(
+      SQL`
+        select
+          categories.name as category_name,
+          channels.id as channel_id,
+          channels.name as channel_name
+        from channels as categories, channels as channels
+        where categories.id = channels.category_id and
+          channels.channel_type = 'public' and
+          channels.name not like 'room%' and
+          categories.guild_id = ${guildId} and
+          channels.id != ${welcomeChannelId}
+        order by categories.position, categories.id, channels.position;
+      `
+    )
+    .then(res => camelize(res.rows))
+}
+
 export async function deleteAllGuildChannels(guildId) {
   return await pgPool
     .query(
       SQL`
       delete from channels 
-      where guild_id = ${guildId} 
+      where guild_id = ${guildId}
       returning *;
     `
     )

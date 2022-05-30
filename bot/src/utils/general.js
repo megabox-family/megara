@@ -22,7 +22,9 @@ import {
   getFormatedCommandChannels,
   getActiveVoiceChannelIds,
   channelWithVoiceChannelIsJoinable,
+  getChannelType,
 } from '../repositories/channels.js'
+import { get } from 'http'
 
 const relativePath = dirname(fileURLToPath(import.meta.url)),
   srcPath = dirname(relativePath),
@@ -90,6 +92,13 @@ export async function startup(bot) {
   })
 
   await removeEmptyVoiceChannelsOnStartup()
+
+  // const guild = bot.guilds.cache.get(`711043006253367426`),
+  //   channel = guild.channels.cache.get(`711043006781849686`)
+
+  // channel.permissionOverwrites.cache.forEach(permissionOverwrite =>
+  //   console.log(permissionOverwrite)
+  // )
 }
 
 export async function logMessageToChannel(message) {
@@ -143,6 +152,10 @@ export async function announceNewChannel(newChannel) {
 
   if (!announcementChannelId) return
 
+  const channelType = await getChannelType(newChannel.id)
+
+  if (channelType === `private`) return
+
   const channelNotificationSquad = guild.roles.cache.find(
       role => role.name === `channel notification squad`
     ),
@@ -150,11 +163,18 @@ export async function announceNewChannel(newChannel) {
       guild.id,
       `unrestricted`
     ),
+    categoryName = await getCategoryName(newChannel.parentId),
+    announcementChannel = guild.channels.cache.get(announcementChannelId),
+    commandSymbol = await getCommandSymbol(guild.id),
     buttonRow = new MessageActionRow().addComponents(
       new MessageButton()
         .setCustomId(`!join-channel: ${newChannel.id}`)
         .setLabel(`Join ${newChannel.name}`)
         .setStyle('SUCCESS'),
+      new MessageButton()
+        .setCustomId(`!leave-channel: ${newChannel.id}`)
+        .setLabel(`Leave ${newChannel.name}`)
+        .setStyle('DANGER'),
       new MessageButton()
         .setCustomId(`!subscribe: ${channelNotificationSquad.id}`)
         .setLabel(`Subscribe to channel notifications`)
@@ -162,21 +182,34 @@ export async function announceNewChannel(newChannel) {
       new MessageButton()
         .setCustomId(`!unsubscribe: ${channelNotificationSquad.id}`)
         .setLabel(`Unsubscribe from channel notifications`)
-        .setStyle('DANGER')
-    ),
-    categoryName = await getCategoryName(newChannel.parentId),
-    announcementChannel = guild.channels.cache.get(announcementChannelId),
-    commandSymbol = getCommandSymbol(guild.id)
+        .setStyle('SECONDARY')
+    )
+
+  let channelTypeMessage, channelTypeDetails, command
+
+  switch (channelType) {
+    case `public`:
+      channelTypeMessage = `We've added a new ${channelType} channel`
+      channelTypeDetails = `By default, all members are added to public channels.`
+      break
+    case `joinable`:
+      channelTypeMessage = `We've added a new ${channelType} channel`
+      channelTypeDetails = `By default, members are not added to joinable channels.`
+      break
+    default:
+      channelTypeMessage = `A channel has been archived`
+      channelTypeDetails =
+        `Messages cannot be sent in archived channels, but you can still access them to view message history. ` +
+        `By default, members are not removed from archived channels unless the channel was previously public.`
+  }
 
   if (announcementChannel)
     announcementChannel.send({
       content: `
         ${channelNotificationSquad} Hey guys! 😁\
-        \nWe've added a new channel, <#${newChannel.id}>, in the '${categoryName}' category.\
-        \nPress the button below, or use the \`${commandSymbol}join\` command to join.\
-        \nExample: \`${commandSymbol}join ${newChannel.name}\`\
+        \n${channelTypeMessage}, **<#${newChannel.id}>**, in the **${categoryName}** category. ${channelTypeDetails} \
 
-        \nThe \`${commandSymbol}join\` command can be used in these channels: ${commandChannels}
+        \nUse the buttons below this message to join / leave **<#${newChannel.id}>** and or to manage these notifications. You can also join / leave channels using text commands, for more information use the \`${commandSymbol}help\` command in these channels: ${commandChannels}
       `,
       components: [buttonRow],
     })
@@ -195,7 +228,7 @@ function sendServerSubscriptionMessage(announcementChannel) {
       new MessageButton()
         .setCustomId(`!unsubscribe: ${serverNotificationSquad.id}`)
         .setLabel(`Unsubscribe from server notifications`)
-        .setStyle('DANGER')
+        .setStyle('SECONDARY')
     )
 
   announcementChannel.send({

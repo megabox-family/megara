@@ -16,8 +16,9 @@ const requiredRoles = [
     `server notification squad`,
     `channel notification squad`,
     `color notification squad`,
-    `!channel type: public`,
+    `!channel type: archived`,
     `!channel type: joinable`,
+    `!channel type: public`,
     `!command level: admin`,
     `!command level: unrestricted`,
     `!command level: cinema`,
@@ -264,7 +265,7 @@ async function announceColorChange(oldRole, newRole) {
       new MessageButton()
         .setCustomId(`!unsubscribe: ${colorNotificationSquad.id}`)
         .setLabel(`Unsubscribe from color notifications`)
-        .setStyle('DANGER')
+        .setStyle('SECONDARY')
     ),
     commandSymbol = await getCommandSymbol(guild.id),
     commandChannels = await getFormatedCommandChannels(

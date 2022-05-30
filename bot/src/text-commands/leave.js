@@ -1,5 +1,8 @@
 import { getCommandName, commandLevelCheck } from '../utils/text-commands.js'
-import { getIdForJoinableChannel } from '../repositories/channels.js'
+import {
+  getIdForJoinableChannel,
+  getChannelType,
+} from '../repositories/channels.js'
 
 const command = getCommandName(import.meta.url)
 
@@ -10,6 +13,7 @@ export default async function (message, commandSymbol, channelName) {
     message.reply(
       `
         Sorry the \`${commandSymbol}${command}\` command requires a channel name (ex: \`${commandSymbol}${command} minecraft\`) 😔\
+        \nUse the \`${commandSymbol}channels\` command to list channels!
       `
     )
 
@@ -17,20 +21,59 @@ export default async function (message, commandSymbol, channelName) {
   }
 
   const guild = message.guild,
-    joinableChannelId = await getIdForJoinableChannel(guild.id, channelName),
-    channel = guild.channels.cache.get(joinableChannelId)
+    joinableChannelId = await getIdForJoinableChannel(guild.id, channelName)
 
-  if (channel) {
-    if (
-      channel.permissionOverwrites.cache.filter(
-        permissionOverwrite => permissionOverwrite.id === message.author.id
-      ).size > 0
-    ) {
-      channel.permissionOverwrites
-        .delete(message.author.id)
-        .then(() =>
-          message.reply(`You have been removed from <#${joinableChannelId}> 👋`)
-        )
-    } else message.reply(`You can't leave a channel you aren't a part of 🤔`)
-  } else message.reply(`Sorry, ${channelName} does not exist 😔`)
+  if (!joinableChannelId) {
+    message.reply(
+      `${channelName} is either a channel that doesn't exist or one that you can't leave 🤔`
+    )
+
+    return
+  }
+
+  const channel = guild.channels.cache.get(joinableChannelId)
+
+  if (!channel) {
+    message.reply(
+      `I was unable to remove you from ${channelName} for an unknown reason, please contact a server administrator for help. 😬`
+    )
+
+    return
+  }
+
+  const channelType = await getChannelType(channel.id),
+    guildMember = guild.members.cache.get(message.author.id),
+    userOverwrite = channel.permissionOverwrites.cache.find(
+      permissionOverwrite => permissionOverwrite.id === guildMember.id
+    ),
+    individualPermissions = userOverwrite
+      ? userOverwrite.allow.serialize()
+      : null
+
+  let left = false
+
+  if ([`archived`, `joinable`].includes(channelType)) {
+    if (userOverwrite) {
+      userOverwrite.delete()
+
+      left = true
+    }
+  } else if (channelType === `public`) {
+    if (!userOverwrite) {
+      channel.permissionOverwrites.create(guildMember.id, {
+        VIEW_CHANNEL: false,
+      })
+
+      left = true
+    } else if (individualPermissions?.VIEW_CHANNEL) {
+      channel.permissionOverwrites.edit(guildMember.id, {
+        VIEW_CHANNEL: false,
+      })
+
+      left = true
+    }
+  }
+
+  if (left) message.reply(`You've been removed to **${channel}** 👋`)
+  else message.reply(`You aren't in **${channel}** 🤔`)
 }
