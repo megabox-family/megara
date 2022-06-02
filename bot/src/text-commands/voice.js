@@ -5,7 +5,6 @@ import {
   deleteDynamicVoiceChannel,
 } from '../utils/voice.js'
 import { getChannelType } from '../repositories/channels.js'
-import { GuildChannel } from 'discord.js'
 
 const command = getCommandName(import.meta.url)
 
