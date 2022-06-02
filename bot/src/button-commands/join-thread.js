@@ -1,16 +1,20 @@
 export default async function (interaction) {
   const guild = interaction.guild,
     channel = interaction.channel,
-    thread = guild.channels.cache.get(
-      interaction.customId.match(`(?!:)[0-9]+`)[0]
-    ),
-    user = interaction.user
+    user = interaction.user,
+    threadId = interaction.customId.match(`(?!:)[0-9]+`)[0]
 
-  console.log(thread)
+  let thread = guild.channels.cache.get(threadId)
+
+  if (!thread) {
+    const archivedThreads = await interaction.channel.threads.fetchArchived()
+
+    thread = archivedThreads.threads.get(threadId)
+
+    if (thread) await thread.setArchived(false)
+  }
 
   if (thread) {
-    if (thread.archived) await thread.setArchived(false)
-
     await thread.members
       .add(user.id)
       .catch(error =>
