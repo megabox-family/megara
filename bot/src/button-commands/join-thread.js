@@ -6,10 +6,12 @@ export default async function (interaction) {
     ),
     user = interaction.user
 
+  console.log(thread)
+
   if (thread) {
     if (thread.archived) await thread.setArchived(false)
 
-    thread.members
+    await thread.members
       .add(user.id)
       .catch(error =>
         console.log(`Unable to add user to thread, see error below:\n${error}`)

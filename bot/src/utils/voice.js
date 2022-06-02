@@ -56,6 +56,8 @@ async function getOrCreateVoiceThread(textChannel, voiceChannelName, guild) {
       reason: 'Needed thread to match voicechannel',
     })
 
+  if (voiceThread.archived) await voiceThread.setArchived(false)
+
   return voiceThread
 }
 
@@ -351,11 +353,19 @@ export async function dynamicRooms(oldState, newState) {
     ),
     guildMember = guild.members.cache.get(oldState.id)
 
-  await oldThread?.members.remove(guildMember.id)
+  await oldThread?.members
+    .remove(guildMember.id)
+    .catch(error =>
+      console.log(`Could not add memeber to thread, see error below\n${error}`)
+    )
   await removeMemberFromChannelTemporarily(guildMember, oldThread?.parentId)
 
   await addMemberToChannelTemporarily(guildMember, newThread?.parentId)
-  await newThread?.members.add(guildMember.id)
+  await newThread?.members
+    .add(guildMember.id)
+    .catch(error =>
+      console.log(`Could not add memeber to thread, see error below\n${error}`)
+    )
 
   //delete or create voice channels
   const oldVoiceChannel = oldState.channel,
