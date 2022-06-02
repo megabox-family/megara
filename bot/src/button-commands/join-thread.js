@@ -7,7 +7,13 @@ export default async function (interaction) {
   let thread = guild.channels.cache.get(threadId)
 
   if (!thread) {
-    const archivedThreads = await interaction.channel.threads.fetchArchived()
+    const archivedThreads = await interaction.channel.threads
+      .fetchArchived({ fetchAll: true })
+      .catch(error =>
+        console.log(
+          `I was unable to fetch archived threads, see error below.\n${error}`
+        )
+      )
 
     thread = archivedThreads.threads.get(threadId)
 
