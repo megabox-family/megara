@@ -27,11 +27,17 @@ export default async function (interaction) {
       publicThread = archivedPublicThreads.threads.get(threadId)
 
     thread = privateThread ? privateThread : publicThread
-
-    if (thread) await thread.setArchived(false)
   }
 
   if (thread) {
+    await thread
+      .setArchived(false)
+      .catch(error =>
+        console.log(
+          `I was unable to unarchive a thread, see error below\n${error}`
+        )
+      )
+
     await thread.members
       .add(user.id)
       .catch(error =>
