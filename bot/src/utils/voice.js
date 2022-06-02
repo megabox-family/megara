@@ -238,12 +238,26 @@ export async function createVoiceChannel(textChannel, voiceChannelname) {
         })
     })
 
-  let newVoiceChannel
+  const premiumTier = guild.premiumTier
+
+  let newVoiceChannel, maxBitrate
+
+  switch (premiumTier) {
+    case `TIER_1`:
+      maxBitrate = 128000
+    case `TIER_2`:
+      maxBitrate = 256000
+    case `TIER_3`:
+      maxBitrate = 384000
+    default:
+      maxBitrate = 96000
+  }
 
   if (category)
     newVoiceChannel = await category.createChannel(voiceChannelname, {
       type: `GUILD_VOICE`,
       permissionOverwrites: textChannelPermissionArray,
+      bitrate: maxBitrate,
     })
 
   return newVoiceChannel

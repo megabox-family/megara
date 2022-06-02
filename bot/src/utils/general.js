@@ -115,8 +115,10 @@ export async function startup(bot) {
 
   // await removeEmptyVoiceChannelsOnStartup()
 
-  // const guild = bot.guilds.cache.get(`711043006253367426`),
-  //   channel = guild.channels.cache.get(`981488367227260938`)
+  const guild = bot.guilds.cache.get(`711043006253367426`),
+    channel = guild.channels.cache.get(`981488367227260938`)
+
+  console.log(guild.premiumSubscriptionCount)
 
   // channel.permissionOverwrites.cache.forEach(overwrite => {
   //   const individualAllowPermissions = overwrite.allow.serialize()
