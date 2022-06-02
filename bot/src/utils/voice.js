@@ -153,9 +153,9 @@ export async function deleteDynamicVoiceChannel(
   })
 
   if (
+    !emptyChannels[0]?.name ||
     (+getVoiceChannelNumber(emptyChannels[0]?.name) !== 1 &&
-      emptyChannels.length == 1) ||
-    !emptyChannels[0]?.name
+      emptyChannels.length == 1)
   )
     return
 
