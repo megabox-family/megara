@@ -4,26 +4,29 @@ export default async function (interaction) {
     user = interaction.user,
     threadId = interaction.customId.match(`(?!:)[0-9]+`)[0]
 
-  console.log(threadId)
-
   let thread = guild.channels.cache.get(threadId)
 
-  console.log(thread)
-
   if (!thread) {
-    console.log(`made it here`)
-
-    const archivedThreads = await interaction.channel.threads
-      .fetchArchived({ fetchAll: true })
+    const archivedPrivateThreads = await interaction.channel.threads
+      .fetchArchived({ type: `private`, fetchAll: true })
       .catch(error =>
         console.log(
-          `I was unable to fetch archived threads, see error below.\n${error}`
+          `I was unable to fetch archived private threads, see error below.\n${error}`
         )
       )
 
-    console.log(archivedThreads)
+    const archivedPublicThreads = await interaction.channel.threads
+      .fetchArchived({ type: `public`, fetchAll: true })
+      .catch(error =>
+        console.log(
+          `I was unable to fetch archived public threads, see error below.\n${error}`
+        )
+      )
 
-    thread = archivedThreads.threads.get(threadId)
+    const privateThread = archivedPrivateThreads.threads.get(threadId),
+      publicThread = archivedPublicThreads.threads.get(threadId)
+
+    thread = privateThread ? privateThread : publicThread
 
     if (thread) await thread.setArchived(false)
   }
@@ -35,7 +38,11 @@ export default async function (interaction) {
         console.log(`Unable to add user to thread, see error below:\n${error}`)
       )
   } else
-    user.send(
-      `The thread you tried joining no longer exits in the ${channel} channel within the ${guild} server.`
-    )
+    user
+      .send(
+        `The thread you tried joining no longer exits in the ${channel} channel within the ${guild} server.`
+      )
+      .catch(error =>
+        console.log(`Couldn't send user messsage (thread button):\n${error}`)
+      )
 }
