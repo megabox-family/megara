@@ -28,7 +28,7 @@ export async function adminCheck(message, commandSymbol, command) {
 export async function cinemaCheck(message, commandSymbol, command) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
 
-  if ([`prohibited`, `restricted`, `unrestricted`].includes(commandLevel)) {
+  if (commandLevel !== `cinema`) {
     const commandChannels = await getFormatedCommandChannels(
       message.guild.id,
       `cinema`
@@ -50,7 +50,7 @@ export async function cinemaCheck(message, commandSymbol, command) {
 export async function commandLevelCheck(message, commandSymbol, command) {
   const commandLevel = await getCommandLevelForChannel(message.channel.id)
 
-  if ([`prohibited`, `restricted`].includes(commandLevel)) {
+  if (![`admin`, `unrestricted`].includes(commandLevel)) {
     const commandChannels = await getFormatedCommandChannels(
       message.guild.id,
       `unrestricted`

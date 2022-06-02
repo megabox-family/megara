@@ -27,7 +27,7 @@ export default async function (message, commandSymbol, args) {
   try {
     thread = await channel.threads.create({
       name: `${channel.name} season ${argArray[0]} episode ${argArray[1]}`,
-      // autoArchiveDuration: 60,
+      autoArchiveDuration: 10080,
       type: 'GUILD_PRIVATE_THREAD',
       reason: 'Needed a separate thread for moderation',
     })

@@ -4,7 +4,9 @@ import SQL from 'sql-template-strings'
 import { getWelcomeChannel } from './guilds.js'
 
 export async function getIdForJoinableChannel(guildId, channelName) {
-  const welcomeChannelId = await getWelcomeChannel(guildId)
+  const welcomeChannelId = await getWelcomeChannel(guildId),
+    roomChannelId = await getRoomChannelId(guildId),
+    unverifiedRoomId = await getUnverifiedRoomChannelId(guildId)
 
   return await pgPool
     .query(
@@ -15,16 +17,24 @@ export async function getIdForJoinableChannel(guildId, channelName) {
         where guild_id = ${guildId} and
           name = ${channelName} and 
           channel_type in ('archived', 'joinable', 'public') and
-          id != ${welcomeChannelId} and
-          channels.name not like 'room%'
+          id not in (${welcomeChannelId}, ${roomChannelId}, ${unverifiedRoomId})
       `
     )
     .then(res => (res.rows[0] ? res.rows[0].id : undefined))
 }
 
-export async function getIdForChannel(channel) {
+export async function getChannelId(channelName, guildId) {
   return await pgPool
-    .query(`select id from channels where name = $1;`, [channel])
+    .query(
+      SQL`
+        select 
+          id 
+        from channels 
+        where guild_id = ${guildId} and
+          name = ${channelName} and
+          channel_type in ('joinable', 'private', 'public')
+      `
+    )
     .then(res => (res.rows[0] ? res.rows[0].id : undefined))
 }
 
@@ -269,10 +279,11 @@ export async function getAlphabeticalChannelsByCategory(categoryId) {
   return await pgPool
     .query(
       SQL`
-        select id
+        select 
+          id,
+          channel_type
         from channels 
-        where category_id = ${categoryId} and
-          channel_type != 'voice'
+        where category_id = ${categoryId}
         order by name
       `
     )
@@ -378,3 +389,51 @@ export async function getAllVoiceChannelIds(guildId) {
 
   return query.map(record => record.id)
 }
+
+export async function getAllTextChannelNames(guildId) {
+  const query = await pgPool
+    .query(
+      SQL`
+        select 
+          name
+        from channels 
+        where guild_id = ${guildId} and
+          channel_type in ('joinable', 'private', 'public')
+      `
+    )
+    .then(res => (res.rows[0] ? camelize(res.rows) : undefined))
+
+  return query.map(record => record.name)
+}
+
+export async function getRoomChannelId(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select
+          id
+        from channels
+        where guild_id = ${guildId} and
+          name = 'rooms' and
+          channel_type not in ('voice', 'category', 'archived', 'hidden')
+      `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].id : undefined))
+}
+
+export async function getUnverifiedRoomChannelId(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select
+          id
+        from channels
+        where guild_id = ${guildId} and
+          name = 'unverified-rooms' and
+          channel_type not in ('voice', 'category', 'archived', 'hidden')
+      `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].id : undefined))
+}
+
+// 981719152106545232

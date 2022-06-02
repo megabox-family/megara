@@ -1,8 +1,6 @@
 import { getCommandName, commandLevelCheck } from '../utils/text-commands.js'
-import {
-  getIdForJoinableChannel,
-  getChannelType,
-} from '../repositories/channels.js'
+import { removeMemberFromChannel } from '../utils/channels.js'
+import { getIdForJoinableChannel } from '../repositories/channels.js'
 
 const command = getCommandName(import.meta.url)
 
@@ -41,39 +39,10 @@ export default async function (message, commandSymbol, channelName) {
     return
   }
 
-  const channelType = await getChannelType(channel.id),
-    guildMember = guild.members.cache.get(message.author.id),
-    userOverwrite = channel.permissionOverwrites.cache.find(
-      permissionOverwrite => permissionOverwrite.id === guildMember.id
-    ),
-    individualPermissions = userOverwrite
-      ? userOverwrite.allow.serialize()
-      : null
+  const guildMember = guild.members.cache.get(message.author.id),
+    result = await removeMemberFromChannel(guildMember, channel.id)
 
-  let left = false
-
-  if ([`archived`, `joinable`].includes(channelType)) {
-    if (userOverwrite) {
-      userOverwrite.delete()
-
-      left = true
-    }
-  } else if (channelType === `public`) {
-    if (!userOverwrite) {
-      channel.permissionOverwrites.create(guildMember.id, {
-        VIEW_CHANNEL: false,
-      })
-
-      left = true
-    } else if (individualPermissions?.VIEW_CHANNEL) {
-      channel.permissionOverwrites.edit(guildMember.id, {
-        VIEW_CHANNEL: false,
-      })
-
-      left = true
-    }
-  }
-
-  if (left) message.reply(`You've been removed to **${channel}** 👋`)
+  if (result === `removed`)
+    message.reply(`You've been removed from **${channel}** 👋`)
   else message.reply(`You aren't in **${channel}** 🤔`)
 }

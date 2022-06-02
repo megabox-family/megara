@@ -1,5 +1,5 @@
 import { getBot } from '../cache-bot.js'
-import { announceNewChannel } from '../utils/general.js'
+import { announceNewChannel, comparePermissions } from '../utils/general.js'
 import { requiredRoleDifference } from './roles.js'
 import { pushChannelToQueue } from './required-role-queue.js'
 import {
@@ -10,6 +10,7 @@ import {
   setLogChannel,
   setAnnouncementChannel,
   setVerificationChannel,
+  setWelcomeChannel,
   getAnnouncementChannel,
   getVerificationChannel,
   getWelcomeChannel,
@@ -22,6 +23,9 @@ import {
   getAlphabeticalCategories,
   getAlphabeticalChannelsByCategory,
   getChannelsGuildById,
+  getChannelType,
+  getRoomChannelId,
+  getUnverifiedRoomChannelId,
 } from '../repositories/channels.js'
 
 const setChannelFunction = {
@@ -29,6 +33,7 @@ const setChannelFunction = {
     logChannel: setLogChannel,
     announcementChannel: setAnnouncementChannel,
     verificationChannel: setVerificationChannel,
+    welcomeChannel: setWelcomeChannel,
   },
   channelVisibilityQueue = [],
   channelSortingQueue = []
@@ -194,7 +199,7 @@ export async function setChannelVisibility(channelId) {
       channel.permissionOverwrites.create(publicRoleId, {})
 
     if (verifiedOverwrite) {
-      const individualPermissions = verifiedOverwrite.allow.serialize()
+      const individualPermissions = comparePermissions(verifiedOverwrite)
 
       if (
         !individualPermissions.VIEW_CHANNEL ||
@@ -247,14 +252,14 @@ export async function setChannelVisibility(channelId) {
         VIEW_CHANNEL: false,
       })
     } else {
-      const individualPermissions = verifiedOverwrite.allow.serialize()
+      const individualPermissions = comparePermissions(verifiedOverwrite)
 
       if (individualPermissions.VIEW_CHANNEL) {
         verifiedOverwrite.edit({ VIEW_CHANNEL: false })
       }
     }
 
-    const individualPermissions = everyoneOverwrite.allow.serialize()
+    const individualPermissions = comparePermissions(everyoneOverwrite)
 
     if (
       !individualPermissions.VIEW_CHANNEL ||
@@ -276,13 +281,22 @@ export async function setChannelVisibility(channelId) {
       await channel.permissionOverwrites.create(archivedRoleId, {})
 
     channel.permissionOverwrites.cache.forEach(async permissionOverwrite => {
-      const individualPermissions = permissionOverwrite.allow.serialize()
+      const individualPermissions = comparePermissions(permissionOverwrite)
 
       if (
         permissionOverwrite.id !== everyoneRoleId &&
-        individualPermissions.SEND_MESSAGES
-      )
-        await permissionOverwrite.edit({ SEND_MESSAGES: false })
+        (individualPermissions.SEND_MESSAGES ||
+          individualPermissions.SEND_MESSAGES_IN_THREADS ||
+          individualPermissions.CREATE_PRIVATE_THREADS ||
+          individualPermissions.CREATE_PUBLIC_THREADS)
+      ) {
+        await permissionOverwrite.edit({
+          SEND_MESSAGES: false,
+          SEND_MESSAGES_IN_THREADS: false,
+          CREATE_PRIVATE_THREADS: false,
+          CREATE_PUBLIC_THREADS: false,
+        })
+      }
     })
   } else if (channelType === `joinable`) {
     if (undergoingVerificationOverwrite)
@@ -290,13 +304,13 @@ export async function setChannelVisibility(channelId) {
     if (verifiedOverwrite) await verifiedOverwrite.delete()
 
     channel.permissionOverwrites.cache.forEach(async permissionOverwrite => {
-      const individualPermissions = permissionOverwrite.allow.serialize()
+      const individualPermissions = permissionOverwrite.deny.serialize() //Don't need to compare when deny and looking for true
 
       if (
         permissionOverwrite.id !== everyoneRoleId &&
-        !individualPermissions.SEND_MESSAGES
+        individualPermissions.SEND_MESSAGES
       )
-        await permissionOverwrite.edit({ SEND_MESSAGES: true })
+        await permissionOverwrite.edit({ SEND_MESSAGES: null })
     })
   } else if (channelType === `public`) {
     if (undergoingVerificationOverwrite)
@@ -336,13 +350,20 @@ export async function sortChannels(guildId) {
     const channelsWithPositionOverrides = {},
       orderedChannels = [],
       channelsWithPositiveOverrides = [],
-      channelsWithNegativeOverrides = []
+      channelsWithNegativeOverrides = [],
+      voiceChannelsWithPositionOverrides = {},
+      orderedVoiceChannels = [],
+      voiceChannelsWithPositiveOverrides = [],
+      voiceChannelsWithNegativeOverrides = []
 
     channels.forEach(channel => {
       const positionOverride = getPositionOverride(channel)
 
-      if (positionOverride)
-        channelsWithPositionOverrides[channel.id] = positionOverride
+      if (positionOverride) {
+        if (channel.type === `GUILD_VOICE`)
+          voiceChannelsWithPositionOverrides[channel.id] = positionOverride
+        else channelsWithPositionOverrides[channel.id] = positionOverride
+      }
     })
 
     alphabeticalBucket.forEach(channel => {
@@ -357,7 +378,22 @@ export async function sortChannels(guildId) {
             id: channel.id,
             positionOverride: channelsWithPositionOverrides[channel.id],
           })
-      } else orderedChannels.push(channel.id)
+      } else if (
+        voiceChannelsWithPositionOverrides.hasOwnProperty(channel.id)
+      ) {
+        if (voiceChannelsWithPositionOverrides[channel.id] > 0)
+          voiceChannelsWithPositiveOverrides.push({
+            id: channel.id,
+            positionOverride: voiceChannelsWithPositionOverrides[channel.id],
+          })
+        else
+          voiceChannelsWithNegativeOverrides.push({
+            id: channel.id,
+            positionOverride: voiceChannelsWithPositionOverrides[channel.id],
+          })
+      } else if (channel.channelType === `voice`)
+        orderedVoiceChannels.push(channel.id)
+      else orderedChannels.push(channel.id)
     })
 
     channelsWithPositiveOverrides.sort((a, b) =>
@@ -376,7 +412,27 @@ export async function sortChannels(guildId) {
       orderedChannels.push(categoriesWithNegativeOverride.id)
     )
 
+    voiceChannelsWithPositiveOverrides.sort((a, b) =>
+      a.positionOverride > b.positionOverride ? -1 : 1
+    )
+
+    voiceChannelsWithNegativeOverrides.sort((a, b) =>
+      a.positionOverride < b.positionOverride ? -1 : 1
+    )
+
+    voiceChannelsWithPositiveOverrides.forEach(categoriesWithPositiveOverride =>
+      orderedVoiceChannels.unshift(categoriesWithPositiveOverride.id)
+    )
+
+    voiceChannelsWithNegativeOverrides.forEach(categoriesWithNegativeOverride =>
+      orderedVoiceChannels.push(categoriesWithNegativeOverride.id)
+    )
+
     orderedChannels.forEach((channelId, index) =>
+      finalChannelArr.push({ channel: channelId, position: index })
+    )
+
+    orderedVoiceChannels.forEach((channelId, index) =>
       finalChannelArr.push({ channel: channelId, position: index })
     )
   })
@@ -422,7 +478,7 @@ export async function createChannel(channel, skipAnnouncementAndSort = false) {
     positionOverride
   )
 
-  // setChannelVisibility(channel, channelType)
+  pushToChannelVisibilityQueue(channel.id)
 
   if (skipAnnouncementAndSort) {
     return channel.id
@@ -634,4 +690,138 @@ export async function syncChannels(guild) {
       announceNewChannel(channelToAnnounce)
     })
   }
+}
+
+export async function addMemberToChannel(member, channelId, temporary = false) {
+  if (!channelId) return
+
+  let result = `already added`
+
+  const guild = member.guild
+
+  const welcomeChannelId = await getWelcomeChannel(guild.id),
+    roomChannelId = await getRoomChannelId(guild.id),
+    unverifiedRoomId = await getUnverifiedRoomChannelId(guild.id)
+
+  if ([welcomeChannelId, roomChannelId, unverifiedRoomId].includes(channelId))
+    return
+
+  const channel = guild.channels.cache.get(channelId),
+    channelType = await getChannelType(channel.id),
+    userOverwrite = channel.permissionOverwrites.cache.find(
+      permissionOverwrite => permissionOverwrite.id === member.id
+    ),
+    individualPermissions = comparePermissions(userOverwrite),
+    individualAllowPermissions = userOverwrite?.allow.serialize()
+
+  if (channelType === `archived`) {
+    const archivedPermissions = {
+      VIEW_CHANNEL: true,
+      SEND_MESSAGES: false,
+      SEND_MESSAGES_IN_THREADS: false,
+      CREATE_PRIVATE_THREADS: false,
+      CREATE_PUBLIC_THREADS: false,
+    }
+
+    if (!userOverwrite) {
+      await channel.permissionOverwrites.create(member.id, archivedPermissions)
+
+      result = `added`
+    } else if (
+      !individualPermissions.VIEW_CHANNEL ||
+      individualPermissions.SEND_MESSAGES ||
+      individualPermissions.SEND_MESSAGES_IN_THREADS ||
+      individualPermissions.CREATE_PRIVATE_THREADS ||
+      individualPermissions.CREATE_PUBLIC_THREADS
+    ) {
+      await channel.permissionOverwrites.edit(member.id, archivedPermissions)
+
+      result = `added`
+    }
+  } else if (channelType === `joinable`) {
+    const joinablePermissions = temporary
+      ? { VIEW_CHANNEL: true, SEND_MESSAGES: true }
+      : { VIEW_CHANNEL: true, SEND_MESSAGES: null }
+
+    if (!userOverwrite) {
+      await channel.permissionOverwrites.create(member.id, joinablePermissions)
+
+      result = `added`
+    } else if (
+      individualPermissions?.VIEW_CHANNEL === false ||
+      individualAllowPermissions.SEND_MESSAGES
+    ) {
+      await channel.permissionOverwrites.edit(member.id, joinablePermissions)
+
+      result = `added`
+    }
+  } else if (channelType === `public`) {
+    if (temporary) {
+      if (userOverwrite) {
+        await channel.permissionOverwrites.create(member.id, {
+          VIEW_CHANNEL: true,
+        })
+
+        result = `added`
+      }
+    } else {
+      if (userOverwrite) {
+        await userOverwrite.delete()
+
+        result = `added`
+      }
+    }
+  } else {
+    result = `not added`
+  }
+
+  return result
+}
+
+export async function removeMemberFromChannel(member, channelId) {
+  if (!channelId) return
+
+  let result = `already removed`
+
+  const guild = member.guild
+
+  const welcomeChannelId = await getWelcomeChannel(guild.id),
+    roomChannelId = await getRoomChannelId(guild.id),
+    unverifiedRoomId = await getUnverifiedRoomChannelId(guild.id)
+
+  if ([welcomeChannelId, roomChannelId, unverifiedRoomId].includes(channelId))
+    return
+
+  const channel = guild.channels.cache.get(channelId),
+    channelType = await getChannelType(channel.id),
+    userOverwrite = channel.permissionOverwrites.cache.find(
+      permissionOverwrite => permissionOverwrite.id === member.id
+    ),
+    individualAllowPermissions = userOverwrite?.allow.serialize()
+
+  if ([`archived`, `joinable`].includes(channelType)) {
+    if (userOverwrite) {
+      userOverwrite.delete()
+
+      result = `removed`
+    }
+  } else if (channelType === `public`) {
+    if (!userOverwrite) {
+      channel.permissionOverwrites.create(member.id, {
+        VIEW_CHANNEL: false,
+      })
+
+      result = `removed`
+    } else if (individualAllowPermissions?.VIEW_CHANNEL) {
+      channel.permissionOverwrites.edit(member.id, {
+        VIEW_CHANNEL: false,
+      })
+
+      result = `removed`
+    } else {
+      result = `not removed`
+    }
+  }
+
+  return result
 }

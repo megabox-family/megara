@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url'
 import { directMessageError } from '../utils/error-logging.js'
 import { syncChannels } from './channels.js'
 import { syncRoles, requiredRoleDifference } from './roles.js'
+import { dynamicRooms } from './voice.js'
 import { pushUserToQueue } from './required-role-queue.js'
 import {
   syncGuilds,
@@ -15,16 +16,17 @@ import {
   getLogChannel,
   getRules,
   getNameGuidelines,
+  getWelcomeChannel,
 } from '../repositories/guilds.js'
 import {
   removeActiveVoiceChannelId,
   getCategoryName,
   getFormatedCommandChannels,
   getActiveVoiceChannelIds,
-  channelWithVoiceChannelIsJoinable,
   getChannelType,
+  getRoomChannelId,
+  getUnverifiedRoomChannelId,
 } from '../repositories/channels.js'
-import { get } from 'http'
 
 const relativePath = dirname(fileURLToPath(import.meta.url)),
   srcPath = dirname(relativePath),
@@ -79,6 +81,23 @@ export async function deleteNewRoles(guild) {
   await deleteNewRoles(guild)
 }
 
+async function registerSlashCommands(bot) {
+  const guild = bot.guilds.cache.get(`711043006253367426`)
+
+  let commands
+
+  if (guild) {
+    commands = guild.commands
+  } else {
+    commands = bot.application?.commands
+  }
+
+  commands?.create({
+    name: `voice`,
+    description: `Opens a voice channel in relation to the current text channel.`,
+  })
+}
+
 export async function startup(bot) {
   console.log(`Logged in as ${bot.user.tag}!`)
 
@@ -91,14 +110,18 @@ export async function startup(bot) {
     await syncRoles(guild)
   })
 
-  await removeEmptyVoiceChannelsOnStartup()
+  registerSlashCommands(bot)
+
+  // await removeEmptyVoiceChannelsOnStartup()
 
   // const guild = bot.guilds.cache.get(`711043006253367426`),
-  //   channel = guild.channels.cache.get(`711043006781849686`)
+  //   channel = guild.channels.cache.get(`981488367227260938`)
 
-  // channel.permissionOverwrites.cache.forEach(permissionOverwrite =>
-  //   console.log(permissionOverwrite)
-  // )
+  // channel.permissionOverwrites.cache.forEach(overwrite => {
+  //   const individualAllowPermissions = overwrite.allow.serialize()
+
+  //   console.log(individualAllowPermissions)
+  // })
 }
 
 export async function logMessageToChannel(message) {
@@ -151,6 +174,14 @@ export async function announceNewChannel(newChannel) {
     announcementChannelId = await getAnnouncementChannel(guild.id)
 
   if (!announcementChannelId) return
+
+  const welcomeChannelId = await getWelcomeChannel(guild.id)
+
+  if (
+    welcomeChannelId === newChannel.id ||
+    [`rooms`, `unverified-rooms`].includes(newChannel.name)
+  )
+    return
 
   const channelType = await getChannelType(newChannel.id)
 
@@ -385,23 +416,32 @@ export function handleInteraction(interaction) {
 
     if (existsSync(buttonFunctionPath))
       import(buttonFunctionPath).then(module => module.default(interaction))
-  }
 
-  interaction.update({})
+    interaction.update({})
+  } else if (interaction.isCommand()) {
+    import(`${srcPath}/text-commands/voice.js`).then(module =>
+      module.default(interaction)
+    )
+  }
 }
 
-export async function checkVoiceChannelValidity(voiceState) {
-  if (
-    voiceState.channel &&
-    (await channelWithVoiceChannelIsJoinable(voiceState.channelID)) &&
-    voiceState.channel.members.size === 0
-  ) {
-    setTimeout(async () => {
-      if (!voiceState.channel) return
-      const voiceChannel = await voiceState.channel.guild.channels.cache.get(
-        voiceState.channelID
-      )
-      removeVoiceChannelIfEmpty(voiceChannel)
-    }, 30000)
-  }
+export async function handleVoiceUpdate(oldState, newState) {
+  dynamicRooms(oldState, newState)
+}
+
+export function comparePermissions(permission) {
+  if (!permission) return
+
+  const individualAllowPermissions = permission.allow.serialize(),
+    individualDenyPermissions = permission.deny.serialize(),
+    permissionKeys = Object.keys(individualAllowPermissions),
+    individualPermissions = {}
+
+  permissionKeys.forEach(key => {
+    if (individualAllowPermissions[key] === individualDenyPermissions[key])
+      individualPermissions[key] = 1
+    else individualPermissions[key] = individualAllowPermissions[key]
+  })
+
+  return individualPermissions
 }

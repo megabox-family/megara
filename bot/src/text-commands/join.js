@@ -1,8 +1,6 @@
 import { getCommandName, commandLevelCheck } from '../utils/text-commands.js'
-import {
-  getIdForJoinableChannel,
-  getChannelType,
-} from '../repositories/channels.js'
+import { addMemberToChannel } from '../utils/channels.js'
+import { getIdForJoinableChannel } from '../repositories/channels.js'
 
 const command = getCommandName(import.meta.url)
 
@@ -41,58 +39,10 @@ export default async function (message, commandSymbol, channelName) {
     return
   }
 
-  const channelType = await getChannelType(channel.id),
-    guildMember = guild.members.cache.get(message.author.id),
-    userOverwrite = channel.permissionOverwrites.cache.find(
-      permissionOverwrite => permissionOverwrite.id === guildMember.id
-    ),
-    individualPermissions = userOverwrite
-      ? userOverwrite.allow.serialize()
-      : null
+  const guildMember = guild.members.cache.get(message.author.id),
+    result = await addMemberToChannel(guildMember, channel.id)
 
-  let joined = false
-
-  if (channelType === `archived`) {
-    if (!userOverwrite) {
-      channel.permissionOverwrites.create(guildMember.id, {
-        VIEW_CHANNEL: true,
-        SEND_MESSAGES: false,
-      })
-
-      joined = true
-    } else if (
-      individualPermissions?.VIEW_CHANNEL === false ||
-      individualPermissions?.SEND_MESSAGES
-    ) {
-      channel.permissionOverwrites.edit(guildMember.id, {
-        VIEW_CHANNEL: true,
-        SEND_MESSAGES: false,
-      })
-
-      joined = true
-    }
-  } else if (channelType === `joinable`) {
-    if (!userOverwrite) {
-      channel.permissionOverwrites.create(guildMember.id, {
-        VIEW_CHANNEL: true,
-      })
-
-      joined = true
-    } else if (individualPermissions?.VIEW_CHANNEL === false) {
-      channel.permissionOverwrites.edit(guildMember.id, {
-        VIEW_CHANNEL: true,
-      })
-
-      joined = true
-    }
-  } else if (channelType === `public`) {
-    if (userOverwrite) {
-      userOverwrite.delete()
-
-      joined = true
-    }
-  }
-
-  if (joined) message.reply(`You've been added to **${channel}** 😁`)
+  if (result === `added`)
+    message.reply(`You've been added to **${channel}** 😁`)
   else message.reply(`You already have access **${channel}** 🤔`)
 }

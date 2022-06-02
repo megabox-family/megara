@@ -2,7 +2,7 @@ import { Client, Intents } from 'discord.js'
 import config from '../config.js'
 import {
   startup,
-  checkVoiceChannelValidity,
+  handleVoiceUpdate,
   handleMessage,
   handleNewMember,
   modifyMember,
@@ -46,7 +46,7 @@ bot.on('roleUpdate', modifyRole)
 bot.on('roleDelete', deleteRole)
 bot.on('messageCreate', handleMessage)
 bot.on('interactionCreate', handleInteraction)
-bot.on('voiceStateUpdate', checkVoiceChannelValidity)
+bot.on('voiceStateUpdate', handleVoiceUpdate)
 
 bot.on('rateLimit', rateLimitData => {
   console.log(rateLimitData)

@@ -1,15 +1,15 @@
 import { getBot } from '../cache-bot.js'
 import { directMessageError } from '../utils/error-logging.js'
-import { getChannelType } from '../repositories/channels.js'
+import { addMemberToChannel } from '../utils/channels.js'
 
 export default async function (interaction) {
-  const interactionChannel = getBot().channels.cache.get(
+  const joinChannel = getBot().channels.cache.get(
       interaction.customId.match(`(?!:)[0-9]+`)[0]
     ),
-    guild = interaction.guild,
+    guild = joinChannel.guild,
     guildMember = guild.members.cache.get(interaction.user.id)
 
-  if (!interactionChannel) {
+  if (!joinChannel) {
     guildMember
       .send(
         `You tried joining a channel that no longer exists, sorry for the trouble 🥺`
@@ -19,53 +19,20 @@ export default async function (interaction) {
     return
   }
 
-  const channelType = await getChannelType(interactionChannel.id)
+  const result = await addMemberToChannel(guildMember, joinChannel.id)
 
-  if (channelType === `private`) {
+  if (result === `not added`)
     guildMember
       .send(
         `You tried joining a channel that no longer exists, sorry for the trouble 🥺`
       )
       .catch(error => directMessageError(error, guildMember))
-
-    return
-  }
-
-  const userOverwrite = interactionChannel.permissionOverwrites.cache.find(
-      permissionOverwrite => permissionOverwrite.id === guildMember.id
-    ),
-    individualPermissions = userOverwrite
-      ? userOverwrite.allow.serialize()
-      : null
-
-  if (channelType === `archived`) {
-    if (!userOverwrite) {
-      interactionChannel.permissionOverwrites.create(guildMember.id, {
-        VIEW_CHANNEL: true,
-        SEND_MESSAGES: false,
-      })
-    } else if (
-      individualPermissions?.VIEW_CHANNEL === false ||
-      individualPermissions?.SEND_MESSAGES
-    ) {
-      interactionChannel.permissionOverwrites.edit(guildMember.id, {
-        VIEW_CHANNEL: true,
-        SEND_MESSAGES: false,
-      })
-    }
-  } else if (channelType === `joinable`) {
-    if (!userOverwrite) {
-      interactionChannel.permissionOverwrites.create(guildMember.id, {
-        VIEW_CHANNEL: true,
-      })
-    } else if (individualPermissions?.VIEW_CHANNEL === false) {
-      interactionChannel.permissionOverwrites.edit(guildMember.id, {
-        VIEW_CHANNEL: true,
-      })
-    }
-  } else if (channelType === `public`) {
-    if (userOverwrite) {
-      userOverwrite.delete()
-    }
-  }
+  else if (result === `added` && !interaction?.guild)
+    guildMember
+      .send(`You've been added to **${joinChannel}** 😁`)
+      .catch(error => directMessageError(error, guildMember))
+  else if (result === `already added` && !interaction?.guild)
+    guildMember
+      .send(`You already have access **${joinChannel}** 🤔`)
+      .catch(error => directMessageError(error, guildMember))
 }
