@@ -4,9 +4,15 @@ export default async function (interaction) {
     user = interaction.user,
     threadId = interaction.customId.match(`(?!:)[0-9]+`)[0]
 
+  console.log(threadId)
+
   let thread = guild.channels.cache.get(threadId)
 
+  console.log(thread)
+
   if (!thread) {
+    console.log(`made it here`)
+
     const archivedThreads = await interaction.channel.threads
       .fetchArchived({ fetchAll: true })
       .catch(error =>
@@ -14,6 +20,8 @@ export default async function (interaction) {
           `I was unable to fetch archived threads, see error below.\n${error}`
         )
       )
+
+    console.log(archivedThreads)
 
     thread = archivedThreads.threads.get(threadId)
 
