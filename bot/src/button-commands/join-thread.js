@@ -7,7 +7,13 @@ export default async function (interaction) {
     user = interaction.user
 
   if (thread) {
-    thread.members.add(user.id)
+    if (thread.archived) await thread.setArchived(false)
+
+    thread.members
+      .add(user.id)
+      .catch(error =>
+        console.log(`Unable to add user to thread, see error below:\n${error}`)
+      )
   } else
     user.send(
       `The thread you tried joining no longer exits in the ${channel} channel within the ${guild} server.`

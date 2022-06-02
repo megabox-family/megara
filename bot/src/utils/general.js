@@ -82,8 +82,7 @@ export async function deleteNewRoles(guild) {
 }
 
 async function registerSlashCommands(bot) {
-  // const guild = null
-  const guild = bot.guilds.cache.get(`711043006253367426`)
+  const guild = bot.guilds.cache.get(`711043006253367426`) //test server, only accessible in development.
 
   let commands
 
