@@ -1,6 +1,7 @@
 import { MessageActionRow, MessageButton } from 'discord.js'
 import { directMessageError } from '../utils/error-logging.js'
 import { addMemberToChannel, removeMemberFromChannel } from './channels.js'
+import { getThreadByName, unarchiveThread } from './threads.js'
 import {
   getChannelId,
   getAllTextChannelNames,
@@ -38,15 +39,8 @@ export async function checkIfRoomOrTextChannel(voiceChannelName, guildId) {
   return voiceChannelType
 }
 
-async function getOrCreateVoiceThread(textChannel, voiceChannelName, guild) {
-  let voiceThread
-
-  voiceThread = guild.channels.cache.find(
-    channel =>
-      channel.type === `GUILD_PUBLIC_THREAD` &&
-      channel.parentId === textChannel.id &&
-      channel.name === voiceChannelName
-  )
+async function getOrCreateVoiceThread(textChannel, voiceChannelName) {
+  let voiceThread = await getThreadByName(textChannel, voiceChannelName)
 
   if (!voiceThread)
     voiceThread = await textChannel.threads.create({
@@ -56,12 +50,12 @@ async function getOrCreateVoiceThread(textChannel, voiceChannelName, guild) {
       reason: 'Needed thread to match voicechannel',
     })
 
-  if (voiceThread.archived) await voiceThread.setArchived(false)
+  await unarchiveThread(voiceThread)
 
   return voiceThread
 }
 
-async function getThread(voiceChannelName, voiceChannelType, guild) {
+async function getVoiceThread(voiceChannelName, voiceChannelType, guild) {
   if (!voiceChannelType) return
 
   let channelId
@@ -77,7 +71,7 @@ async function getThread(voiceChannelName, voiceChannelType, guild) {
 
   const channel = guild.channels.cache.get(channelId)
 
-  return await getOrCreateVoiceThread(channel, voiceChannelName, guild)
+  return await getOrCreateVoiceThread(channel, voiceChannelName)
 }
 
 async function removeMemberFromChannelTemporarily(member, channelId) {
@@ -179,13 +173,13 @@ export async function deleteDynamicVoiceChannel(
       channel.name !== `${getVoiceChannelBasename(channel.name)}-1` ||
       voiceChannelType === `text`
     )
-      try {
-        await channel.delete()
-      } catch (error) {
-        console.log(
-          `Failed to delete dynamic voice channel, see error below:\n${error}`
+      await channel
+        .delete()
+        .catch(error =>
+          console.log(
+            `Failed to delete dynamic voice channel, see error below:\n${error}`
+          )
         )
-      }
   }
 }
 
@@ -341,12 +335,12 @@ export async function dynamicRooms(oldState, newState) {
   if (!oldVoiceChannelType && !newVoiceChannelType) return
 
   //get or create thread
-  const oldThread = await getThread(
+  const oldThread = await getVoiceThread(
       oldVoiceChannelName,
       oldVoiceChannelType,
       guild
     ),
-    newThread = await getThread(
+    newThread = await getVoiceThread(
       newVoiceChannelName,
       newVoiceChannelType,
       guild

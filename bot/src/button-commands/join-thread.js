@@ -1,42 +1,15 @@
+import { getThreadById, unarchiveThread } from '../utils/threads.js'
+
 export default async function (interaction) {
   const guild = interaction.guild,
     channel = interaction.channel,
     user = interaction.user,
     threadId = interaction.customId.match(`(?!:)[0-9]+`)[0]
 
-  let thread = guild.channels.cache.get(threadId)
-
-  if (!thread) {
-    const archivedPrivateThreads = await interaction.channel.threads
-      .fetchArchived({ type: `private`, fetchAll: true })
-      .catch(error =>
-        console.log(
-          `I was unable to fetch archived private threads, see error below.\n${error}`
-        )
-      )
-
-    const archivedPublicThreads = await interaction.channel.threads
-      .fetchArchived({ type: `public`, fetchAll: true })
-      .catch(error =>
-        console.log(
-          `I was unable to fetch archived public threads, see error below.\n${error}`
-        )
-      )
-
-    const privateThread = archivedPrivateThreads.threads.get(threadId),
-      publicThread = archivedPublicThreads.threads.get(threadId)
-
-    thread = privateThread ? privateThread : publicThread
-  }
+  const thread = await getThreadById(channel, threadId)
 
   if (thread) {
-    await thread
-      .setArchived(false)
-      .catch(error =>
-        console.log(
-          `I was unable to unarchive a thread, see error below\n${error}`
-        )
-      )
+    await unarchiveThread(thread)
 
     await thread.members
       .add(user.id)

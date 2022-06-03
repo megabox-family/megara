@@ -21,27 +21,28 @@ export default async function (message, commandSymbol, args) {
     return
   }
 
-  const channel = message.channel
-  let thread
+  const guild = message.guild,
+    premiumTier = guild.premiumTier,
+    channel = message.channel
 
-  try {
-    thread = await channel.threads.create({
+  let thread, threadType
+
+  if (![`TIER_2`, `TIER_3`].includes(premiumTier))
+    threadType = `GUILD_PUBLIC_THREAD`
+  else threadType = `GUILD_PRIVATE_THREAD`
+
+  thread = await channel.threads
+    .create({
       name: `${channel.name} season ${argArray[0]} episode ${argArray[1]}`,
       autoArchiveDuration: 10080,
-      type: 'GUILD_PRIVATE_THREAD',
-      reason: 'Needed a separate thread for moderation',
+      type: threadType,
+      reason: 'Needed a thread for an episode in a show',
     })
-  } catch (error) {
-    console.log(
-      `There was an error when trying to generate a private thread, see error below:\n${error}`
+    .catch(error =>
+      console.log(
+        `I was unable to create a ${threadType} thread, see error below:\n${error}`
+      )
     )
-
-    message.reply(
-      `I was unable to create a thread, either threads are disabled server wide or the server doesn't have enough boosts to create private threads.`
-    )
-
-    return
-  }
 
   const episodeButton = new MessageActionRow().addComponents(
     new MessageButton()
