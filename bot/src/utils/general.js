@@ -24,8 +24,6 @@ import {
   getFormatedCommandChannels,
   getActiveVoiceChannelIds,
   getChannelType,
-  getRoomChannelId,
-  getUnverifiedRoomChannelId,
 } from '../repositories/channels.js'
 
 const relativePath = dirname(fileURLToPath(import.meta.url)),
@@ -101,16 +99,16 @@ async function registerSlashCommands(bot) {
 export async function startup(bot) {
   console.log(`Logged in as ${bot.user.tag}!`)
 
-  cacheBot(bot)
-  await syncGuilds(bot.guilds.cache)
+  // cacheBot(bot)
+  // await syncGuilds(bot.guilds.cache)
 
-  bot.guilds.cache.forEach(async guild => {
-    await deleteNewRoles(guild)
-    await syncChannels(guild)
-    await syncRoles(guild)
-  })
+  // bot.guilds.cache.forEach(async guild => {
+  //   await deleteNewRoles(guild)
+  //   await syncChannels(guild)
+  //   await syncRoles(guild)
+  // })
 
-  registerSlashCommands(bot)
+  // registerSlashCommands(bot)
 
   // await removeEmptyVoiceChannelsOnStartup()
 
