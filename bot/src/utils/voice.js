@@ -87,8 +87,8 @@ async function removeMemberFromChannelTemporarily(member, channelId) {
 
   if (
     individualPermissions &&
-    ((channelType === `joinable` && individualPermissions.SEND_MESSAGES) ||
-      (channelType === `public` && individualPermissions.VIEW_CHANNEL))
+    (channelType === `joinable` || channelType === `public`) &&
+    individualPermissions.SEND_MESSAGES
   )
     removeMemberFromChannel(member, channelId)
 }

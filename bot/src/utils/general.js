@@ -7,6 +7,7 @@ import { directMessageError } from '../utils/error-logging.js'
 import { syncChannels } from './channels.js'
 import { syncRoles, requiredRoleDifference } from './roles.js'
 import { dynamicRooms } from './voice.js'
+import { registerSlashCommands } from './slash-commands.js'
 import { pushUserToQueue } from './required-role-queue.js'
 import {
   syncGuilds,
@@ -79,23 +80,6 @@ export async function deleteNewRoles(guild) {
   await deleteNewRoles(guild)
 }
 
-async function registerSlashCommands(bot) {
-  const guild = bot.guilds.cache.get(`711043006253367426`) //test server, only accessible in development.
-
-  let commands
-
-  if (guild) {
-    commands = guild.commands
-  } else {
-    commands = bot.application?.commands
-  }
-
-  commands?.create({
-    name: `voice`,
-    description: `Opens a voice channel in relation to the current text channel.`,
-  })
-}
-
 export async function startup(bot) {
   console.log(`Logged in as ${bot.user.tag}!`)
 
@@ -110,10 +94,8 @@ export async function startup(bot) {
 
   registerSlashCommands(bot)
 
-  // await removeEmptyVoiceChannelsOnStartup()
-
   // const guild = bot.guilds.cache.get(`711043006253367426`),
-  //   channel = guild.channels.cache.get(`981488367227260938`)
+  //   channel = guild.channels.cache.get(`711043006781849686`)
 
   // console.log(guild.premiumSubscriptionCount)
 
@@ -287,7 +269,11 @@ export async function handleMessage(message) {
 
   const commandSymbol = await getCommandSymbol(message.guild.id)
 
-  if (messageText.substring(0, 1) !== commandSymbol) return
+  if (
+    messageText.substring(0, 1) !== commandSymbol ||
+    !messageText.substring(1, 2).match(`[0-9]|[a-zA-z]`)
+  )
+    return
 
   const delimiter = messageText.split('').find(char => {
       if ([` `, `\n`].includes(char)) return char
@@ -427,6 +413,25 @@ export function handleInteraction(interaction) {
 
 export async function handleVoiceUpdate(oldState, newState) {
   dynamicRooms(oldState, newState)
+}
+
+export function getIndividualPermissionSets(overwrite) {
+  const allow = overwrite.allow.serialize(),
+    deny = overwrite.deny.serialize(),
+    permissionKeys = Object.keys(allow),
+    permissionSets = {
+      allow: new Set(),
+      deny: new Set(),
+    }
+
+  permissionKeys.forEach(key => {
+    if (allow[key]) permissionSets.allow.add(key)
+    else if (deny[key]) {
+      permissionSets.deny.add(key)
+    }
+  })
+
+  return permissionSets
 }
 
 export function comparePermissions(permission) {

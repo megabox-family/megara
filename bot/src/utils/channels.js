@@ -1,5 +1,10 @@
+import { Permissions } from 'discord.js'
 import { getBot } from '../cache-bot.js'
-import { announceNewChannel, comparePermissions } from '../utils/general.js'
+import {
+  announceNewChannel,
+  getIndividualPermissionSets,
+  comparePermissions,
+} from '../utils/general.js'
 import { requiredRoleDifference } from './roles.js'
 import { pushChannelToQueue } from './required-role-queue.js'
 import {
@@ -126,6 +131,50 @@ export function getPositionOverride(channel) {
   return positionOverride ? +positionOverride.match(`-?[0-9]+`)[0] : null
 }
 
+function unarchiveUserOverwrites(overwrites) {
+  if (!overwrites) return
+
+  let permissionsHaveChanged = false
+
+  overwrites.forEach(overwrite => {
+    const denyPermissions = overwrite.deny.serialize()
+
+    if (
+      overwrite.type === `member` &&
+      (denyPermissions.SEND_MESSAGES ||
+        denyPermissions.SEND_MESSAGES_IN_THREADS ||
+        denyPermissions.CREATE_PRIVATE_THREADS ||
+        denyPermissions.CREATE_PUBLIC_THREADS ||
+        denyPermissions?.USE_PRIVATE_THREADS ||
+        denyPermissions?.USE_PUBLIC_THREADS)
+    ) {
+      const newOverwrite = overwrites.get(overwrite.id),
+        permissionSets = getIndividualPermissionSets(overwrite)
+
+      permissionSets.allow.delete(`SEND_MESSAGES`)
+      permissionSets.allow.delete(`SEND_MESSAGES_IN_THREADS`)
+      permissionSets.allow.delete(`CREATE_PRIVATE_THREADS`)
+      permissionSets.allow.delete(`CREATE_PUBLIC_THREADS`)
+      permissionSets.allow.delete(`USE_PRIVATE_THREADS`)
+      permissionSets.allow.delete(`USE_PUBLIC_THREADS`)
+
+      permissionSets.deny.delete(`SEND_MESSAGES`)
+      permissionSets.deny.delete(`SEND_MESSAGES_IN_THREADS`)
+      permissionSets.deny.delete(`CREATE_PRIVATE_THREADS`)
+      permissionSets.deny.delete(`CREATE_PUBLIC_THREADS`)
+      permissionSets.deny.delete(`USE_PRIVATE_THREADS`)
+      permissionSets.deny.delete(`USE_PUBLIC_THREADS`)
+
+      newOverwrite.allow = new Permissions([...permissionSets.allow])
+      newOverwrite.deny = new Permissions([...permissionSets.deny])
+
+      permissionsHaveChanged = true
+    }
+  })
+
+  return permissionsHaveChanged
+}
+
 export async function setChannelVisibility(channelId) {
   const channel = getBot().channels.cache.get(channelId)
 
@@ -148,46 +197,34 @@ export async function setChannelVisibility(channelId) {
     categoryName = channel.parentId
       ? guild.channels.cache.get(channel.parentId).name
       : ``,
-    archivedRoleId = guild.roles.cache.find(
+    roles = guild.roles.cache,
+    archivedRoleId = roles.find(
       role => role.name === `!channel type: archived`
     )?.id,
-    hiddenRoleId = guild.roles.cache.find(
+    hiddenRoleId = roles.find(
       role => role.name === `!channel type: hidden`
     )?.id,
-    joinableRoleId = guild.roles.cache.find(
+    joinableRoleId = roles.find(
       role => role.name === `!channel type: joinable`
     )?.id,
-    publicRoleId = guild.roles.cache.find(
+    publicRoleId = roles.find(
       role => role.name === `!channel type: public`
     )?.id,
-    undergoingVerificationRoleId = guild.roles.cache.find(
+    undergoingVerificationRoleId = roles.find(
       role => role.name === `undergoing verification`
     )?.id,
-    verifiedRoleId = guild.roles.cache.find(
-      role => role.name === `verified`
-    )?.id,
-    everyoneRoleId = guild.roles.cache.find(
-      role => role.name === `@everyone`
-    ).id,
-    archivedOverwrite = archivedRoleId
-      ? channel.permissionOverwrites.cache.get(archivedRoleId)
-      : null,
-    hiddenOverwrite = hiddenRoleId
-      ? channel.permissionOverwrites.cache.get(hiddenRoleId)
-      : null,
-    joinableOverwrite = joinableRoleId
-      ? channel.permissionOverwrites.cache.get(joinableRoleId)
-      : null,
-    publicOverwrite = publicRoleId
-      ? channel.permissionOverwrites.cache.get(publicRoleId)
-      : null,
+    verifiedRoleId = roles.find(role => role.name === `verified`)?.id,
+    everyoneRoleId = roles.find(role => role.name === `@everyone`).id,
+    overwrites = channel.permissionOverwrites.cache,
+    archivedOverwrite = archivedRoleId ? overwrites.get(archivedRoleId) : null,
+    hiddenOverwrite = hiddenRoleId ? overwrites.get(hiddenRoleId) : null,
+    joinableOverwrite = joinableRoleId ? overwrites.get(joinableRoleId) : null,
+    publicOverwrite = publicRoleId ? overwrites.get(publicRoleId) : null,
     undergoingVerificationOverwrite = undergoingVerificationRoleId
-      ? channel.permissionOverwrites.cache.get(undergoingVerificationRoleId)
+      ? overwrites.get(undergoingVerificationRoleId)
       : null,
-    verifiedOverwrite = verifiedRoleId
-      ? channel.permissionOverwrites.cache.get(verifiedRoleId)
-      : null,
-    everyoneOverwrite = channel.permissionOverwrites.cache.get(everyoneRoleId)
+    verifiedOverwrite = verifiedRoleId ? overwrites.get(verifiedRoleId) : null,
+    everyoneOverwrite = overwrites.get(everyoneRoleId)
 
   if ([announcementChannelId, welcomeChannelId].includes(channel.id)) {
     if (hiddenOverwrite) await hiddenOverwrite.delete()
@@ -199,17 +236,14 @@ export async function setChannelVisibility(channelId) {
       channel.permissionOverwrites.create(publicRoleId, {})
 
     if (verifiedOverwrite) {
-      const allowPermissions = verifiedOverwrite.allow.serialize(),
-        denyPermissions = verifiedOverwrite.deny.serialize()
+      const comparedPermissions = comparePermissions(verifiedOverwrite)
 
       if (
-        denyPermissions.VIEW_CHANNEL ||
-        allowPermissions.SEND_MESSAGES ||
-        allowPermissions.SEND_MESSAGES_IN_THREADS ||
-        allowPermissions.CREATE_PUBLIC_THREADS ||
-        allowPermissions.CREATE_PRIVATE_THREADS ||
-        allowPermissions.ATTACH_FILES ||
-        denyPermissions.READ_MESSAGE_HISTORY
+        !comparedPermissions.VIEW_CHANNEL ||
+        comparedPermissions.SEND_MESSAGES ||
+        comparedPermissions.SEND_MESSAGES_IN_THREADS ||
+        comparedPermissions.CREATE_PUBLIC_THREADS ||
+        comparedPermissions.CREATE_PRIVATE_THREADS
       )
         await verifiedOverwrite.edit({
           VIEW_CHANNEL: true,
@@ -217,8 +251,6 @@ export async function setChannelVisibility(channelId) {
           SEND_MESSAGES_IN_THREADS: false,
           CREATE_PUBLIC_THREADS: false,
           CREATE_PRIVATE_THREADS: false,
-          ATTACH_FILES: false,
-          READ_MESSAGE_HISTORY: true,
         })
     } else
       await channel.permissionOverwrites.create(verifiedRoleId, {
@@ -227,8 +259,6 @@ export async function setChannelVisibility(channelId) {
         SEND_MESSAGES_IN_THREADS: false,
         CREATE_PUBLIC_THREADS: false,
         CREATE_PRIVATE_THREADS: false,
-        ATTACH_FILES: false,
-        READ_MESSAGE_HISTORY: true,
       })
   } else if (channel.id === verificationChannelId) {
     if (hiddenOverwrite) await hiddenOverwrite.delete()
@@ -262,9 +292,14 @@ export async function setChannelVisibility(channelId) {
 
     const denyPermissions = everyoneOverwrite.deny.serialize()
 
-    if (denyPermissions.VIEW_CHANNEL || denyPermissions.SEND_MESSAGES) {
-      everyoneOverwrite.edit({ VIEW_CHANNEL: true, SEND_MESSAGES: true })
+    if (denyPermissions.VIEW_CHANNEL) {
+      everyoneOverwrite.edit({ VIEW_CHANNEL: true })
     }
+
+    let permissionsHaveChanged = unarchiveUserOverwrites(overwrites)
+
+    if (permissionsHaveChanged)
+      await channel.edit({ permissionOverwrites: overwrites })
   } else if (
     categoryName.toUpperCase() === `ARCHIVED` ||
     channelType === `archived`
@@ -278,38 +313,49 @@ export async function setChannelVisibility(channelId) {
     if (!archivedOverwrite && archivedRoleId)
       await channel.permissionOverwrites.create(archivedRoleId, {})
 
-    channel.permissionOverwrites.cache.forEach(async permissionOverwrite => {
-      const allowPermissions = permissionOverwrite.allow.serialize()
+    let permissionsHaveChanged = false
+
+    overwrites.forEach(overwrite => {
+      const comparedPermissions = comparePermissions(overwrite)
 
       if (
-        permissionOverwrite.id !== everyoneRoleId &&
-        (allowPermissions.SEND_MESSAGES ||
-          allowPermissions.SEND_MESSAGES_IN_THREADS ||
-          allowPermissions.CREATE_PRIVATE_THREADS ||
-          allowPermissions.CREATE_PUBLIC_THREADS)
+        overwrite.type === `member` &&
+        (comparedPermissions.SEND_MESSAGES ||
+          comparedPermissions.SEND_MESSAGES_IN_THREADS ||
+          comparedPermissions.CREATE_PRIVATE_THREADS ||
+          comparedPermissions.CREATE_PUBLIC_THREADS)
       ) {
-        await permissionOverwrite.edit({
-          SEND_MESSAGES: false,
-          SEND_MESSAGES_IN_THREADS: false,
-          CREATE_PRIVATE_THREADS: false,
-          CREATE_PUBLIC_THREADS: false,
-        })
+        const newOverwrite = overwrites.get(overwrite.id),
+          permissionSets = getIndividualPermissionSets(overwrite)
+
+        permissionSets.allow.delete(`SEND_MESSAGES`)
+        permissionSets.allow.delete(`SEND_MESSAGES_IN_THREADS`)
+        permissionSets.allow.delete(`CREATE_PRIVATE_THREADS`)
+        permissionSets.allow.delete(`CREATE_PUBLIC_THREADS`)
+
+        permissionSets.deny.add(`SEND_MESSAGES`)
+        permissionSets.deny.add(`SEND_MESSAGES_IN_THREADS`)
+        permissionSets.deny.add(`CREATE_PRIVATE_THREADS`)
+        permissionSets.deny.add(`CREATE_PUBLIC_THREADS`)
+
+        newOverwrite.allow = new Permissions([...permissionSets.allow])
+        newOverwrite.deny = new Permissions([...permissionSets.deny])
+
+        permissionsHaveChanged = true
       }
     })
+
+    if (permissionsHaveChanged)
+      await channel.edit({ permissionOverwrites: overwrites })
   } else if (channelType === `joinable`) {
     if (undergoingVerificationOverwrite)
       await undergoingVerificationOverwrite.delete()
     if (verifiedOverwrite) await verifiedOverwrite.delete()
 
-    channel.permissionOverwrites.cache.forEach(async permissionOverwrite => {
-      const denyPermissions = permissionOverwrite.deny.serialize()
+    let permissionsHaveChanged = unarchiveUserOverwrites(overwrites)
 
-      if (
-        permissionOverwrite.id !== everyoneRoleId &&
-        denyPermissions.SEND_MESSAGES
-      )
-        await permissionOverwrite.edit({ SEND_MESSAGES: null })
-    })
+    if (permissionsHaveChanged)
+      await channel.edit({ permissionOverwrites: overwrites })
   } else if (channelType === `public`) {
     if (undergoingVerificationOverwrite)
       await undergoingVerificationOverwrite.delete()
@@ -317,10 +363,20 @@ export async function setChannelVisibility(channelId) {
       await channel.permissionOverwrites.create(verifiedRoleId, {
         VIEW_CHANNEL: true,
       })
+
+    let permissionsHaveChanged = unarchiveUserOverwrites(overwrites)
+
+    if (permissionsHaveChanged)
+      await channel.edit({ permissionOverwrites: overwrites })
   } else if (channelType === `private`) {
     if (undergoingVerificationOverwrite)
       await undergoingVerificationOverwrite.delete()
     if (verifiedOverwrite) await verifiedOverwrite.delete()
+
+    let permissionsHaveChanged = unarchiveUserOverwrites(overwrites)
+
+    if (permissionsHaveChanged)
+      await channel.edit({ permissionOverwrites: overwrites })
   }
 }
 
@@ -344,7 +400,7 @@ export async function sortChannels(guildId) {
     )
   )
 
-  alphabeticalBuckets.forEach(async alphabeticalBucket => {
+  alphabeticalBuckets.forEach(alphabeticalBucket => {
     const channelsWithPositionOverrides = {},
       orderedChannels = [],
       channelsWithPositiveOverrides = [],
@@ -554,6 +610,7 @@ export async function modifyChannel(
       newCommandLevel,
       newPositionOverride
     )
+
     if (skipAnnouncementAndSort) {
       if (oldChannelType !== newChannelType) return newChannel.id
     } else {
@@ -709,8 +766,8 @@ export async function addMemberToChannel(member, channelId, temporary = false) {
     userOverwrite = channel.permissionOverwrites.cache.find(
       permissionOverwrite => permissionOverwrite.id === member.id
     ),
-    allowPermissions = userOverwrite?.allow.serialize(),
-    denyPermissions = userOverwrite?.deny.serialize()
+    comparedPermissions = comparePermissions(userOverwrite),
+    allowPermissions = userOverwrite.allow.serialize()
 
   if (channelType === `archived`) {
     const archivedPermissions = {
@@ -726,11 +783,11 @@ export async function addMemberToChannel(member, channelId, temporary = false) {
 
       result = `added`
     } else if (
-      denyPermissions.VIEW_CHANNEL ||
-      allowPermissions.SEND_MESSAGES ||
-      allowPermissions.SEND_MESSAGES_IN_THREADS ||
-      allowPermissions.CREATE_PRIVATE_THREADS ||
-      allowPermissions.CREATE_PUBLIC_THREADS
+      !comparedPermissions.VIEW_CHANNEL ||
+      comparedPermissions.SEND_MESSAGES ||
+      comparedPermissions.SEND_MESSAGES_IN_THREADS ||
+      comparedPermissions.CREATE_PRIVATE_THREADS ||
+      comparedPermissions.CREATE_PUBLIC_THREADS
     ) {
       await channel.permissionOverwrites.edit(member.id, archivedPermissions)
 
@@ -745,16 +802,20 @@ export async function addMemberToChannel(member, channelId, temporary = false) {
       await channel.permissionOverwrites.create(member.id, joinablePermissions)
 
       result = `added`
-    } else if (denyPermissions.VIEW_CHANNEL || allowPermissions.SEND_MESSAGES) {
+    } else if (
+      !comparedPermissions.VIEW_CHANNEL ||
+      allowPermissions.SEND_MESSAGES
+    ) {
       await channel.permissionOverwrites.edit(member.id, joinablePermissions)
 
       result = `added`
     }
   } else if (channelType === `public`) {
     if (temporary) {
-      if (userOverwrite) {
-        await channel.permissionOverwrites.create(member.id, {
+      if (userOverwrite && comparedPermissions?.VIEW_CHANNEL === false) {
+        await channel.permissionOverwrites.edit(member.id, {
           VIEW_CHANNEL: true,
+          SEND_MESSAGES: true,
         })
 
         result = `added`
@@ -792,7 +853,7 @@ export async function removeMemberFromChannel(member, channelId) {
     userOverwrite = channel.permissionOverwrites.cache.find(
       permissionOverwrite => permissionOverwrite.id === member.id
     ),
-    allowPermissions = userOverwrite?.allow.serialize()
+    comparedPermissions = comparePermissions(userOverwrite)
 
   if ([`archived`, `joinable`].includes(channelType)) {
     if (userOverwrite) {
@@ -807,7 +868,7 @@ export async function removeMemberFromChannel(member, channelId) {
       })
 
       result = `removed`
-    } else if (allowPermissions.VIEW_CHANNEL) {
+    } else if (comparedPermissions.VIEW_CHANNEL) {
       channel.permissionOverwrites.edit(member.id, {
         VIEW_CHANNEL: false,
       })
