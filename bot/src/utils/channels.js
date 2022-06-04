@@ -625,7 +625,13 @@ export async function modifyChannel(
         pushToChannelSortingQueue(newChannel.guild.id)
       }
 
-      if (oldChannelType !== newChannelType) announceNewChannel(newChannel)
+      if (oldChannelType !== newChannelType) {
+        console.log(
+          `${oldChannelType} changed to ${newChannelType} in ${newChannel.name}.`
+        )
+
+        announceNewChannel(newChannel)
+      }
     }
   }
 }
