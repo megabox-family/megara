@@ -767,7 +767,7 @@ export async function addMemberToChannel(member, channelId, temporary = false) {
       permissionOverwrite => permissionOverwrite.id === member.id
     ),
     comparedPermissions = comparePermissions(userOverwrite),
-    allowPermissions = userOverwrite.allow.serialize()
+    allowPermissions = userOverwrite?.allow.serialize()
 
   if (channelType === `archived`) {
     const archivedPermissions = {
