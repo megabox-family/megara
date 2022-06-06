@@ -377,7 +377,9 @@ export async function handleMessage(message) {
     message.reply(
       `
         Sorry, \`${commandSymbol}${command}\` is not a valid command 😔\
-        \nUse the \`${commandSymbol}help\` command to get a valid list of commands 🥰
+        \nUse the \`${commandSymbol}help\` command to get a valid list of commands 🥰\
+        
+        \n*Keep in mind that most commands are now slash commands, type \`/\` to get a list of available slash commands in this channel.*
       `
     )
 }

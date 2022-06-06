@@ -19,17 +19,20 @@ export const defaultPermission = false,
     },
     {
       name: `make-private`,
-      description: `If true, only you will see the result. If false, others in this channel can see the result.`,
+      description: `If true, only you will see the result. If false or left blank, others can see the result.`,
       type: `BOOLEAN`,
-      required: true,
+      required: false,
     },
   ]
 
 export default async function (interaction) {
   const options = interaction.options,
     numberOfDice = options.getInteger(`number-of-dice`),
-    numberOfSides = options.getInteger(`number-of-sides`),
-    makePrivate = options.getBoolean(`make-private`)
+    numberOfSides = options.getInteger(`number-of-sides`)
+
+  let makePrivate = options.getBoolean(`make-private`)
+
+  makePrivate = makePrivate === null ? false : true
 
   let total = 0
   let rolls = []
