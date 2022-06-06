@@ -25,10 +25,10 @@ export default async function (message, commandSymbol, args) {
 
   await setRules(message.guild.id, args)
 
-  message.reply(
-    `
-      Your server's rules have been set! 😁\
-      \nIf you'd like to preview your rules use the \`${commandSymbol}rules\` command 👍
-    `
-  )
+  if (args)
+    message.reply(`
+      \nYour server's rules have been set! 😁\
+      \nIf you'd like to preview your rules use the \`/rules\` command 👍
+    `)
+  else message.reply(`Rules have been removed from your server 😬`)
 }

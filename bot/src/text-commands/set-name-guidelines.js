@@ -23,10 +23,12 @@ export default async function (message, commandSymbol, args) {
 
   await setNameGuidelines(message.guild.id, args)
 
-  message.reply(
-    `
+  if (args)
+    message.reply(
+      `
       Your server's name guildlines have been set! 😁\
-      \nIf you'd like to preview your name guildlines use the \`!nameGuidelines\` command 👍\
+      \nIf you'd like to preview your name guildlines use the \`/name-guidelines\` command 👍\
     `
-  )
+    )
+  else message.reply(`Name guidelines have been removed from your server 😬`)
 }

@@ -1,16 +1,26 @@
-import { getCommandName } from '../utils/text-commands.js'
 import { getAllVoiceChannelIds } from '../repositories/channels.js'
 
-const command = getCommandName(import.meta.url)
+export const description = `Creates a sepcificed number of randomized teams composed of people in the voice channel you're in.`
+export const defaultPermission = false,
+  options = [
+    {
+      name: `number-of-teams`,
+      description: `The number of teams you'd like to divy people into.`,
+      type: `INTEGER`,
+      required: true,
+      minValue: 2,
+      maxValue: 1000,
+    },
+  ]
 
-export default async function (message, commandSymbol, numberOfTeams) {
-  const guild = message.guild,
+export default async function (interaction) {
+  const guild = interaction.guild,
     voiceChannelIds = await getAllVoiceChannelIds(guild.id),
     voiceChannels = voiceChannelIds.map(voiceChannelId =>
       guild.channels.cache.get(voiceChannelId)
     ),
     voiceChannelMemberNames = voiceChannels
-      .find(voiceChannel => voiceChannel.members.get(message.author.id))
+      .find(voiceChannel => voiceChannel.members.get(interaction.member.id))
       ?.members.map(voiceChannelMember => {
         const user = voiceChannelMember.user
 
@@ -18,24 +28,22 @@ export default async function (message, commandSymbol, numberOfTeams) {
           ? `${voiceChannelMember.nickname} (${user.username}#${user.discriminator})`
           : `${user.username} (#${user.discriminator})`
       }),
+    options = interaction.options,
+    numberOfTeams = options.getInteger(`number-of-teams`),
     teams = []
 
   if (!voiceChannelMemberNames) {
-    message.reply(
-      `You must be in a call to use the \`${commandSymbol}${command}\` command 🤔`
-    )
-
-    return
-  } else if (!numberOfTeams || !numberOfTeams.match(`^[2-9]$|^[1-9][0-9]+$`)) {
-    message.reply(
-      `Invalid input, the value following \`${commandSymbol}${command}\` must be a number greater than 1 (ex: \`${commandSymbol}${command} 2\`) 🤔`
-    )
+    interaction.reply({
+      content: `You must be in a call to use the \`/teams\` command 🤔`,
+      ephemeral: true,
+    })
 
     return
   } else if (voiceChannelMemberNames.length < 2) {
-    message.reply(
-      `You need at least 2 people in a call to use the \`${commandSymbol}${command}\` command 🤔`
-    )
+    interaction.reply({
+      content: `You need at least 2 people in a call to use the \`/teams\` command 🤔`,
+      ephemeral: true,
+    })
 
     return
   } else if (voiceChannelMemberNames.length < numberOfTeams)
@@ -59,7 +67,7 @@ export default async function (message, commandSymbol, numberOfTeams) {
     })
   }
 
-  let replyMessage = `Good luck everyone! 🍀\n\n`
+  let replyMessage = 'Good luck everyone! 🍀\n```'
 
   teams
     .filter(team => team.length !== 0)
@@ -67,5 +75,7 @@ export default async function (message, commandSymbol, numberOfTeams) {
       replyMessage += `**Team ${index + 1}**\n${team.join(`\n`)}\n\n`
     })
 
-  message.reply(replyMessage)
+  replyMessage += '```'
+
+  interaction.reply(replyMessage)
 }

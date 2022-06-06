@@ -1,40 +1,45 @@
 import { MessageActionRow, MessageButton } from 'discord.js'
-import { getCommandName, adminCheck } from '../utils/text-commands.js'
 import { getWelcomeChannel } from '../repositories/guilds.js'
 import { getPublicChannelList } from '../repositories/channels.js'
 
-const command = getCommandName(import.meta.url)
+export const description = `Generate public channel or notification buttons in a specified channel.`
+export const defaultPermission = false,
+  options = [
+    {
+      name: `button-type`,
+      description: `The type of buttons you want to generate.`,
+      type: `STRING`,
+      required: true,
+      choices: [
+        { name: `public`, value: `public` },
+        { name: `notification`, value: `notification` },
+      ],
+    },
+    {
+      name: `channel-id`,
+      description: `The channel id of the channel you want to generate the buttons in.`,
+      type: `STRING`,
+      required: true,
+    },
+  ]
 
-export default async function (message, commandSymbol, args) {
-  if (!(await adminCheck(message, commandSymbol, command))) return
+export default async function (interaction) {
+  const guild = interaction.guild,
+    options = interaction.options,
+    buttonType = options.getString(`button-type`),
+    channelId = options.getString(`channel-id`),
+    optionChannel = guild.channels.cache.get(channelId)
 
-  const argArr = args.split(' ')
-
-  if (!argArr || argArr.length !== 2) {
-    message.reply(`\
-      \nThe ${commandSymbol}${command} requires 2 arguments, the type of buttons to be generated and in what channel id.
-      \n Example: \`${commandSymbol}${command} notification 753376109764018206\`
-    `)
-
-    return
-  } else if (![`public`, `notification`].includes(argArr[0].toLowerCase())) {
-    message.reply(
-      `Invalid button type, valid options are **public** & **notification**, please try again.`
-    )
+  if (!optionChannel) {
+    interaction.reply({
+      contents: `You provided an invalid channel id, please try again.`,
+      ephemeral: true,
+    })
 
     return
   }
 
-  const guild = message.guild,
-    buttonChannel = guild.channels.cache.get(argArr[1])
-
-  if (!buttonChannel) {
-    message.reply(`Invalid channel id, please try again.`)
-
-    return
-  }
-
-  if (argArr[0].toLowerCase() === `public`) {
+  if (buttonType === `public`) {
     const welcomeChannelId = await getWelcomeChannel(guild.id),
       publicChannelIds = await getPublicChannelList(guild.id, welcomeChannelId)
 
@@ -72,9 +77,9 @@ export default async function (message, commandSymbol, args) {
       }
     }
 
-    fragmentedButtonArray.forEach(buttonArray => {
-      buttonChannel.send({ components: buttonArray })
-    })
+    for (const buttonArray of fragmentedButtonArray) {
+      await optionChannel.send({ components: buttonArray })
+    }
   } else {
     const serverNotificationSquad = guild.roles.cache.find(
         role => role.name === `server notification squad`
@@ -118,8 +123,13 @@ export default async function (message, commandSymbol, args) {
         ),
       ]
 
-    buttonChannel.send({
+    await optionChannel.send({
       components: notificationButtons,
     })
   }
+
+  await interaction.reply({
+    content: `${buttonType} buttons were sent to ${optionChannel} 🤓`,
+    ephemeral: true,
+  })
 }

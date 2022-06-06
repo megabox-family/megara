@@ -10,116 +10,12 @@ export default async function (message, commandSymbol) {
 
   //admin commands go here
   const adminCommands = [
-    `${commandSymbol}buttons`,
-    `${commandSymbol}channelFunction`,
-    `${commandSymbol}commandSymbol`,
     `${commandSymbol}setNameGuidelines`,
     `${commandSymbol}setRules`,
-    `${commandSymbol}sort`,
-    `${commandSymbol}test`,
   ]
 
   //full command list goes here
   const commandArray = [
-    {
-      name: `\`${commandSymbol}buttons notification <channel id>\``,
-      value: `\
-        \nSends message containing buttons that allow members to subsribe and unsubscribe from notification groups.\
-        \nExample: \`${commandSymbol}buttons notification 822941461695299624\`\
-      `,
-    },
-    {
-      name: `\`${commandSymbol}buttons public <channel id>\``,
-      value: `\
-        \nSends message containing buttons that allow members to join / leave public channels within the server.\
-        \nExample: \`${commandSymbol}buttons public 822941461695299624\`\
-      `,
-    },
-    {
-      name: `\`${commandSymbol}channelFunction <channel id>\``,
-      value: `\
-        \nSet the function of a channel, needed for some of ${
-          getBot().user.username
-        }'s features.\
-        \nExample: \`${commandSymbol}channelFunction log 822941461695299624\`\
-      `,
-    },
-    {
-      name: `\`${commandSymbol}channels\``,
-      value: `Displays the list of joinable channels.`,
-    },
-    {
-      name: `\`${commandSymbol}channels archived\``,
-      value: `Displays the list of archived channels that you can join / leave.`,
-    },
-    {
-      name: `\`${commandSymbol}channels public\``,
-      value: `Displays the list of public channels that you can join / leave.`,
-    },
-    {
-      name: `\`${commandSymbol}color list\``,
-      value: `Displays the list of possible color roles to choose from.`,
-    },
-    {
-      name: `\`${commandSymbol}color <color>\``,
-      value: `
-        Sets your color.\
-        \nExample: \`${commandSymbol}color sobble\`\
-      `,
-    },
-    {
-      name: `\`${commandSymbol}commandSymbol <command symbol>\``,
-      value: `
-        Lets you set the command symbol for ${
-          getBot().user.username
-        }'s commands to avoid bot command overlapping.\
-        \nExample: \`${commandSymbol}commandSymbol &\`
-      `,
-    },
-    {
-      name: `\`${commandSymbol}episode <season #> <episode # / name>\``,
-      value: `
-        Generates a private thread within a cinema channel to discuss spoilers in relation to a specific episode.\
-        \nExample: \`${commandSymbol}episode 3 7\`, \`${commandSymbol}episode 1 Pilot\`, \`${commandSymbol}episode 4 Finale\`
-      `,
-    },
-    {
-      name: `\`${commandSymbol}join <channel>\``,
-      value: `
-        \nAdds you to the specified channel, if it's joinable.\
-        \nExample: \`${commandSymbol}join minecraft\`\
-      `,
-    },
-    {
-      name: `\`${commandSymbol}leave <channel>\``,
-      value: `\
-        \nRemoves you from the specified channel.\
-        \nExample: \`${commandSymbol}leave minecraft\`
-      `,
-    },
-    {
-      name: `\`${commandSymbol}nameGuideLines\``,
-      value: `Prints the servers name guidelines.`,
-    },
-    {
-      name: `\`${commandSymbol}name <Your name here>\``,
-      value: `\
-        \nUse this command to set your nickname within this server.\
-        \nTypically this is only done once when you join the server.\
-        \nExample: \`${commandSymbol}name John\`\
-      `,
-    },
-    {
-      name: `\`${commandSymbol}roll [count]d[die]\``,
-      value: `\
-        \nRoll any number of dice of any size (limited by discord message size).\
-        \nExample: \`${commandSymbol}roll 4d8\`\
-      `,
-    },
-    {
-      name: `\`${commandSymbol}rules\``,
-      value: `Displays the servers rules.`,
-    },
     {
       name: `\`${commandSymbol}setNameGuidelines\``,
       value: `\
@@ -144,40 +40,6 @@ export default async function (message, commandSymbol) {
         \n\`\`\`\
       `,
     },
-    {
-      name: `\`${commandSymbol}sort channels <boolean>\``,
-      value: `\
-        \nEnables / disables category and channel sorting for the server.\
-        \nCategories and channels will be sorted alphabetically unless overriden.\
-        \nExample: \`${commandSymbol}sort channels true\`, \`${commandSymbol}sort channels false\`\
-      `,
-    },
-    {
-      name: `\`${commandSymbol}sort roles <boolean>\``,
-      value: `\
-        \nEnables / disables role sorting for the server.\
-        \nThis is used to ensure color roles are places at the top for color priority, it also puts function roles at the bottom of the list.\
-        \nRoles placed between color roles and function roles will retain their position, roles above ${
-          getBot().user.username
-        } will not be sorted.
-        \nExample: \`${commandSymbol}sort roles true\`, \`${commandSymbol}sort roles false\`\
-      `,
-    },
-    {
-      name: `\`${commandSymbol}teams [count of teams]\``,
-      value: `\
-        \nIf this command is used while you're in a voice call with others, it will divy everyone in the call into a specified number of teams.\
-        \nExample: \`${commandSymbol}teams 2\`\
-      `,
-    },
-    {
-      name: `\`${commandSymbol}test\``,
-      value: `This command is a wildcard, used for development, proceed with care.`,
-    },
-    {
-      name: `\`${commandSymbol}voice\``,
-      value: `Type this in any joinable topic channel and a voice channel specific to that topic will be opened up alongside it.`,
-    },
   ]
 
   //full command list is filtered using the admin commands array
@@ -188,7 +50,7 @@ export default async function (message, commandSymbol) {
     filteredCommandArray = commandArray.filter(command => {
       if (
         adminCommands.find(adminCommand => {
-          if (command.name.match(`${adminCommand}(\\s|\`)`)) return true
+          if (command.name.match(`\\${adminCommand}(\\s|\`)`)) return true
         })
       ) {
         return command
@@ -198,7 +60,7 @@ export default async function (message, commandSymbol) {
     filteredCommandArray = commandArray.filter(command => {
       if (
         adminCommands.every(adminCommand => {
-          if (!command.name.match(`${adminCommand}(\\s|\`)`)) return true
+          if (!command.name.match(`\\${adminCommand}(\\s|\`)`)) return true
         })
       ) {
         return command
@@ -209,10 +71,19 @@ export default async function (message, commandSymbol) {
   //index is added to name of each command
   const finalCommandArray = filteredCommandArray.map((command, index) => {
     return {
-      name: `${index + 1}. ${command.name}`,
-      value: command.value,
+      name: `${index + 1}. ${command?.name}`,
+      value: command?.value,
     }
   })
+
+  if (finalCommandArray.length < 1) {
+    message.reply(`
+      \nThere are currently no text commands in this server.\
+      \nMost commands are slash commands, type \`/\` to get a list of available commands in this channel.
+    `)
+
+    return
+  }
 
   const commandListEmbed = new MessageEmbed()
     .setColor('#ff8bdb')

@@ -1,13 +1,13 @@
-import { MessageActionRow, MessageButton } from 'discord.js'
+import { MessageActionRow, MessageButton, Constants } from 'discord.js'
 import { cacheBot, getBot } from '../cache-bot.js'
 import { readdirSync, existsSync } from 'fs'
 import { basename, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { isEqual } from 'lodash-es'
 import { directMessageError } from '../utils/error-logging.js'
 import { syncChannels } from './channels.js'
 import { syncRoles, requiredRoleDifference } from './roles.js'
 import { dynamicRooms } from './voice.js'
-import { registerSlashCommands } from './slash-commands.js'
 import { pushUserToQueue } from './required-role-queue.js'
 import {
   syncGuilds,
@@ -23,17 +23,25 @@ import {
   removeActiveVoiceChannelId,
   getCategoryName,
   getFormatedCommandChannels,
-  getActiveVoiceChannelIds,
   getChannelType,
 } from '../repositories/channels.js'
 
 const relativePath = dirname(fileURLToPath(import.meta.url)),
   srcPath = dirname(relativePath),
-  textCommandFiles = readdirSync(`${srcPath}/text-commands`),
+  textCommandFolderName = `text-commands`,
+  slashCommandFolderName = `slash-commands`,
+  textCommandFiles = readdirSync(`${srcPath}/${textCommandFolderName}`),
+  slashCommandFiles = readdirSync(`${srcPath}/${slashCommandFolderName}`),
   textCommands = textCommandFiles.map(textCommandFile => {
     return {
       baseName: basename(textCommandFile, '.js').replace(/-/g, ``),
-      fullPath: `${srcPath}/text-commands/${textCommandFile}`,
+      fullPath: `${srcPath}/${textCommandFolderName}/${textCommandFile}`,
+    }
+  }),
+  slashCommands = slashCommandFiles.map(slashCommandFile => {
+    return {
+      baseName: basename(slashCommandFile, '.js'),
+      fullPath: `${srcPath}/${slashCommandFolderName}/${slashCommandFile}`,
     }
   })
 
@@ -43,32 +51,12 @@ export const validCommandSymbols = [
   `%`,
   `^`,
   `&`,
-  `(`,
-  `)`,
   `-`,
   `+`,
   `=`,
-  `{`,
-  `}`,
-  `[`,
-  `]`,
   `?`,
-  `,`,
   `.`,
 ]
-
-export async function removeEmptyVoiceChannelsOnStartup() {
-  const activeVoiceChannels = await getActiveVoiceChannelIds()
-
-  activeVoiceChannels.forEach(channel => {
-    setTimeout(async () => {
-      const voiceChannel = await getBot().channels.cache.get(
-        channel.activeVoiceChannelId
-      )
-      removeVoiceChannelIfEmpty(voiceChannel)
-    }, 30000)
-  })
-}
 
 export async function deleteNewRoles(guild) {
   const newRole = guild.roles.cache.find(role => role.name === `new role`)
@@ -78,6 +66,96 @@ export async function deleteNewRoles(guild) {
   await newRole.delete().catch()
 
   await deleteNewRoles(guild)
+}
+
+export async function registerSlashCommands(bot) {
+  const guild = bot.guilds.cache.get(`711043006253367426`)
+
+  let commands
+
+  if (guild) {
+    commands = guild.commands
+  } else {
+    commands = bot.application?.commands
+  }
+
+  await commands.fetch()
+
+  // console.log(
+  //   commands.cache.forEach(command => {
+  //     if (command.name === `episode`) console.log(command.options)
+  //   })
+  // )
+
+  const commandCache = commands.cache,
+    slashCommandNameArray = slashCommands.map(
+      slashCommand => slashCommand.baseName
+    )
+
+  for (const [commandId, command] of commandCache) {
+    if (!slashCommandNameArray.includes(command.name)) {
+      console.log(
+        `The ${command.name} command no longer exists, queued for deletion`
+      )
+      await command.delete()
+    }
+  }
+
+  for (const slashCommand of slashCommands) {
+    const commandModule = await import(slashCommand.fullPath).then(
+        module => module
+      ),
+      commandObject = {
+        name: slashCommand.baseName,
+        description: commandModule?.description,
+        options: commandModule?.options,
+        defaultPermission: commandModule?.defaultPermission,
+      },
+      existingCommand = commandCache.find(
+        command => command.name === slashCommand.baseName
+      )
+
+    if (commandModule?.options) commandObject.options = commandModule.options
+    else commandObject.options = []
+
+    if (commandObject.options.length > 0)
+      existingCommand?.options?.forEach((option, index) => {
+        const optionKeys = Object.keys(option),
+          newOption = commandObject.options[index]
+
+        optionKeys.forEach(key => {
+          if (!newOption.hasOwnProperty(key)) newOption[key] = undefined
+        })
+
+        option?.choices?.forEach((choice, jndex) => {
+          const choiceKeys = Object.keys(choice),
+            newChoice = commandObject.options[index].choices[jndex]
+
+          choiceKeys.forEach(key => {
+            if (!newChoice.hasOwnProperty(key)) newChoice[key] = undefined
+          })
+        })
+      })
+
+    if (!commandModule?.description) {
+      console.log(
+        `'${commandObject.name}' was not registered as a slash command because it's missing core components.`
+      )
+    } else if (
+      !existingCommand ||
+      existingCommand.description !== commandObject.description ||
+      !isEqual(
+        existingCommand.options,
+        commandObject.options ||
+          existingCommand.defaultPermission !== commandObject.defaultPermission
+      )
+    ) {
+      console.log(`${commandObject.name} was generated.`)
+
+      if (existingCommand) await existingCommand.edit(commandObject)
+      else await commands?.create(commandObject)
+    }
+  }
 }
 
 export async function startup(bot) {
@@ -95,7 +173,9 @@ export async function startup(bot) {
   registerSlashCommands(bot)
 
   // const guild = bot.guilds.cache.get(`711043006253367426`),
-  //   channel = guild.channels.cache.get(`711043006781849686`)
+  //   channel = guild.channels.cache.get(`711043006781849687`)
+
+  // console.log(channel.type)
 
   // console.log(guild.premiumSubscriptionCount)
 
@@ -325,7 +405,7 @@ export async function sendVerificationInstructions(guildMember) {
           \nFirstly, please read over ${guild.name}'s name guidelines:\
           \n${nameGuidelines}\
   
-          \nLastly, set your name by using the \`${commandSymbol}name\` command like this \`${commandSymbol}name [your name]\`, ex: \`${commandSymbol}name John\`\
+          \nLastly, set your name by using the \`/set-name\` command like this \`/set-name [your name]\`, ex: \`/set-name John\`\
 
           \n*Hint: if you're confused as to how this works, scroll up to see how others have been verified in this channel.*
         `
@@ -335,9 +415,9 @@ export async function sendVerificationInstructions(guildMember) {
       `\
           \n<@${guildMember.id}>\
           \nBefore I can give you full access to the server you'll need to set your nickname, don't worry it's a piece of cake! 🍰\
-          \nTo set your name simply use the \`${commandSymbol}name\` command like this \`${commandSymbol}name [your name]\`, ex: \`${commandSymbol}name John\`\
+          \nTo set your name simply use the \`/set-name\` command like this \`/set-name [your name]\`, ex: \`/set-name John\`\
 
-          \n*Hint: if you're confused as to how this works, scroll up to see how others have been verified in this channel.*
+          \n*Hint: Type \`/\` to see available commands, one you start to type 'set-nick' it should come up, then entire your name in the \`name\` field.*
         `
     )
 }
@@ -405,9 +485,11 @@ export function handleInteraction(interaction) {
 
     interaction.update({})
   } else if (interaction.isCommand()) {
-    import(`${srcPath}/text-commands/voice.js`).then(module =>
-      module.default(interaction)
+    const slashCommand = slashCommands.find(
+      slashCommand => slashCommand.baseName === interaction.commandName
     )
+
+    import(slashCommand.fullPath).then(module => module.default(interaction))
   }
 }
 

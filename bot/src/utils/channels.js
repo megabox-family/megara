@@ -627,7 +627,7 @@ export async function modifyChannel(
 
       if (oldChannelType !== newChannelType) {
         console.log(
-          `${oldChannelType} changed to ${newChannelType} in ${newChannel.name}.`
+          `Channel type ${oldChannelType} changed to ${newChannelType} in ${newChannel.name}.`
         )
 
         announceNewChannel(newChannel)
@@ -742,7 +742,7 @@ export async function syncChannels(guild) {
     const adminChannelId = await getAdminChannel(guild.id)
 
     if (!adminChannelId)
-      guild.channels.cache.get(adminChannelId).send(
+      guild.channels.cache.get(adminChannelId)?.send(
         `Potential oopsie detected. More than five channels were marked for announcement:
           ${channelsToAnnounce.join(', ')}`
       )

@@ -10,6 +10,8 @@ import {
   getChannelType,
 } from '../repositories/channels.js'
 
+const voiceDeleteCounters = {}
+
 function getVoiceChannelBasename(voiceChannelName) {
   return voiceChannelName.match(`.+(?=-[0-9]+)`)?.[0]
 }
@@ -127,6 +129,38 @@ async function addMemberToChannelTemporarily(member, channelId) {
       .catch(error => directMessageError(error, member))
 }
 
+export async function queueDelayedVoiceDelete(channel, voiceChannelType) {
+  delete voiceDeleteCounters?.[channel.name]
+
+  await new Promise(resolution => setTimeout(resolution, 1250))
+
+  voiceDeleteCounters[channel.name] = 0
+
+  delayedVoiceChannelDelete(channel, voiceChannelType)
+}
+
+export async function delayedVoiceChannelDelete(channel, voiceChannelType) {
+  await new Promise(resolution => setTimeout(resolution, 1000))
+
+  if (!voiceDeleteCounters.hasOwnProperty(channel.name)) return
+
+  let counter = voiceDeleteCounters?.[channel.name]
+
+  if (counter !== null) counter++
+
+  if (voiceDeleteCounters.hasOwnProperty(channel.name))
+    voiceDeleteCounters[channel.name] = counter
+
+  if (voiceDeleteCounters?.[channel.name] === 29) {
+    deleteDynamicVoiceChannel(channel, voiceChannelType)
+    delete voiceDeleteCounters?.[channel.name]
+
+    return
+  }
+
+  delayedVoiceChannelDelete(channel, voiceChannelType)
+}
+
 export async function deleteDynamicVoiceChannel(
   voiceChannel,
   voiceChannelType
@@ -148,19 +182,21 @@ export async function deleteDynamicVoiceChannel(
       emptyChannels.push(relevantDynamicVoiceChannel)
   })
 
+  if (emptyChannels.length > 1) {
+    const collator = new Intl.Collator(undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    })
+
+    emptyChannels.sort((a, b) => collator.compare(a.name, b.name))
+  }
+
   if (
     !emptyChannels[0]?.name ||
     (+getVoiceChannelNumber(emptyChannels[0]?.name) !== 1 &&
       emptyChannels.length == 1)
   )
     return
-
-  const collator = new Intl.Collator(undefined, {
-    numeric: true,
-    sensitivity: 'base',
-  })
-
-  emptyChannels.sort((a, b) => collator.compare(a.name, b.name))
 
   if (
     emptyChannels.length < dynamicVoiceChannels.size &&
@@ -350,7 +386,7 @@ export async function dynamicRooms(oldState, newState) {
   await oldThread?.members
     .remove(guildMember.id)
     .catch(error =>
-      console.log(`Could not add memeber to thread, see error below\n${error}`)
+      console.log(`Could not add member to thread, see error below\n${error}`)
     )
   await removeMemberFromChannelTemporarily(guildMember, oldThread?.parentId)
 
@@ -358,7 +394,7 @@ export async function dynamicRooms(oldState, newState) {
   await newThread?.members
     .add(guildMember.id)
     .catch(error =>
-      console.log(`Could not add memeber to thread, see error below\n${error}`)
+      console.log(`Could not add member to thread, see error below\n${error}`)
     )
 
   //delete or create voice channels
