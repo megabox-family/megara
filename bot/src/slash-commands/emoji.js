@@ -222,10 +222,10 @@ export default function (interaction) {
       interaction.reply(`🚔`)
       break
     case `🚓`:
-      interaction.reply(`<a:peperun:983505269730467901>`)
+      interaction.reply(`<a:peperun:983514136946311218>`)
       break
     case `🚔`:
-      interaction.reply(`<a:peperun:983505269730467901>`)
+      interaction.reply(`<a:peperun:983514136946311218>`)
       break
     default:
       const emojis = [
