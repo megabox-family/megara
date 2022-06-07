@@ -115,6 +115,8 @@ export default function (interaction) {
       break
     case `🤠`:
       interaction.reply(`🐄`)
+    case `🐄`:
+      interaction.reply(`🤠`)
       break
     case `🔥`:
       interaction.reply(`🥵`)

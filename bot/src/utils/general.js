@@ -9,6 +9,7 @@ import { syncChannels } from './channels.js'
 import { syncRoles, requiredRoleDifference } from './roles.js'
 import { dynamicRooms } from './voice.js'
 import { pushUserToQueue } from './required-role-queue.js'
+import { pinMessage, unpinMessage } from './emoji.js'
 import {
   syncGuilds,
   getCommandSymbol,
@@ -533,4 +534,12 @@ export function comparePermissions(permission) {
   })
 
   return individualPermissions
+}
+
+export async function handleReactionAdd(reaction, user) {
+  pinMessage(reaction, user)
+}
+
+export async function handleReactionRemove(reaction, user) {
+  unpinMessage(reaction, user)
 }

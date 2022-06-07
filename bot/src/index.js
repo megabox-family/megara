@@ -7,6 +7,8 @@ import {
   handleNewMember,
   modifyMember,
   handleInteraction,
+  handleReactionAdd,
+  handleReactionRemove,
 } from './utils/general.js'
 import {
   createChannel,
@@ -47,6 +49,8 @@ bot.on('roleDelete', deleteRole)
 bot.on('messageCreate', handleMessage)
 bot.on('interactionCreate', handleInteraction)
 bot.on('voiceStateUpdate', handleVoiceUpdate)
+bot.on('messageReactionAdd', handleReactionAdd)
+bot.on('messageReactionRemove', handleReactionRemove)
 
 bot.on('rateLimit', rateLimitData => {
   console.log(rateLimitData)
