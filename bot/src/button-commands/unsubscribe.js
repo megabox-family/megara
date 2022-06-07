@@ -19,7 +19,8 @@ export default async function (interaction) {
 
   member.roles.remove(roleId)
 
-  member.send(
-    `You are now unsubscribed from ${roleName} notifications in the ${guild.name} server.`
-  )
+  interaction.reply({
+    content: `You are now unsubscribed from ${roleName} notifications in the ${guild.name} server.`,
+    ephemeral: true,
+  })
 }

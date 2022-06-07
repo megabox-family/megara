@@ -17,11 +17,8 @@ export default async function (interaction) {
         console.log(`Unable to add user to thread, see error below:\n${error}`)
       )
   } else
-    user
-      .send(
-        `The thread you tried joining no longer exits in the ${channel} channel within the ${guild} server.`
-      )
-      .catch(error =>
-        console.log(`Couldn't send user messsage (thread button):\n${error}`)
-      )
+    interaction.reply({
+      content: `The thread you tried joining no longer exits in the ${channel} channel within the ${guild} server.`,
+      ephemeral: true,
+    })
 }

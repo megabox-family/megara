@@ -477,16 +477,21 @@ export function modifyMember(oldMember, newMember) {
     })
 }
 
-export function handleInteraction(interaction) {
+export async function handleInteraction(interaction) {
   if (interaction.isButton()) {
     const buttonFunctionPath = `${srcPath}/button-commands/${
       interaction.customId.match(`(?!!).+(?=:)`)[0]
     }.js`
 
     if (existsSync(buttonFunctionPath))
-      import(buttonFunctionPath).then(module => module.default(interaction))
+      await import(buttonFunctionPath).then(module =>
+        module.default(interaction)
+      )
 
-    interaction.update({})
+    interaction.update({}).catch(error => {
+      if (error.message !== `Interaction has already been acknowledged.`)
+        console.log(error.message)
+    })
   } else if (interaction.isCommand()) {
     const slashCommand = slashCommands.find(
       slashCommand => slashCommand.baseName === interaction.commandName

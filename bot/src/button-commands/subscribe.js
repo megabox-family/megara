@@ -19,7 +19,8 @@ export default async function (interaction) {
 
   member.roles.add(roleId)
 
-  member.send(
-    `You are now subscribed to ${roleName} notifications in the ${guild.name} server.`
-  )
+  interaction.reply({
+    content: `You are now subscribed to ${roleName} notifications in the ${guild.name} server.`,
+    ephemeral: true,
+  })
 }
