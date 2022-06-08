@@ -27,6 +27,8 @@ import {
   getChannelType,
 } from '../repositories/channels.js'
 
+import { getThreadById } from './threads.js'
+
 const relativePath = dirname(fileURLToPath(import.meta.url)),
   srcPath = dirname(relativePath),
   textCommandFolderName = `text-commands`,
@@ -174,7 +176,17 @@ export async function startup(bot) {
   registerSlashCommands(bot)
 
   // const guild = bot.guilds.cache.get(`711043006253367426`),
-  //   channel = guild.channels.cache.get(`711043006781849687`)
+  //   channel = guild.channels.cache.get(`711043006781849686`),
+  //   thread = await getThreadById(channel, `983883902299029554`)
+  // messages = await thread.messages.fetch(),
+  // members = await thread.members.fetch()
+  // console.log(thread)
+
+  // await thread.members.remove(`644957448666480643`)
+
+  // console.log(thread)
+
+  // 598729034867933195
 
   // console.log(channel.type)
 

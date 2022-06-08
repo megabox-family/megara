@@ -1,7 +1,11 @@
 import { MessageActionRow, MessageButton } from 'discord.js'
 import { directMessageError } from '../utils/error-logging.js'
 import { addMemberToChannel, removeMemberFromChannel } from './channels.js'
-import { getThreadByName, unarchiveThread } from './threads.js'
+import {
+  getThreadByName,
+  unarchiveThread,
+  addMemberToThread,
+} from './threads.js'
 import {
   getChannelId,
   getAllTextChannelNames,
@@ -391,11 +395,13 @@ export async function dynamicRooms(oldState, newState) {
   await removeMemberFromChannelTemporarily(guildMember, oldThread?.parentId)
 
   await addMemberToChannelTemporarily(guildMember, newThread?.parentId)
-  await newThread?.members
-    .add(guildMember.id)
-    .catch(error =>
-      console.log(`Could not add member to thread, see error below\n${error}`)
-    )
+  await addMemberToThread(newThread, guildMember)
+
+  // await newThread?.members
+  //   .add(guildMember.id)
+  //   .catch(error =>
+  //     console.log(`Could not add member to thread, see error below\n${error}`)
+  //   )
 
   //delete or create voice channels
   const oldVoiceChannel = oldState.channel,

@@ -220,11 +220,11 @@ export default async function (interaction) {
     )
 
   await member.roles.add(serverNotificationRole.id)
-  await new Promise(resolution => setTimeout(resolution, 1000))
+  await new Promise(resolution => setTimeout(resolution, 10000))
 
   await member.roles.add(channelNotificationRole.id)
-  await new Promise(resolution => setTimeout(resolution, 1000))
+  await new Promise(resolution => setTimeout(resolution, 10000))
 
   await member.roles.add(colorNotificationRole.id)
-  await new Promise(resolution => setTimeout(resolution, 1000))
+  await new Promise(resolution => setTimeout(resolution, 10000))
 }
