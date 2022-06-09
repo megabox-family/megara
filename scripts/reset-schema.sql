@@ -42,6 +42,29 @@ create table channels (
   active_voice_channel_id text
 );
 
+-- worlds
+drop table if exists worlds;
+
+create table worlds (
+  id uuid not null primary key,
+  name text not null,
+  guild_id text not null,
+  created_by text not null
+);
+
+-- coordinates
+drop table if exists coordinates;
+
+create table coordinates (
+  id uuid not null primary key,
+  name text not null,
+  world_id text not null,
+  created_by text not null,
+  x integer not null,
+  y integer not null,
+  z integer not null
+);
+
 
 --roles
 -- drop table if exists roles;
@@ -56,14 +79,3 @@ create table channels (
 -- );
 
 
---coordinates
--- drop table if exists coordinates;
-
--- create table coordinates (
---   id uuid not null primary key,
---   name text not null,
---   owner text not null,
---   x integer not null,
---   y integer not null,
---   z integer not null
--- );

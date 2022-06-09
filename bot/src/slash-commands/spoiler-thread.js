@@ -44,11 +44,11 @@ export default async function (interaction) {
       .setStyle('SUCCESS')
   )
 
-  interaction.deferReply()
-  interaction.deleteReply()
+  // interaction.deferReply()
+  // interaction.deleteReply()
 
-  channel
-    .send({
+  interaction
+    .reply({
       content: `A new private thread for **${threadName}** has been created, press the button below to join the thread (**spoiler warning**):`,
       components: [threadButton],
     })
