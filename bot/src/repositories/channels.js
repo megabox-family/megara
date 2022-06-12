@@ -4,9 +4,12 @@ import SQL from 'sql-template-strings'
 import { getWelcomeChannel } from './guilds.js'
 
 export async function getIdForJoinableChannel(guildId, channelName) {
-  const welcomeChannelId = await getWelcomeChannel(guildId),
-    roomChannelId = await getRoomChannelId(guildId),
-    unverifiedRoomId = await getUnverifiedRoomChannelId(guildId)
+  const _welcomeChannelId = await getWelcomeChannel(guildId),
+    welcomeChannelId = _welcomeChannelId ? _welcomeChannelId : ``,
+    _roomChannelId = await getRoomChannelId(guildId),
+    roomChannelId = _roomChannelId ? _roomChannelId : ``,
+    _unverifiedRoomId = await getUnverifiedRoomChannelId(guildId),
+    unverifiedRoomId = _unverifiedRoomId ? _unverifiedRoomId : ``
 
   return await pgPool
     .query(

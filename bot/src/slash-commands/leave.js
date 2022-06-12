@@ -15,7 +15,7 @@ export const defaultPermission = false,
 export default async function (interaction) {
   const guild = interaction.guild,
     options = interaction.options,
-    channelName = options.getString(`channel-name`),
+    channelName = options.getString(`channel-name`).toLowerCase(),
     joinableChannelId = await getIdForJoinableChannel(guild.id, channelName)
 
   if (!joinableChannelId) {
