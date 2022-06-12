@@ -17,7 +17,8 @@ create table guilds (
   log_channel text,
   announcement_channel text,
   verification_channel text,
-  welcome_channel text
+  welcome_channel text,
+  active_world text
 );
 
 

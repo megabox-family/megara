@@ -17,6 +17,22 @@ export async function getWorldId(name, guildId) {
     .then(res => (res.rows[0] ? res.rows[0].id : undefined))
 }
 
+export async function getWorldName(id) {
+  return await pgPool
+    .query(
+      SQL`
+        select
+          name
+        from worlds
+        where id = ${id}
+      `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].name : undefined))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
 export async function createWorld(name, guildId) {
   return await pgPool
     .query(

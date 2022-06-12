@@ -1,5 +1,7 @@
 import { MessageEmbed, MessageActionRow, MessageButton } from 'discord.js'
+import { getActiveWorld } from '../repositories/guilds.js'
 import {
+  getWorldName,
   getWorldGroups,
   getCoordinatesByWorld,
   getCoordinatesByUser,
@@ -19,7 +21,7 @@ export async function getPages(
     delimiter = formatting ? formatting.delimiter : `\n`,
     succeed = formatting ? formatting.succeed : ``
 
-  let query
+  let query, activeWorldName
 
   switch (groupBy) {
     case `coordinates-world`:
@@ -33,7 +35,15 @@ export async function getPages(
       break
     case `worlds-world`:
       query = await getWorldGroups(guild.id, filters)
+      const activeWorldId = await getActiveWorld(guild.id)
+      activeWorldName = await getWorldName(activeWorldId)
   }
+
+  if (activeWorldName)
+    query.forEach(record => {
+      if (record.values === activeWorldName)
+        record.values = `**${activeWorldName} (active world)**`
+    })
 
   const groups = [...new Set(query.map(record => record.group))],
     groupedValues = groups.map(groupValue => {

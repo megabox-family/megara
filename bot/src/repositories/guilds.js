@@ -377,3 +377,36 @@ export async function getNameGuidelines(guildId) {
     )
     .then(res => (res.rows[0] ? res.rows[0].name_guidelines : undefined))
 }
+
+export async function setActiveWorld(worldId, guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        update guilds 
+        set 
+          active_world = ${worldId}
+        where id = ${guildId} 
+        returning *;
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function getActiveWorld(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          active_world 
+        from guilds
+        where id = ${guildId} 
+      `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].active_world : undefined))
+    .catch(error => {
+      console.log(error)
+    })
+}
