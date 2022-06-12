@@ -121,7 +121,10 @@ export async function registerSlashCommands(bot) {
     if (commandModule?.options) commandObject.options = commandModule.options
     else commandObject.options = []
 
-    if (commandObject.options.length > 0)
+    if (
+      commandObject.options.length > 0 &&
+      commandObject.options.length === existingCommand?.options?.length
+    )
       existingCommand?.options?.forEach((option, index) => {
         const optionKeys = Object.keys(option),
           newOption = commandObject.options[index]
@@ -147,11 +150,8 @@ export async function registerSlashCommands(bot) {
     } else if (
       !existingCommand ||
       existingCommand.description !== commandObject.description ||
-      !isEqual(
-        existingCommand.options,
-        commandObject.options ||
-          existingCommand.defaultPermission !== commandObject.defaultPermission
-      )
+      !isEqual(existingCommand.options, commandObject.options) ||
+      existingCommand.defaultPermission !== commandObject.defaultPermission
     ) {
       console.log(`${commandObject.name} was generated.`)
 

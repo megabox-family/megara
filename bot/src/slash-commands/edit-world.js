@@ -1,11 +1,17 @@
-import { getWorldId, deleteWorld } from '../repositories/coordinates.js'
+import { getWorldId, editWorld } from '../repositories/coordinates.js'
 
-export const description = `Allows you to delete a world record in the worlds table for Minecraft.`
+export const description = `Allows you to edit a world record in the worlds table for Minecraft.`
 export const defaultPermission = false,
   options = [
     {
       name: `world-name`,
-      description: `The name of the world you'd like to delete 👹`,
+      description: `The name of the world you'd like to edit 📝`,
+      type: `STRING`,
+      required: true,
+    },
+    {
+      name: `new-world-name`,
+      description: `A new name for the world you're editing.`,
       type: `STRING`,
       required: true,
     },
@@ -27,10 +33,12 @@ export default async function (interaction) {
     return
   }
 
-  await deleteWorld(existingWorldId)
+  const newWorldName = options.getString(`new-world-name`).toLowerCase()
+
+  await editWorld(existingWorldId, newWorldName)
 
   interaction.reply({
-    content: `The world with name **${worldName}** has been destroyed 💥`,
+    content: `The specified world's name has been changed from **${worldName}** to **${newWorldName}** 📝`,
     ephemeral: true,
   })
 }

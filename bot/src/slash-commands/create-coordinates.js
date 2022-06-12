@@ -1,21 +1,21 @@
 import {
   getWorldId,
   getCoordinatesId,
-  createCoordinate,
+  createCoordinates,
 } from '../repositories/coordinates.js'
 
 export const description = `Allows you to record the coordinates of a location in Minecraft.`
 export const defaultPermission = false,
   options = [
     {
-      name: `world-name`,
-      description: `The name of the world you'd like to create the coordinates in.`,
+      name: `coordinates-name`,
+      description: `The name for the coordinates (example: skeleton spawner).`,
       type: `STRING`,
       required: true,
     },
     {
-      name: `coordinates-name`,
-      description: `The name for the coordinates (example: skeleton spawner).`,
+      name: `world-name`,
+      description: `The name of the world you'd like to create the coordinates in.`,
       type: `STRING`,
       required: true,
     },
@@ -54,12 +54,26 @@ export default async function (interaction) {
 
     return
   }
-  const coordinatesName = options.getString(`coordinates-name`).toLowerCase(),
-    coordinatesId = getCoordinatesId(coordinatesName, existingWorldId)
+  const coordinatesName = options.getString(`coordinates-name`).toLowerCase()
 
-  if (coordinatesId) {
+  if (coordinatesName.length > 40) {
     interaction.reply({
-      content: `Coordinates named **${coordinatesName}** already exist for your user, one user cannot have multiple coordinates with the same name.`,
+      content: `Coordinate names must be under 40 characters, please try again (pro tip: hit ctrl-z).`,
+      ephemeral: true,
+    })
+
+    return
+  }
+
+  const existingCoordinatesId = await getCoordinatesId(
+    coordinatesName,
+    existingWorldId,
+    member.id
+  )
+
+  if (existingCoordinatesId) {
+    interaction.reply({
+      content: `Coordinates named **${coordinatesName}** already exist for your user in **${worldName}**, one user cannot have multiple coordinates with the same name in the same world. 🤨`,
       ephemeral: true,
     })
 
@@ -70,5 +84,17 @@ export default async function (interaction) {
     y = options.getInteger(`y`),
     z = options.getInteger(`z`)
 
-  createCoordinate([coordinatesName, existingWorldId, member.id, x, y, z])
+  await createCoordinates([
+    coordinatesName,
+    existingWorldId,
+    member.id,
+    x,
+    y,
+    z,
+  ])
+
+  interaction.reply({
+    content: `The **${coordinatesName}** coordinates in **${worldName}** have been created for your user 🧭`,
+    ephemeral: true,
+  })
 }

@@ -27,12 +27,12 @@ function formatEmbedChannelArray(channelList) {
   ]
 
   return categoryArray.map(categoryName => {
-    const formattedChannelList = `<#${channelList
+    const formattedChannelList = channelList
       .filter(record => record.categoryName === categoryName)
       .map(record => record.channelId)
-      .join(`>\n<#`)}>`
+      .join(`>\n<#`)
 
-    return { name: categoryName, value: formattedChannelList }
+    return { name: categoryName, value: `<#${formattedChannelList}>` }
   })
 }
 

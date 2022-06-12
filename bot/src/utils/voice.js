@@ -397,12 +397,6 @@ export async function dynamicRooms(oldState, newState) {
   await addMemberToChannelTemporarily(guildMember, newThread?.parentId)
   await addMemberToThread(newThread, guildMember)
 
-  // await newThread?.members
-  //   .add(guildMember.id)
-  //   .catch(error =>
-  //     console.log(`Could not add member to thread, see error below\n${error}`)
-  //   )
-
   //delete or create voice channels
   const oldVoiceChannel = oldState.channel,
     newVoiceChannel = newState.channel,

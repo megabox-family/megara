@@ -82,4 +82,10 @@ export async function addMemberToThread(thread, member) {
   const addMessage = await thread.send(`${member}`)
 
   await addMessage.delete()
+
+  // await newThread?.members
+  //   .add(guildMember.id)
+  //   .catch(error =>
+  //     console.log(`Could not add member to thread, see error below\n${error}`)
+  //   )
 }

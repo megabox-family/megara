@@ -48,8 +48,7 @@ drop table if exists worlds;
 create table worlds (
   id uuid not null primary key,
   name text not null,
-  guild_id text not null,
-  created_by text not null
+  guild_id text not null
 );
 
 -- coordinates
@@ -58,11 +57,22 @@ drop table if exists coordinates;
 create table coordinates (
   id uuid not null primary key,
   name text not null,
-  world_id text not null,
+  world_id uuid not null,
   created_by text not null,
   x integer not null,
   y integer not null,
   z integer not null
+);
+
+-- lists
+drop table if exists lists;
+
+create table lists (
+  id text not null primary key,
+  page_data text not null,
+  records_per_page integer not null,
+  group_by text not null,
+  filters text
 );
 
 
