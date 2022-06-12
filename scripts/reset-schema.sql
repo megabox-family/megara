@@ -69,6 +69,8 @@ drop table if exists lists;
 
 create table lists (
   id text not null primary key,
+  title text not null,
+  description text,
   page_data text not null,
   records_per_page integer not null,
   group_by text not null,

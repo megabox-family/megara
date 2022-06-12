@@ -92,7 +92,7 @@ export default async function (interaction) {
 
   if (pages.length === 0) {
     interaction.reply({
-      content: `The are no Minecraft coordinates with this criteria in **${guild.name}**.`,
+      content: `The are no Minecraft coordinates with this criteria in **${guild.name}** 🤔`,
       ephemeral: true,
     })
 

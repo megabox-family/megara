@@ -28,7 +28,7 @@ export default async function (interaction) {
 
   if (pages.length === 0) {
     interaction.reply({
-      content: `The are no Minecraft worlds in **${guild.name}** to list.`,
+      content: `The are no Minecraft worlds in **${guild.name}** to list 🤔`,
       ephemeral: true,
     })
 

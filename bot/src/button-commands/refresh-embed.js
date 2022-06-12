@@ -18,12 +18,22 @@ export default async function (interaction) {
 
   const recordsPerPage = listInfo.recordsPerPage,
     group = listInfo.groupBy,
-    pages = await getPages(recordsPerPage, group, guild, listInfo.filters),
-    messageContent = await generateListMessage(
-      pages,
-      listInfo.title,
-      listInfo.description
-    )
+    pages = await getPages(recordsPerPage, group, guild, listInfo.filters)
+
+  if (pages.length === 0) {
+    interaction.reply({
+      content: `There was an error refreshing the list, please dismiss the list message and create a new one 😬`,
+      ephemeral: true,
+    })
+
+    return
+  }
+
+  const messageContent = await generateListMessage(
+    pages,
+    listInfo.title,
+    listInfo.description
+  )
 
   await updateListPageData(message.id, pages)
 
