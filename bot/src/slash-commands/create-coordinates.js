@@ -16,7 +16,7 @@ export const defaultPermission = false,
     },
     {
       name: `dimension`,
-      description: `Specify if the coordinates you're creating are in the Overworld, Nether, or The End.`,
+      description: `Specify if the coordinates you're creating are in the Overworld, Nether, or End.`,
       type: `STRING`,
       required: true,
       choices: dimensions.map(dimension => {
