@@ -1,4 +1,4 @@
-import { indexOf } from 'lodash-es'
+import { dimensions } from '../utils/slash-commands.js'
 import {
   getWorldId,
   getCoordinates,
@@ -9,26 +9,35 @@ export const description = `Allows you to edit the coordinates of a location in 
 export const defaultPermission = false,
   options = [
     {
-      name: `coordinates-name`,
-      description: `The name for the coordinates you'd like to edit.`,
-      type: `STRING`,
-      required: true,
-    },
-    {
       name: `world-name`,
       description: `The name of the world you'd like to edit the coordinates in.`,
       type: `STRING`,
       required: true,
     },
     {
-      name: `new-coordinates-name`,
-      description: `The new name for the coordinates (example: skeleton spawner).`,
+      name: `coordinates-name`,
+      description: `The name for the coordinates you'd like to edit.`,
       type: `STRING`,
-      required: false,
+      required: true,
     },
     {
       name: `new-world-name`,
       description: `The name of the world you'd like to change these coordinates to.`,
+      type: `STRING`,
+      required: false,
+    },
+    {
+      name: `dimension`,
+      description: `The dimension you'd like to change these coordinates to.`,
+      type: `STRING`,
+      required: false,
+      choices: dimensions.map(dimension => {
+        return { name: dimension, value: dimension }
+      }),
+    },
+    {
+      name: `new-coordinates-name`,
+      description: `The new name for the coordinates (example: skeleton spawner).`,
       type: `STRING`,
       required: false,
     },
@@ -108,6 +117,7 @@ export default async function (interaction) {
     x = options.getInteger(`x`),
     y = options.getInteger(`y`),
     z = options.getInteger(`z`),
+    dimension = options.getString(`dimension`),
     newCoordinates = {
       id: null,
       name: newCoordinatesName,
@@ -115,6 +125,7 @@ export default async function (interaction) {
       x: x,
       y: y,
       z: z,
+      dimension: dimension,
     },
     allValuesAreNull = Object.keys(newCoordinates).every(
       key => newCoordinates[key] == null
@@ -140,15 +151,17 @@ export default async function (interaction) {
     content: `
       The **${existingCoordinates.name}** coordinates in **${newWorldName}** have been edited for your user 📝
       \nOld:\
-      \n\`\`\`coordinates-name: ${coordinatesName},\
-      \nworld-name: ${worldName},\
+      \n\`\`\`world-name: ${worldName},\
+      \ndimension: ${existingCoordinates.dimension},\
+      \ncoordinates-name: ${coordinatesName},\
       \nx: ${existingCoordinates.x},\
       \ny: ${existingCoordinates.y},\
       \nz: ${existingCoordinates.z},\
       \n\`\`\`\
       \nNew:\
-      \n\`\`\`coordinates-name: ${newCoordinates.name},\
-      \nworld-name: ${newWorldName},\
+      \n\`\`\`world-name: ${newWorldName},\
+      \ndimension: ${newCoordinates.dimension},\
+      \ncoordinates-name: ${newCoordinates.name},\
       \nx: ${newCoordinates.x},\
       \ny: ${newCoordinates.y},\
       \nz: ${newCoordinates.z},\

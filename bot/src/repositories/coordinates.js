@@ -154,7 +154,8 @@ export async function editCoordinates(coordinates) {
           world_id = ${coordinates.worldId},
           x = ${coordinates.x},
           y = ${coordinates.y},
-          z = ${coordinates.z}
+          z = ${coordinates.z},
+          dimension = ${coordinates.dimension}
         where id = ${coordinates.id}
         returning *;
       `
