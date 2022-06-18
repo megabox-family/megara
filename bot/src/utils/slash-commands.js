@@ -10,7 +10,7 @@ import {
 } from '../repositories/coordinates.js'
 
 export const defaultRecordsPerPage = 20,
-  dimensions = [`overworld`, `nether`, `the end`]
+  dimensions = [`overworld`, `nether`, `end`]
 
 export async function getPages(
   recordsPerPage,

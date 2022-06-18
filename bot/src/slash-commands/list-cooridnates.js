@@ -115,7 +115,7 @@ export default async function (interaction) {
   }
 
   const title = `Minecraft Coordinates (X / Y / Z)`,
-    description = `group by: ${_groupBy} \nkey: 🟢 = overworld, 🔴 = nether, 🟣 = the end \nfilters: world = ${worldFilter}, dimension = ${dimensionFilter}, user = ${userFilter}`,
+    description = `group by: ${_groupBy} \nkey: 🟢 = overworld, 🔴 = nether, 🟣 = end \nfilters: world = ${worldFilter}, dimension = ${dimensionFilter}, user = ${userFilter}`,
     messageContents = await generateListMessage(pages, title, description)
 
   await interaction.reply(messageContents)
