@@ -70,7 +70,7 @@ export async function getListInfo(id) {
 
   let filters = result.filters
 
-  filters = filters ? JSON.stringify(filters) : null
+  result.filters = filters ? JSON.parse(filters) : null
 
   return result
 }

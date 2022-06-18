@@ -15,7 +15,7 @@ export const defaultPermission = false,
     },
     {
       name: `world-name`,
-      description: `The name of the world you'd like to create the coordinates in.`,
+      description: `The name of the world you'd like to create the coordinates in (use \`/list-worlds\` to get a list).`,
       type: `STRING`,
       required: true,
     },

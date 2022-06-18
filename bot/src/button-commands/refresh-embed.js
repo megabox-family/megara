@@ -18,7 +18,8 @@ export default async function (interaction) {
 
   const recordsPerPage = listInfo.recordsPerPage,
     group = listInfo.groupBy,
-    pages = await getPages(recordsPerPage, group, guild, listInfo.filters)
+    filters = listInfo.filters,
+    pages = await getPages(recordsPerPage, group, guild, filters)
 
   if (pages.length === 0) {
     interaction.reply({

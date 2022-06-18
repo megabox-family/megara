@@ -146,11 +146,16 @@ export async function updateColorList(guildId) {
 export async function sortRoles(guildId) {
   if (!(await getRoleSorting(guildId))) return
 
-  const guild = getBot().guilds.cache.get(guildId),
-    botRole = guild.roles.cache.find(
+  const guild = getBot().guilds.cache.get(guildId)
+
+  await guild.roles.fetch()
+
+  const botRole = guild.roles.cache.find(
       role => role.name === getBot().user.username
     ),
-    roles = guild.roles.cache.filter(role => role.position < botRole.position)
+    roles = guild.roles.cache.filter(
+      role => role.position < botRole.position && role.name !== `@everyone`
+    )
 
   let colorRoles = [],
     functionalRoles = [],
@@ -161,34 +166,36 @@ export async function sortRoles(guildId) {
       colorRoles.push({ name: role.name, id: role.id })
     else if (role.name.match(`^!.+:`))
       functionalRoles.push({ name: role.name, id: role.id })
-    else if (role.name !== `@everyone`)
+    else
       normalRoles.push({
         name: role.name,
         id: role.id,
+        position: role.position,
       })
   })
 
-  colorRoles.sort((a, b) => (a.name > b.name ? -1 : 1))
-  functionalRoles.sort((a, b) => (a.name > b.name ? -1 : 1))
-  normalRoles.sort((a, b) => (a.name > b.name ? -1 : 1))
+  const collator = new Intl.Collator(undefined, {
+    numeric: true,
+    sensitivity: 'base',
+  })
 
-  const sortedRoleArray = [...functionalRoles, ...normalRoles, ...colorRoles],
-    finalRoleArray = sortedRoleArray.map((sortedRole, index) => {
+  functionalRoles.sort((a, b) => (a.name > b.name ? -1 : 1))
+  normalRoles.sort((a, b) => collator.compare(a.position, b.position))
+  colorRoles.sort((a, b) => (a.name > b.name ? -1 : 1))
+
+  const sortedRoleArray = [...functionalRoles, ...normalRoles, ...colorRoles]
+
+  const finalRoleArray = sortedRoleArray.map((sortedRole, index) => {
       return { role: sortedRole.id, position: index + 1, name: sortedRole.name }
     }),
-    currentRolePositions = finalRoleArray.map(role => {
-      const _role = guild.roles.cache.get(role.role)
-
-      if (!_role)
-        console.log(
-          `This role is deleted but we're trying to sort it: ${role.role}`
-        )
-
-      return { role: _role?.id, position: _role?.position, name: _role?.name }
+    currentRolePositions = roles.map(role => {
+      return { role: role.id, position: role.position, name: role.name }
     })
 
+  currentRolePositions.sort((a, b) => collator.compare(a.position, b.position))
+
   // console.log(finalRoleArray, `\n\n`)
-  // console.log(finalRoleArray, currentRolePositions, `\n\n\n\n\n`)
+  // console.log(currentRolePositions, `\n\n\n\n\n`)
 
   console.log(`tried sorting roles`)
 

@@ -1,3 +1,4 @@
+import { indexOf } from 'lodash-es'
 import {
   getWorldId,
   getCoordinates,
@@ -114,7 +115,19 @@ export default async function (interaction) {
       x: x,
       y: y,
       z: z,
-    }
+    },
+    allValuesAreNull = Object.keys(newCoordinates).every(
+      key => newCoordinates[key] == null
+    )
+
+  if (allValuesAreNull) {
+    interaction.reply({
+      content: `You need to change at least one property of the original coordinates to edit them 🤔`,
+      ephemeral: true,
+    })
+
+    return
+  }
 
   Object.keys(newCoordinates).forEach(key => {
     if (newCoordinates[key] == null)
