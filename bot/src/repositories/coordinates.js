@@ -2,6 +2,7 @@ import pgPool from '../pg-pool.js'
 import camelize from 'camelize'
 import SQL from 'sql-template-strings'
 import { randomUUID } from 'crypto'
+import { dimensions } from '../utils/slash-commands.js'
 
 export async function getWorldId(name, guildId) {
   return await pgPool
@@ -118,7 +119,7 @@ export async function getCoordinatesId(name, worldId, userId) {
 export async function createCoordinates(coordinates) {
   return await pgPool
     .query(
-      `insert into coordinates (id, name, world_id, created_by, x, y, z) values($1, $2, $3, $4, $5, $6, $7) returning *;`,
+      `insert into coordinates (id, name, world_id, created_by, x, y, z, dimension) values($1, $2, $3, $4, $5, $6, $7, $8) returning *;`,
       [randomUUID(), ...coordinates]
     )
     .catch(error => {
@@ -218,19 +219,51 @@ export async function getUserArray(guildId) {
 
 export async function getCoordinatesByWorld(guildId, filters) {
   const world = filters.world ? [filters.world] : await getWorldArray(guildId),
-    userId = filters.userId ? [filters.userId] : await getUserArray(guildId)
+    userId = filters.userId ? [filters.userId] : await getUserArray(guildId),
+    dimension = filters.dimension ? [filters.dimension] : dimensions
 
   return await pgPool
     .query(
       SQL`
         select 
           worlds.name as "group",
+          case
+            when dimension like 'overworld' then concat('🟢 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+            when dimension like 'nether' then concat('🔴 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+            else concat('🟣 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+          end as values
+        from coordinates
+        join worlds on coordinates.world_id = worlds.id
+        where guild_id = ${guildId} and
+          worlds.name = any(${world}) and
+          created_by = any(${userId}) and
+          dimension = any(${dimension})
+        order by "group", values
+      `
+    )
+    .then(res => res.rows)
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function getCoordinatesByDimension(guildId, filters) {
+  const world = filters.world ? [filters.world] : await getWorldArray(guildId),
+    userId = filters.userId ? [filters.userId] : await getUserArray(guildId),
+    dimension = filters.dimension ? [filters.dimension] : dimensions
+
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          dimension as "group",
           concat(coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' ) as values
         from coordinates
         join worlds on coordinates.world_id = worlds.id
         where guild_id = ${guildId} and
           worlds.name = any(${world}) and
-          created_by = any(${userId})
+          created_by = any(${userId}) and
+          dimension = any(${dimension})
         order by "group", values
       `
     )
@@ -242,19 +275,25 @@ export async function getCoordinatesByWorld(guildId, filters) {
 
 export async function getCoordinatesByUser(guild, filters) {
   const world = filters.world ? [filters.world] : await getWorldArray(guild.id),
-    userId = filters.userId ? [filters.userId] : await getUserArray(guild.id)
+    userId = filters.userId ? [filters.userId] : await getUserArray(guild.id),
+    dimension = filters.dimension ? [filters.dimension] : dimensions
 
   const result = await pgPool
     .query(
       SQL`
         select 
           created_by as "group",
-          concat(coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' ) as values
+          case
+            when dimension like 'overworld' then concat('🟢 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+            when dimension like 'nether' then concat('🔴 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+            else concat('🟣 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+          end as values
         from coordinates
         join worlds on coordinates.world_id = worlds.id
         where guild_id = ${guild.id} and
           worlds.name = any(${world}) and
-          created_by = any(${userId})
+          created_by = any(${userId}) and
+          dimension = any(${dimension}) 
         order by "group", values
       `
     )
@@ -283,19 +322,25 @@ export async function getCoordinatesByUser(guild, filters) {
 
 export async function getCoordinatesByAll(guildId, filters) {
   const world = filters.world ? [filters.world] : await getWorldArray(guildId),
-    userId = filters.userId ? [filters.userId] : await getUserArray(guildId)
+    userId = filters.userId ? [filters.userId] : await getUserArray(guildId),
+    dimension = filters.dimension ? [filters.dimension] : dimensions
 
   return await pgPool
     .query(
       SQL`
         select 
           'coordinates' as "group",
-          concat(coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' ) as values
+          case
+            when dimension like 'overworld' then concat('🟢 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+            when dimension like 'nether' then concat('🔴 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+            else concat('🟣 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+          end as values
         from coordinates
         join worlds on coordinates.world_id = worlds.id
         where guild_id = ${guildId} and
           worlds.name = any(${world}) and
-          created_by = any(${userId})
+          created_by = any(${userId}) and
+          dimension = any(${dimension})
         order by "group", values
       `
     )

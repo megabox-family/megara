@@ -1,3 +1,4 @@
+import { dimensions } from '../utils/slash-commands.js'
 import {
   getWorldId,
   getCoordinatesId,
@@ -8,14 +9,23 @@ export const description = `Allows you to record the coordinates of a location i
 export const defaultPermission = false,
   options = [
     {
-      name: `coordinates-name`,
-      description: `The name for the coordinates (example: skeleton spawner).`,
+      name: `world-name`,
+      description: `The name of the world you'd like to create the coordinates in (use \`/list-worlds\` to get a list).`,
       type: `STRING`,
       required: true,
     },
     {
-      name: `world-name`,
-      description: `The name of the world you'd like to create the coordinates in (use \`/list-worlds\` to get a list).`,
+      name: `dimension`,
+      description: `Specify if the coordinates you're creating are in the Overworld, Nether, or The End.`,
+      type: `STRING`,
+      required: true,
+      choices: dimensions.map(dimension => {
+        return { name: dimension, value: dimension }
+      }),
+    },
+    {
+      name: `coordinates-name`,
+      description: `The name for the coordinates (example: skeleton spawner).`,
       type: `STRING`,
       required: true,
     },
@@ -54,11 +64,12 @@ export default async function (interaction) {
 
     return
   }
-  const coordinatesName = options.getString(`coordinates-name`).toLowerCase()
+  const coordinatesName = options.getString(`coordinates-name`).toLowerCase(),
+    characterLimit = 36
 
-  if (coordinatesName.length > 40) {
+  if (coordinatesName.length > characterLimit) {
     interaction.reply({
-      content: `Coordinate names must be under 40 characters, please try again (pro tip: hit ctrl-z).`,
+      content: `Coordinate names must be under ${characterLimit} characters, please try again (pro tip: hit ctrl-z).`,
       ephemeral: true,
     })
 
@@ -80,7 +91,8 @@ export default async function (interaction) {
     return
   }
 
-  const x = options.getInteger(`x`),
+  const dimension = options.getString(`dimension`),
+    x = options.getInteger(`x`),
     y = options.getInteger(`y`),
     z = options.getInteger(`z`)
 
@@ -91,6 +103,7 @@ export default async function (interaction) {
     x,
     y,
     z,
+    dimension,
   ])
 
   interaction.reply({

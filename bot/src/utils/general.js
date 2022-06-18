@@ -133,14 +133,17 @@ export async function registerSlashCommands(bot) {
           if (!newOption.hasOwnProperty(key)) newOption[key] = undefined
         })
 
-        option?.choices?.forEach((choice, jndex) => {
-          const choiceKeys = Object.keys(choice),
-            newChoice = commandObject.options[index].choices[jndex]
+        if (option.name === newOption.name)
+          option?.choices?.forEach((choice, jndex) => {
+            if (commandObject.options[index].choices) {
+              const choiceKeys = Object.keys(choice),
+                newChoice = commandObject.options[index].choices[jndex]
 
-          choiceKeys.forEach(key => {
-            if (!newChoice.hasOwnProperty(key)) newChoice[key] = undefined
+              choiceKeys.forEach(key => {
+                if (!newChoice.hasOwnProperty(key)) newChoice[key] = undefined
+              })
+            }
           })
-        })
       })
 
     if (!commandModule?.description) {

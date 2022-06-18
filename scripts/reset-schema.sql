@@ -62,7 +62,8 @@ create table coordinates (
   created_by text not null,
   x integer not null,
   y integer not null,
-  z integer not null
+  z integer not null,
+  dimension text not null
 );
 
 -- lists

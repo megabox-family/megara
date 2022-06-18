@@ -4,11 +4,13 @@ import {
   getWorldName,
   getWorldGroups,
   getCoordinatesByWorld,
+  getCoordinatesByDimension,
   getCoordinatesByUser,
   getCoordinatesByAll,
 } from '../repositories/coordinates.js'
 
-export const defaultRecordsPerPage = 20
+export const defaultRecordsPerPage = 20,
+  dimensions = [`overworld`, `nether`, `the end`]
 
 export async function getPages(
   recordsPerPage,
@@ -26,6 +28,9 @@ export async function getPages(
   switch (groupBy) {
     case `coordinates-world`:
       query = await getCoordinatesByWorld(guild.id, filters)
+      break
+    case `coordinates-dimension`:
+      query = await getCoordinatesByDimension(guild.id, filters)
       break
     case `coordinates-user`:
       query = await getCoordinatesByUser(guild, filters)

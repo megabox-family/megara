@@ -1,4 +1,5 @@
 import {
+  dimensions,
   defaultRecordsPerPage,
   getPages,
   generateListMessage,
@@ -18,9 +19,10 @@ export const defaultPermission = false,
       type: `STRING`,
       required: true,
       choices: [
-        { name: `world`, value: `coordinates-world` },
-        { name: `user`, value: `coordinates-user` },
-        { name: `all coordinates`, value: `coordinates-all` },
+        { name: `world`, value: `world` },
+        { name: `dimension`, value: `dimension` },
+        { name: `user`, value: `user` },
+        { name: `all coordinates`, value: `all` },
       ],
     },
     {
@@ -30,6 +32,15 @@ export const defaultPermission = false,
       required: false,
     },
     {
+      name: `dimension-filter`,
+      description: `Only show cooridinates for the specified dimension within the world.`,
+      type: `STRING`,
+      required: false,
+      choices: dimensions.map(dimension => {
+        return { name: dimension, value: dimension }
+      }),
+    },
+    {
       name: `only-my-coordinates`,
       description: `If true only coordinates you've entered will be listed, if false all user's cooridinates will list.`,
       type: `BOOLEAN`,
@@ -37,7 +48,7 @@ export const defaultPermission = false,
     },
     {
       name: `records-per-page`,
-      description: `The total number of values you'd like to show per page (default is 20).`,
+      description: `The total number of values you'd like to show per page (default is ${defaultRecordsPerPage}).`,
       type: `INTEGER`,
       required: false,
       minValue: 1,
@@ -49,7 +60,8 @@ export default async function (interaction) {
   const guild = interaction.guild,
     member = interaction.member,
     options = interaction.options,
-    groupBy = options.getString(`group-by`),
+    _groupBy = options.getString(`group-by`),
+    groupBy = `coordinates-${_groupBy}`,
     _worldFilter = options.getString(`world-filter`),
     worldFilter = _worldFilter ? _worldFilter : `all`
 
@@ -81,12 +93,15 @@ export default async function (interaction) {
     }
   }
 
-  const userFilter = onlyMyCoordinates == null ? `all` : `<@${member.id}>`,
+  const _dimensionFilter = options.getString(`dimension-filter`),
+    dimensionFilter = _dimensionFilter == null ? `all` : _dimensionFilter,
+    userFilter = onlyMyCoordinates == null ? `all` : `<@${member.id}>`,
     _recordsPerPage = options.getInteger(`records-per-page`),
     recordsPerPage = _recordsPerPage ? _recordsPerPage : defaultRecordsPerPage,
     filters = {
       world: _worldFilter,
       userId: onlyMyCoordinates ? member.id : null,
+      dimension: _dimensionFilter,
     },
     pages = await getPages(recordsPerPage, groupBy, guild, filters)
 
@@ -99,9 +114,16 @@ export default async function (interaction) {
     return
   }
 
-  const title = `Minecraft Coordinates (X / Y / Z)`,
-    description = `filters: world = ${worldFilter}, user = ${userFilter}`,
-    messageContents = await generateListMessage(pages, title, description)
+  const title = `Minecraft Coordinates (X / Y / Z)`
+
+  let description
+
+  if (_groupBy === `dimension`)
+    description = `group by: ${_groupBy} \nfilters: world = ${worldFilter}, dimension = ${dimensionFilter}, user = ${userFilter}`
+  else
+    description = `group by: ${_groupBy} \nkey: 🟢 = overworld, 🔴 = nether, 🟣 = the end \nfilters: world = ${worldFilter}, dimension = ${dimensionFilter}, user = ${userFilter}`
+
+  const messageContents = await generateListMessage(pages, title, description)
 
   await interaction.reply(messageContents)
 
