@@ -229,9 +229,14 @@ export async function getCoordinatesByWorld(guildId, filters) {
         select 
           worlds.name as "group",
           case
-            when dimension like 'overworld' then concat('🟢 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
-            when dimension like 'nether' then concat('🔴 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
-            else concat('🟣 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+            when dimension like 'overworld' then 1
+            when dimension like 'nether' then 2
+            else 3
+          end as sort,
+          case
+            when dimension like 'overworld' then concat(':green_circle: ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+            when dimension like 'nether' then concat(':red_circle: ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+            else concat(':purple_circle: ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
           end as values
         from coordinates
         join worlds on coordinates.world_id = worlds.id
@@ -239,7 +244,7 @@ export async function getCoordinatesByWorld(guildId, filters) {
           worlds.name = any(${world}) and
           created_by = any(${userId}) and
           dimension = any(${dimension})
-        order by "group", values
+        order by "group", sort, values
       `
     )
     .then(res => res.rows)
@@ -285,9 +290,14 @@ export async function getCoordinatesByUser(guild, filters) {
         select 
           created_by as "group",
           case
-            when dimension like 'overworld' then concat('🟢 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
-            when dimension like 'nether' then concat('🔴 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
-            else concat('🟣 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+            when dimension like 'overworld' then 1
+            when dimension like 'nether' then 2
+            else 3
+          end as sort,
+          case
+            when dimension like 'overworld' then concat(':green_circle: ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+            when dimension like 'nether' then concat(':red_circle: ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+            else concat(':purple_circle: ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
           end as values
         from coordinates
         join worlds on coordinates.world_id = worlds.id
@@ -295,7 +305,7 @@ export async function getCoordinatesByUser(guild, filters) {
           worlds.name = any(${world}) and
           created_by = any(${userId}) and
           dimension = any(${dimension}) 
-        order by "group", values
+        order by "group", sort, values
       `
     )
     .then(res => res.rows)
@@ -332,9 +342,14 @@ export async function getCoordinatesByAll(guildId, filters) {
         select 
           'coordinates' as "group",
           case
-            when dimension like 'overworld' then concat('🟢 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
-            when dimension like 'nether' then concat('🔴 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
-            else concat('🟣 ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+            when dimension like 'overworld' then 1
+            when dimension like 'nether' then 2
+            else 3
+          end as sort,
+          case
+            when dimension like 'overworld' then concat(':green_circle: ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+            when dimension like 'nether' then concat(':red_circle: ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
+            else concat(':purple_circle: ', coordinates.name, ' (', coordinates.x, ' / ', coordinates.y, ' / ', coordinates.z, ')' )
           end as values
         from coordinates
         join worlds on coordinates.world_id = worlds.id
@@ -342,7 +357,7 @@ export async function getCoordinatesByAll(guildId, filters) {
           worlds.name = any(${world}) and
           created_by = any(${userId}) and
           dimension = any(${dimension})
-        order by "group", values
+        order by "group", sort, values
       `
     )
     .then(res => res.rows)
