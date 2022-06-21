@@ -87,9 +87,10 @@ export async function syncVipMembers(guild) {
   if (newVipMembers.length > 0) {
     const alphaRunTime = getExpectedRunTime(newVipMembers.length)
 
-    adminChannel.send(
-      `Some VIP members do not have the VIP role, attributing ${newVipMembers.length} member(s) the VIP role, this will take around ${alphaRunTime} to finish 🕑`
-    )
+    if (adminChannel)
+      adminChannel.send(
+        `Some VIP members do not have the VIP role, attributing ${newVipMembers.length} member(s) the VIP role, this will take around ${alphaRunTime} to finish 🕑`
+      )
 
     batchAddRole(newVipMembers, vipRole.id)
   }
@@ -97,9 +98,10 @@ export async function syncVipMembers(guild) {
   if (noLongerVipMembers.length > 0) {
     const alphaRunTime = getExpectedRunTime(noLongerVipMembers.length)
 
-    adminChannel.send(
-      `Some members no longer qualify for VIP status, removing the VIP role from ${noLongerVipMembers.length} member(s), this will take around ${alphaRunTime} to finish 🕑`
-    )
+    if (adminChannel)
+      adminChannel.send(
+        `Some members no longer qualify for VIP status, removing the VIP role from ${noLongerVipMembers.length} member(s), this will take around ${alphaRunTime} to finish 🕑`
+      )
 
     batchRemoveRole(noLongerVipMembers, vipRole.id)
   }

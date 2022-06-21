@@ -172,7 +172,7 @@ export async function startup(bot) {
     await deleteNewRoles(guild)
     await syncChannels(guild)
     await syncRoles(guild)
-    await syncVipMembers(guild)
+    // await syncVipMembers(guild)
   })
 
   registerSlashCommands(bot)
