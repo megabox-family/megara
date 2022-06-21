@@ -1,4 +1,4 @@
-import { batchAddRole } from './roles.js'
+import { batchAddRole, batchRemoveRole } from './roles.js'
 import {
   getAdminChannel,
   getVipRoleId,
@@ -74,22 +74,38 @@ export async function syncVipMembers(guild) {
   }
 
   const vipMemberArray = await getVipMemberArray(guild),
-    curratedVipMembers = vipMemberArray.filter(
+    newVipMembers = vipMemberArray.filter(
       member => !member._roles.includes(vipRole.id)
+    ),
+    noLongerVipMembers = guild.members.cache
+      .filter(
+        member =>
+          !vipMemberArray.includes(member) && member._roles.includes(vipRole.id)
+      )
+      .map(member => member)
+
+  if (newVipMembers.length > 0) {
+    const alphaRunTime = getExpectedRunTime(newVipMembers.length)
+
+    adminChannel.send(
+      `Some VIP members do not have the VIP role, attributing ${newVipMembers.length} member(s) the VIP role, this will take around ${alphaRunTime} to finish 🕑`
     )
 
-  if (curratedVipMembers.length === 0) return
+    batchAddRole(newVipMembers, vipRole.id)
+  }
 
-  const alphaRunTime = getExpectedRunTime(curratedVipMembers.length)
+  if (noLongerVipMembers.length > 0) {
+    const alphaRunTime = getExpectedRunTime(noLongerVipMembers.length)
 
-  adminChannel.send(
-    `Some VIP members do not have the VIP role, attributing ${curratedVipMembers.length} member(s) the VIP role, this will take around ${alphaRunTime} to finish 🕑`
-  )
+    adminChannel.send(
+      `Some members no longer qualify for VIP status, removing the VIP role from ${noLongerVipMembers.length} member(s), this will take around ${alphaRunTime} to finish 🕑`
+    )
 
-  batchAddRole(curratedVipMembers, vipRole.id)
+    batchRemoveRole(noLongerVipMembers, vipRole.id)
+  }
 }
 
-export async function handlePremiumRole(oldMember, newMember) {
+async function handlePremiumRole(oldMember, newMember) {
   const guild = newMember.guild,
     wasPremium = oldMember.premiumSinceTimestamp,
     isPremium = newMember.premiumSinceTimestamp
@@ -130,4 +146,48 @@ export async function handlePremiumRole(oldMember, newMember) {
     if (!memberVipOverrideId && memberHasVipRole)
       newMember.roles.remove(vipRole)
   }
+}
+
+async function handleVipRole(oldMember, newMember) {
+  const guild = newMember.guild,
+    vipRoleId = await getVipRoleId(guild.id)
+
+  if (!vipRoleId) return
+
+  const wasVip = oldMember._roles.includes(vipRoleId),
+    isVip = newMember._roles.includes(vipRoleId)
+
+  if ((!wasVip && !isVip) || (wasVip && isVip)) return
+
+  const vipMemberArray = await getVipMemberArray(guild),
+    adminChannelId = await getAdminChannel(guild.id),
+    adminChannel = adminChannelId
+      ? guild.channels.cache.get(adminChannelId)
+      : null
+
+  if (!wasVip && isVip) {
+    if (vipMemberArray.includes(newMember)) return
+
+    newMember.roles.remove(vipRoleId)
+
+    if (adminChannel)
+      adminChannel.send(`
+      Somone tried giving ${oldMember} the VIP role but they do not qualify for VIP status, it has automatically been removed 🤔\
+      \nIf you'd like to give a member who does not typically qualify for VIP status the VIP role, please use the \`/vip-user-override\` command.
+      `)
+  } else {
+    if (!vipMemberArray.includes(newMember)) return
+
+    if (adminChannel)
+      adminChannel.send(
+        `Somone tried removing the VIP role from ${oldMember} but they still qualify for VIP status, it has automatically been re-added 🤔`
+      )
+
+    newMember.roles.add(vipRoleId)
+  }
+}
+
+export async function handleMemberUpdate(oldMember, newMember) {
+  handlePremiumRole(oldMember, newMember)
+  handleVipRole(oldMember, newMember)
 }

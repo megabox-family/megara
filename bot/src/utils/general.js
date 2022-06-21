@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url'
 import { isEqual } from 'lodash-es'
 import { directMessageError } from '../utils/error-logging.js'
 import { syncChannels } from './channels.js'
-import { handlePremiumRole, syncVipMembers } from './members.js'
+import { syncVipMembers } from './members.js'
 import { syncRoles } from './roles.js'
 import { dynamicRooms } from './voice.js'
 import { pinMessage, unpinMessage } from './emoji.js'
@@ -453,10 +453,6 @@ export async function handleNewMember(guildMember) {
   }
 
   sendVerificationInstructions(guildMember)
-}
-
-export async function modifyMember(oldMember, newMember) {
-  handlePremiumRole(oldMember, newMember)
 }
 
 export async function handleInteraction(interaction) {

@@ -5,11 +5,11 @@ import {
   handleVoiceUpdate,
   handleMessage,
   handleNewMember,
-  modifyMember,
   handleInteraction,
   handleReactionAdd,
   handleReactionRemove,
 } from './utils/general.js'
+import { handleMemberUpdate } from './utils/members.js'
 import {
   createChannel,
   modifyChannel,
@@ -39,7 +39,7 @@ bot.on('guildCreate', createGuild)
 bot.on('guildUpdate', modifyGuild)
 bot.on('guildDelete', deleteGuild)
 bot.on('guildMemberAdd', handleNewMember)
-bot.on('guildMemberUpdate', modifyMember)
+bot.on('guildMemberUpdate', handleMemberUpdate)
 bot.on('channelCreate', createChannel)
 bot.on('channelUpdate', modifyChannel)
 bot.on('channelDelete', deleteChannel)
