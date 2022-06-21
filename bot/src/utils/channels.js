@@ -6,7 +6,6 @@ import {
   comparePermissions,
 } from '../utils/general.js'
 import { requiredRoleDifference } from './roles.js'
-import { pushChannelToQueue } from './required-role-queue.js'
 import {
   getAdminChannel,
   getFunctionChannels,
@@ -54,10 +53,11 @@ async function emptyChannelVisibilityQueue() {
 }
 
 export function pushToChannelVisibilityQueue(channelId) {
-  if (!channelVisibilityQueue.includes(channelId))
+  if (!channelVisibilityQueue.includes(channelId)) {
     channelVisibilityQueue.push(channelId)
 
-  if (channelVisibilityQueue.length === 1) emptyChannelVisibilityQueue()
+    if (channelVisibilityQueue.length === 1) emptyChannelVisibilityQueue()
+  }
 }
 
 async function emptyChannelSortingQueue() {
@@ -71,9 +71,11 @@ async function emptyChannelSortingQueue() {
 }
 
 export function pushToChannelSortingQueue(GuildId) {
-  if (!channelSortingQueue.includes(GuildId)) channelSortingQueue.push(GuildId)
+  if (!channelSortingQueue.includes(GuildId)) {
+    channelSortingQueue.push(GuildId)
 
-  if (channelSortingQueue.length === 1) emptyChannelSortingQueue()
+    if (channelSortingQueue.length === 1) emptyChannelSortingQueue()
+  }
 }
 
 export function checkType(channel) {
@@ -566,16 +568,6 @@ export async function modifyChannel(
         permissionOverwrite => permissionOverwrite.id
       )
     )
-
-    if (requiredRole)
-      pushChannelToQueue({
-        guild: newChannel.guild.id,
-        role: requiredRole.name,
-        channel: newChannel.id,
-        permissionOverwrite: oldChannel.permissionOverwrites.cache.get(
-          requiredRole.id
-        ),
-      })
   }
 
   pushToChannelVisibilityQueue(newChannel.id)

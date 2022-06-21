@@ -18,7 +18,8 @@ create table guilds (
   announcement_channel text,
   verification_channel text,
   welcome_channel text,
-  active_world text
+  active_world text,
+  vip_role text
 );
 
 
@@ -41,6 +42,15 @@ create table channels (
   position_override integer,
   position integer,
   active_voice_channel_id text
+);
+
+-- vip-user-overrides
+drop table if exists vip_user_overrides;
+
+create table vip_user_overrides (
+  id uuid not null primary key,
+  user_id text not null,
+  guild_id text not null
 );
 
 -- worlds

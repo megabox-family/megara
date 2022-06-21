@@ -6,9 +6,9 @@ import { fileURLToPath } from 'url'
 import { isEqual } from 'lodash-es'
 import { directMessageError } from '../utils/error-logging.js'
 import { syncChannels } from './channels.js'
-import { syncRoles, requiredRoleDifference } from './roles.js'
+import { handlePremiumRole, syncVipMembers } from './members.js'
+import { syncRoles } from './roles.js'
 import { dynamicRooms } from './voice.js'
-import { pushUserToQueue } from './required-role-queue.js'
 import { pinMessage, unpinMessage } from './emoji.js'
 import {
   syncGuilds,
@@ -26,8 +26,6 @@ import {
   getFormatedCommandChannels,
   getChannelType,
 } from '../repositories/channels.js'
-
-import { getThreadById } from './threads.js'
 
 const relativePath = dirname(fileURLToPath(import.meta.url)),
   srcPath = dirname(relativePath),
@@ -174,32 +172,12 @@ export async function startup(bot) {
     await deleteNewRoles(guild)
     await syncChannels(guild)
     await syncRoles(guild)
+    await syncVipMembers(guild)
   })
 
   registerSlashCommands(bot)
 
-  // const guild = bot.guilds.cache.get(`711043006253367426`),
-  //   channel = guild.channels.cache.get(`711043006781849686`),
-  //   thread = await getThreadById(channel, `983883902299029554`)
-  // messages = await thread.messages.fetch(),
-  // members = await thread.members.fetch()
-  // console.log(thread)
-
-  // await thread.members.remove(`644957448666480643`)
-
-  // console.log(thread)
-
-  // 598729034867933195
-
-  // console.log(channel.type)
-
-  // console.log(guild.premiumSubscriptionCount)
-
-  // channel.permissionOverwrites.cache.forEach(overwrite => {
-  //   const individualAllowPermissions = overwrite.allow.serialize()
-
-  //   console.log(individualAllowPermissions)
-  // })
+  // const guild = bot.guilds.cache.get(`711043006253367426`)
 }
 
 export async function logMessageToChannel(message) {
@@ -477,19 +455,8 @@ export async function handleNewMember(guildMember) {
   sendVerificationInstructions(guildMember)
 }
 
-export function modifyMember(oldMember, newMember) {
-  const requiredRole = requiredRoleDifference(
-    newMember.guild,
-    oldMember._roles,
-    newMember._roles
-  )
-
-  if (requiredRole)
-    pushUserToQueue({
-      guild: newMember.guild.id,
-      role: requiredRole.name,
-      user: newMember.id,
-    })
+export async function modifyMember(oldMember, newMember) {
+  handlePremiumRole(oldMember, newMember)
 }
 
 export async function handleInteraction(interaction) {

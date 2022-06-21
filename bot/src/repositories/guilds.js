@@ -410,3 +410,36 @@ export async function getActiveWorld(guildId) {
       console.log(error)
     })
 }
+
+export async function setVipRoleId(roleId, guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        update guilds
+        set
+          vip_role_id = ${roleId}
+        where id = ${guildId}
+        returning *;
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function getVipRoleId(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          vip_role_id 
+        from guilds
+        where id = ${guildId} 
+      `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].vip_role_id : undefined))
+    .catch(error => {
+      console.log(error)
+    })
+}

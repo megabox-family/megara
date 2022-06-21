@@ -1,12 +1,14 @@
 import { Permissions, MessageActionRow, MessageButton } from 'discord.js'
 import { getBot } from '../cache-bot.js'
 import ffmpeg from 'fluent-ffmpeg'
-import { getUserRoleQueue, getChannelRoleQueue } from './required-role-queue.js'
+import { pauseDuation } from './members.js'
 import {
   getRoleSorting,
   getAdminChannel,
   getAnnouncementChannel,
   getCommandSymbol,
+  getVipRoleId,
+  setVipRoleId,
 } from '../repositories/guilds.js'
 import { getFormatedCommandChannels } from '../repositories/channels.js'
 
@@ -50,9 +52,11 @@ async function emptyRoleSortingQueue() {
 }
 
 export function pushToRoleSortingQueue(GuildId) {
-  if (!roleSortingQueue.includes(GuildId)) roleSortingQueue.push(GuildId)
+  if (!roleSortingQueue.includes(GuildId)) {
+    roleSortingQueue.push(GuildId)
 
-  if (roleSortingQueue.length === 1) emptyRoleSortingQueue()
+    if (roleSortingQueue.length === 1) emptyRoleSortingQueue()
+  }
 }
 
 async function emptyColorUpdateQueue() {
@@ -345,7 +349,6 @@ export async function createRole(role) {
         `
           \n@here\
           \nSomeone tried creating a duplicate of the \`${roleName}\` role, which I need to function 😡\
-
           \nIt's okay, I forgive you guys 😇\
           \nBut I did have to delete that new role...
         `
@@ -356,11 +359,7 @@ export async function createRole(role) {
     announceColorChange(role)
   }
 
-  if (
-    role.position < botRole.position &&
-    !roleSortingQueue.includes(guild.id) &&
-    role.name !== `new role`
-  ) {
+  if (role.position < botRole.position && role.name !== `new role`) {
     setTimeout(() => pushToRoleSortingQueue(guild.id), 3000)
   }
 }
@@ -411,86 +410,95 @@ export async function modifyRole(oldRole, newRole) {
   if (
     (oldRole.rawPosition !== newRole.rawPosition ||
       oldRole.name !== newRole.name) &&
-    newRole.position < botRole.position &&
-    !roleSortingQueue.includes(guild.id)
+    newRole.position < botRole.position
   ) {
     setTimeout(() => pushToRoleSortingQueue(guild.id), 3000)
   }
 }
 
 export async function deleteRole(role) {
-  const guild = role.guild
+  const guild = role.guild,
+    vipRoleId = await getVipRoleId(guild.id)
+
+  if (role.id === vipRoleId) {
+    await setVipRoleId(null, guild.id)
+
+    const adminChannelId = await getAdminChannel(guild.id),
+      adminChannel = adminChannelId
+        ? guild.channels.cache.get(adminChannelId)
+        : null
+
+    if (adminChannel)
+      adminChannel.send(`
+        The VIP role for this server was just deleted 😬\
+        \nIf this was on purpose, great. If not, I can't restore it.\
+        \nVIP functionality in this server will no longer work until you set the VIP role again using the \`/set-vip-role\` command.
+      `)
+  }
 
   if (balanceDisrupted(role)) {
     const newRole = await guild.roles.create(role),
-      UserRoleQueue = getUserRoleQueue(),
-      userArray = UserRoleQueue
-        ? UserRoleQueue.filter(
-            record =>
-              record.guild === newRole.guild.id && record.role === newRole.name
-          ).map(record => record.user)
-        : null,
-      channelRoleQueue = getChannelRoleQueue(),
-      channelArray = channelRoleQueue
-        ? channelRoleQueue
-            .filter(
-              record =>
-                record.guild === newRole.guild.id &&
-                record.role === newRole.name
-            )
-            .map(record => {
-              return {
-                channelId: record.channel,
-                overwrite: record.permissionOverwrite,
-              }
-            })
-        : null
-
-    if (userArray)
-      userArray.forEach(user =>
-        guild.members.cache.get(user).roles.add(newRole)
-      )
-
-    if (channelArray)
-      channelArray.forEach(channel => {
-        channel.overwrite.allow = channel.overwrite.allow.serialize()
-        channel.overwrite.deny = channel.overwrite.deny.serialize()
-
-        const permissionKeys = Object.keys(channel.overwrite.allow),
-          finalPermissionObject = {}
-
-        permissionKeys.forEach(key => {
-          if (channel.overwrite.allow[key] !== channel.overwrite.deny[key])
-            finalPermissionObject[key] = channel.overwrite.allow[key]
-        })
-
-        guild.channels.cache
-          .get(channel.channelId)
-          .permissionOverwrites.create(newRole.id, finalPermissionObject)
-      })
-
-    const adminChannel = guild.channels.cache.get(
-      await getAdminChannel(guild.id)
-    )
+      adminChannel = guild.channels.cache.get(await getAdminChannel(guild.id))
 
     if (adminChannel)
       adminChannel.send(
         `
           \n@here\
-          \nSomeone tried deleting the \`${newRole.name}\` role, which I need to function 😡\
-
+          \nSomeone tried deleting the \`@${newRole.name}\` role, which I need to function 😡\
           \nIt's okay, I forgive you guys 😇\
-          \nI did my best to restore the role and re-assign it to users and channels, but I may have missed something.\
+          \nI recreated the role... but you'll have to re-add it to any channel or member\
           
-          \nIf you recently removed this role from a user or channel it's possible that it was re-added, I'd peek around to make sure everything is okay 👀\
         `
       )
 
-    if (!roleSortingQueue.includes(guild.id))
-      setTimeout(() => pushToRoleSortingQueue(guild.id), 3000)
+    setTimeout(() => pushToRoleSortingQueue(guild.id), 3000)
   } else if (role.name.match(`^~.+~$`)) {
     await new Promise(resolve => setTimeout(resolve, 3000))
     pushToColorUpdateQueue(guild.id)
     announceColorChange(role)
   }
+}
+
+export async function batchAddRole(members, roleId) {
+  for (const member of members) {
+    const guild = member.guild,
+      role = guild.roles.cache.get(roleId)
+
+    if (!role) return false
+
+    if (!member._roles.includes(roleId)) {
+      member.roles
+        .add(roleId)
+        .catch(
+          error =>
+            `Unable to add role to user via batch, see error below:\n${error}`
+        )
+
+      await new Promise(resolve => setTimeout(resolve, pauseDuation * 1000))
+    }
+  }
+
+  return true
+}
+
+export async function batchRemoveRole(members, roleId) {
+  for (const member of members) {
+    const guild = member.guild,
+      role = guild.roles.cache.get(roleId)
+
+    if (!role) return false
+
+    if (member._roles.includes(roleId)) {
+      member.roles
+        .remove(roleId)
+        .catch(
+          error =>
+            `Unable to remove role from user via batch, see error below:\n${error}`
+        )
+
+      await new Promise(resolve => setTimeout(resolve, pauseDuation * 1000))
+    }
+  }
+
+  return true
 }

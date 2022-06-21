@@ -133,7 +133,16 @@ export default async function (interaction) {
     await member.setNickname(null)
   }
 
-  const verifiedRole = guild.roles.cache.find(role => role.name === `verified`)
+  const verifiedRole = guild.roles.cache.find(role => role.name === `verified`),
+    serverNotificationRole = guild.roles.cache.find(
+      role => role.name === `server notification squad`
+    ),
+    channelNotificationRole = guild.roles.cache.find(
+      role => role.name === `channel notification squad`
+    ),
+    colorNotificationRole = guild.roles.cache.find(
+      role => role.name === `color notification squad`
+    )
 
   if (member.roles.cache.get(verifiedRole.id)) {
     interaction.reply({
@@ -150,7 +159,12 @@ export default async function (interaction) {
     let attempts = 0
 
     while (!roleIsUpdated) {
-      await member.roles.add(verifiedRole.id)
+      await member.roles.add([
+        verifiedRole.id,
+        serverNotificationRole.id,
+        channelNotificationRole.id,
+        colorNotificationRole.id,
+      ])
       await new Promise(resolution => setTimeout(resolution, 1000))
 
       roleIsUpdated = await member.roles.cache.some(
@@ -208,23 +222,4 @@ export default async function (interaction) {
       ephemeral: true,
     })
   }
-
-  const serverNotificationRole = guild.roles.cache.find(
-      role => role.name === `server notification squad`
-    ),
-    channelNotificationRole = guild.roles.cache.find(
-      role => role.name === `channel notification squad`
-    ),
-    colorNotificationRole = guild.roles.cache.find(
-      role => role.name === `color notification squad`
-    )
-
-  await member.roles.add(serverNotificationRole.id)
-  await new Promise(resolution => setTimeout(resolution, 10000))
-
-  await member.roles.add(channelNotificationRole.id)
-  await new Promise(resolution => setTimeout(resolution, 10000))
-
-  await member.roles.add(colorNotificationRole.id)
-  await new Promise(resolution => setTimeout(resolution, 10000))
 }
