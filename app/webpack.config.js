@@ -19,8 +19,9 @@ module.exports = {
     host: '0.0.0.0',
     port: 3000,
     proxy: { '/api': 'http://api:3002' },
-    stats: 'errors-only',
-    overlay: true,
+    client: {
+      overlay: true,
+    },
     historyApiFallback: {
       index: '/',
     },
