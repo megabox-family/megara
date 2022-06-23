@@ -23,10 +23,6 @@ const Home = () => {
       })
   }, [])
 
-  const handleButtonClick = () => {
-    axios.get('/api').then(res => console.log(res.data))
-  }
-
   return (
     <div className="coming-soon">
       <div className="header-image">
@@ -46,7 +42,6 @@ const Home = () => {
         <div className="footer-content">
           <img className="footer-image" src={megaboxGray} />
           <span className="footer-text">Megabox</span>
-          <button onClick={handleButtonClick}>Click me!</button>
         </div>
       </div>
     </div>
