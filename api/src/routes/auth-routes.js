@@ -2,12 +2,14 @@ const express = require('express')
 const router = express.Router()
 const passport = require('passport')
 
+const config = require('../../config')
+
 router.get('/', passport.authenticate('discord'))
 
 router.get(
   '/redirect',
   passport.authenticate('discord', {
-    successRedirect: 'http://localhost:3000',
+    successRedirect: config.appUrl,
     failureRedirect: '/failure',
   })
 )

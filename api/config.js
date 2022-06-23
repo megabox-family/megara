@@ -23,4 +23,5 @@ module.exports = {
   sessionSecret: e.SESSION_SECRET,
   isDevelopment,
   port: 3002,
+  appUrl: isDevelopment ? 'http://localhost:3000' : 'http://megabox.family',
 }
