@@ -10,7 +10,7 @@ const Home = () => {
 
   useEffect(() => {
     axios
-      .get('/api/auth/user', {
+      .get('/api/auth/login', {
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json',
