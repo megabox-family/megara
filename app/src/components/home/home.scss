@@ -46,6 +46,62 @@
   opacity: 40%;
 }
 
+.donation-button {
+  display: block;
+  margin: 25px auto;
+  text-align: center;
+  font-size: 34px;
+  font-weight: 600;
+  width: 500px;
+  color: #232529;
+  background-color: #F1D35E;
+  border-radius: 10px/10px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.donation-button:hover {
+  outline: 1px solid white;
+  box-sizing: border-box;
+
+}
+
+.tomato-boy {
+  margin-top: 5px;
+}
+
+.subtitle {
+  font-size: 25px;
+  display: block;
+  margin-bottom: 20px;
+}
+
+.cancel-button {
+  background: none;
+  border: none;
+  outline: inherit;
+  padding: 0;
+  cursor: pointer;
+  color: white;
+  font-size: 20px;
+  float: right;
+  margin-right: 50px;
+}
+
+.cancel-button:hover {
+  color: #F1D35E;
+}
+
+.login-button {
+  font-size: 20px;
+  float: left;
+  margin-left: 50px;
+}
+
+.login-button:hover {
+  color: #F1D35E;
+}
+
 .footer {
   background-color: #232529;
   width: 100%;
