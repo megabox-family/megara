@@ -18,7 +18,9 @@ module.exports = {
   devServer: {
     host: '0.0.0.0',
     port: 3000,
-    proxy: { '/api': 'http://api:3002' },
+    proxy: {
+      '/api': { target: 'http://api:3002', pathRewrite: { '^/api': '' } },
+    },
     client: {
       overlay: true,
     },
@@ -66,11 +68,7 @@ module.exports = {
       },
       {
         test: /\.(png|jpe?g|svg|gif)$/i,
-        use: [
-          {
-            loader: 'file-loader',
-          },
-        ],
+        type: 'asset/resource',
       },
     ],
   },
