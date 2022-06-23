@@ -15,10 +15,12 @@ module.exports = {
     password: e.POSTGRES_PASSWORD,
   },
   botToken: e.DISCORD_BOT_TOKEN,
-  jwtSecret: e.JWT_SECRET,
+  clientId: e.CLIENT_ID,
+  clientSecret: e.CLIENT_SECRET,
   cookieOptions: {
     maxAge: 1000 * 60 * 60 * 24 * 7,
   },
+  sessionSecret: e.SESSION_SECRET,
   isDevelopment,
   port: 3002,
 }
