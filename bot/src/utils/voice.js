@@ -497,7 +497,7 @@ export function checkIfMemberIsPermissible(channel, member) {
         overwrite =>
           member._roles.includes(overwrite.id) ||
           member.id === overwrite.id ||
-          guild.roles.cache.get(overwrite.id).name === `@everyone`
+          guild.roles.cache.get(overwrite.id)?.name === `@everyone`
       )
       .map(overwrite => {
         if (overwrite.id === member.id)
