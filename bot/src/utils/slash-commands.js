@@ -1,5 +1,13 @@
 import { MessageEmbed, MessageActionRow, MessageButton } from 'discord.js'
+import { isEqual } from 'lodash-es'
+import { slashCommands } from './general.js'
+import { getColorRoles } from './roles.js'
 import { getActiveWorld } from '../repositories/guilds.js'
+import {
+  getJoinableChannelList,
+  getPublicChannelList,
+  getArchivedChannelList,
+} from '../repositories/channels.js'
 import {
   getWorldName,
   getWorldGroups,
@@ -12,17 +20,166 @@ import {
 export const defaultRecordsPerPage = 20,
   dimensions = [`overworld`, `nether`, `end`]
 
-export async function getPages(
-  recordsPerPage,
-  groupBy,
-  guild,
-  filters,
-  formatting
-) {
-  const precede = formatting ? formatting.precede : ``,
-    delimiter = formatting ? formatting.delimiter : `\n`,
-    succeed = formatting ? formatting.succeed : ``
+async function registerDevCommands(guild) {
+  const commands = guild.commands
 
+  await commands.fetch()
+
+  const commandCache = commands.cache,
+    slashCommandNameArray = slashCommands.map(
+      slashCommand => slashCommand.baseName
+    )
+
+  for (const [commandId, command] of commandCache) {
+    if (!slashCommandNameArray.includes(command.name)) {
+      console.log(
+        `The ${command.name} command no longer exists, queued for deletion`
+      )
+      await command.delete()
+    }
+  }
+
+  for (const slashCommand of slashCommands) {
+    const commandModule = await import(slashCommand.fullPath).then(
+        module => module
+      ),
+      commandObject = {
+        name: slashCommand.baseName,
+        description: commandModule?.description,
+        options: commandModule?.options,
+        defaultPermission: commandModule?.defaultPermission,
+      },
+      existingCommand = commandCache.find(
+        command => command.name === slashCommand.baseName
+      )
+
+    if (commandModule?.options) commandObject.options = commandModule.options
+    else commandObject.options = []
+
+    if (
+      commandObject.options.length > 0 &&
+      commandObject.options.length === existingCommand?.options?.length
+    )
+      existingCommand?.options?.forEach((option, index) => {
+        const optionKeys = Object.keys(option),
+          newOption = commandObject.options[index]
+
+        optionKeys.forEach(key => {
+          if (!newOption.hasOwnProperty(key)) newOption[key] = undefined
+        })
+
+        if (option.name === newOption.name)
+          option?.choices?.forEach((choice, jndex) => {
+            if (commandObject.options[index].choices) {
+              const choiceKeys = Object.keys(choice),
+                newChoice = commandObject.options[index].choices[jndex]
+
+              choiceKeys.forEach(key => {
+                if (!newChoice.hasOwnProperty(key)) newChoice[key] = undefined
+              })
+            }
+          })
+      })
+
+    if (!commandModule?.description) {
+      console.log(
+        `'${commandObject.name}' was not registered as a slash command because it's missing core components.`
+      )
+    } else if (
+      !existingCommand ||
+      existingCommand.description !== commandObject.description ||
+      !isEqual(existingCommand.options, commandObject.options) ||
+      existingCommand.defaultPermission !== commandObject.defaultPermission
+    ) {
+      console.log(`${commandObject.name} was generated.`)
+
+      if (existingCommand) await existingCommand.edit(commandObject)
+      else await commands?.create(commandObject)
+    }
+  }
+}
+
+async function registerProdCommands(bot) {
+  const commands = bot.application?.commands
+
+  await commands.fetch()
+
+  const commandCache = commands.cache,
+    commandsArray = []
+
+  let updateCommands = false
+
+  for (const slashCommand of slashCommands) {
+    const commandModule = await import(slashCommand.fullPath).then(
+        module => module
+      ),
+      commandObject = {
+        name: slashCommand.baseName,
+        description: commandModule?.description,
+        options: commandModule?.options,
+        defaultPermission: commandModule?.defaultPermission,
+      },
+      existingCommand = commandCache.find(
+        command => command.name === slashCommand.baseName
+      )
+
+    if (commandModule?.options) commandObject.options = commandModule.options
+    else commandObject.options = []
+
+    if (
+      commandObject.options.length > 0 &&
+      commandObject.options.length === existingCommand?.options?.length
+    )
+      existingCommand?.options?.forEach((option, index) => {
+        const optionKeys = Object.keys(option),
+          newOption = commandObject.options[index]
+
+        optionKeys.forEach(key => {
+          if (!newOption.hasOwnProperty(key)) newOption[key] = undefined
+        })
+
+        if (option.name === newOption.name)
+          option?.choices?.forEach((choice, jndex) => {
+            if (commandObject.options[index].choices) {
+              const choiceKeys = Object.keys(choice),
+                newChoice = commandObject.options[index].choices[jndex]
+
+              choiceKeys.forEach(key => {
+                if (!newChoice.hasOwnProperty(key)) newChoice[key] = undefined
+              })
+            }
+          })
+      })
+
+    commandsArray.push(commandObject)
+
+    if (
+      !existingCommand ||
+      existingCommand.description !== commandObject.description ||
+      !isEqual(existingCommand.options, commandObject.options) ||
+      existingCommand.defaultPermission !== commandObject.defaultPermission
+    )
+      updateCommands = true
+  }
+
+  if (updateCommands) {
+    console.log(`New commands were generated`)
+
+    commands.set(commandsArray)
+  }
+}
+
+export async function registerSlashCommands(bot) {
+  const guild = bot.guilds.cache.get(`711043006253367426`)
+
+  if (guild) {
+    await registerDevCommands(guild)
+  } else {
+    await registerProdCommands(bot)
+  }
+}
+
+export async function getPages(recordsPerPage, groupBy, guild, filters) {
   let query, activeWorldName
 
   switch (groupBy) {
@@ -42,6 +199,19 @@ export async function getPages(
       query = await getWorldGroups(guild.id, filters)
       const activeWorldId = await getActiveWorld(guild.id)
       activeWorldName = await getWorldName(activeWorldId)
+      break
+    case `roles-color`:
+      query = getColorRoles(guild)
+      break
+    case `channels-joinable`:
+      query = await getJoinableChannelList(guild.id)
+      break
+    case `channels-public`:
+      query = await getPublicChannelList(guild.id)
+      break
+    case `channels-archived`:
+      query = await getArchivedChannelList(guild.id)
+      break
   }
 
   if (activeWorldName)
@@ -96,7 +266,7 @@ export async function getPages(
 
       formattedBuckets[page].push({
         name: `${groupValue} ⋅ ${subPage} of ${subPageTotal}`,
-        value: `${precede}${_groupValues.join(delimiter)}${succeed}`,
+        value: _groupValues.join(`\n`),
       })
 
       subPage++
@@ -104,7 +274,7 @@ export async function getPages(
     } else if (subPage === subPageTotal) {
       formattedBuckets[page].push({
         name: `${groupValue} ⋅ ${subPage} of ${subPageTotal}`,
-        value: `${precede}${_groupValues.join(delimiter)}${succeed}`,
+        value: _groupValues.join(`\n`),
       })
 
       subPage = 1
@@ -112,7 +282,7 @@ export async function getPages(
     } else {
       formattedBuckets[page].push({
         name: groupValue,
-        value: `${precede}${_groupValues.join(delimiter)}${succeed}`,
+        value: _groupValues.join(`\n`),
       })
     }
   }

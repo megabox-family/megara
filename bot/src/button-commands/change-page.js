@@ -1,9 +1,15 @@
 import { MessageEmbed } from 'discord.js'
-import { toggleListButtons } from '../utils/buttons.js'
-import { getPageData } from '../repositories/lists.js'
+import {
+  toggleListButtons,
+  getColorButtons,
+  getChannelButtons,
+} from '../utils/buttons.js'
+import { getGroupBy, getPageData } from '../repositories/lists.js'
 
 export default async function (interaction) {
-  const message = interaction.message,
+  const guild = interaction.guild,
+    member = interaction.member,
+    message = interaction.message,
     pages = await getPageData(message.id)
 
   if (!pages) {
@@ -33,28 +39,49 @@ export default async function (interaction) {
   const existingEmbed = message.embeds[0],
     existingFooter = existingEmbed.footer,
     currentPage = +existingFooter.text.match(`[0-9]+(?=\\sof)`),
-    _newPage = currentPage + ammountOfPages
+    _newPageNo = currentPage + ammountOfPages
 
-  let newPage
+  let newPageNo
 
   if (ammountOfPages > 0)
-    newPage = _newPage > totalPages ? totalPages : _newPage
-  else newPage = _newPage <= 0 ? 1 : _newPage
+    newPageNo = _newPageNo > totalPages ? totalPages : _newPageNo
+  else newPageNo = _newPageNo <= 0 ? 1 : _newPageNo
 
-  const newEmbed = new MessageEmbed()
+  const newPage = pages[newPageNo - 1],
+    newEmbed = new MessageEmbed()
       .setColor(existingEmbed.color)
       .setTitle(existingEmbed.title)
       .setDescription(existingEmbed.description)
-      .addFields(pages[newPage - 1])
-      .setFooter({ text: `Page ${newPage} of ${totalPages}` })
+      .addFields(newPage)
+      .setFooter({ text: `Page ${newPageNo} of ${totalPages}` })
       .setTimestamp(),
-    newComponents = await toggleListButtons(
-      newPage,
+    paginationButtons = await toggleListButtons(
+      newPageNo,
       totalPages,
-      message.components
+      message.components[0]
     )
+
+  const groupBy = await getGroupBy(message.id)
+
+  let otherButtons
+
+  if (groupBy === `roles-color`)
+    otherButtons = getColorButtons(newPage, member._roles)
+  else if (
+    [`channels-joinable`, `channels-public`, `channels-archived`].includes(
+      groupBy
+    )
+  )
+    otherButtons = getChannelButtons(
+      newPage,
+      member.id,
+      guild.channels.cache,
+      groupBy
+    )
+
+  const newComponents = otherButtons
+    ? [paginationButtons, ...otherButtons]
+    : [paginationButtons]
 
   interaction.update({ embeds: [newEmbed], components: newComponents })
 }
-
-// (?<=\/)[0-9]+ total pages

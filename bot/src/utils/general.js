@@ -3,13 +3,13 @@ import { cacheBot, getBot } from '../cache-bot.js'
 import { readdirSync, existsSync } from 'fs'
 import { basename, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { isEqual } from 'lodash-es'
 import { directMessageError } from '../utils/error-logging.js'
 import { syncChannels } from './channels.js'
 import { syncVipMembers } from './members.js'
 import { syncRoles } from './roles.js'
 import { dynamicRooms } from './voice.js'
 import { pinMessage, unpinMessage } from './emoji.js'
+import { registerSlashCommands } from './slash-commands.js'
 import {
   syncGuilds,
   getCommandSymbol,
@@ -30,34 +30,42 @@ import {
 const relativePath = dirname(fileURLToPath(import.meta.url)),
   srcPath = dirname(relativePath),
   textCommandFolderName = `text-commands`,
-  slashCommandFolderName = `slash-commands`,
   textCommandFiles = readdirSync(`${srcPath}/${textCommandFolderName}`),
-  slashCommandFiles = readdirSync(`${srcPath}/${slashCommandFolderName}`),
   textCommands = textCommandFiles.map(textCommandFile => {
     return {
       baseName: basename(textCommandFile, '.js').replace(/-/g, ``),
       fullPath: `${srcPath}/${textCommandFolderName}/${textCommandFile}`,
     }
   }),
+  slashCommandFolderName = `slash-commands`,
+  slashCommandFiles = readdirSync(`${srcPath}/${slashCommandFolderName}`),
+  modalFolderName = `modal-commands`,
+  modalCommandFiles = readdirSync(`${srcPath}/${modalFolderName}`),
+  modalCommands = modalCommandFiles.map(modalCommandFile => {
+    return {
+      baseName: basename(modalCommandFile, '.js'),
+      fullPath: `${srcPath}/${modalFolderName}/${modalCommandFile}`,
+    }
+  })
+
+export const validCommandSymbols = [
+    `!`,
+    `$`,
+    `%`,
+    `^`,
+    `&`,
+    `-`,
+    `+`,
+    `=`,
+    `?`,
+    `.`,
+  ],
   slashCommands = slashCommandFiles.map(slashCommandFile => {
     return {
       baseName: basename(slashCommandFile, '.js'),
       fullPath: `${srcPath}/${slashCommandFolderName}/${slashCommandFile}`,
     }
   })
-
-export const validCommandSymbols = [
-  `!`,
-  `$`,
-  `%`,
-  `^`,
-  `&`,
-  `-`,
-  `+`,
-  `=`,
-  `?`,
-  `.`,
-]
 
 export async function deleteNewRoles(guild) {
   const newRole = guild.roles.cache.find(role => role.name === `new role`)
@@ -67,99 +75,6 @@ export async function deleteNewRoles(guild) {
   await newRole.delete().catch()
 
   await deleteNewRoles(guild)
-}
-
-export async function registerSlashCommands(bot) {
-  const guild = bot.guilds.cache.get(`711043006253367426`)
-
-  let commands
-
-  if (guild) {
-    commands = guild.commands
-  } else {
-    commands = bot.application?.commands
-  }
-
-  await commands.fetch()
-
-  // console.log(
-  //   commands.cache.forEach(command => {
-  //     if (command.name === `episode`) console.log(command.options)
-  //   })
-  // )
-
-  const commandCache = commands.cache,
-    slashCommandNameArray = slashCommands.map(
-      slashCommand => slashCommand.baseName
-    )
-
-  for (const [commandId, command] of commandCache) {
-    if (!slashCommandNameArray.includes(command.name)) {
-      console.log(
-        `The ${command.name} command no longer exists, queued for deletion`
-      )
-      await command.delete()
-    }
-  }
-
-  for (const slashCommand of slashCommands) {
-    const commandModule = await import(slashCommand.fullPath).then(
-        module => module
-      ),
-      commandObject = {
-        name: slashCommand.baseName,
-        description: commandModule?.description,
-        options: commandModule?.options,
-        defaultPermission: commandModule?.defaultPermission,
-      },
-      existingCommand = commandCache.find(
-        command => command.name === slashCommand.baseName
-      )
-
-    if (commandModule?.options) commandObject.options = commandModule.options
-    else commandObject.options = []
-
-    if (
-      commandObject.options.length > 0 &&
-      commandObject.options.length === existingCommand?.options?.length
-    )
-      existingCommand?.options?.forEach((option, index) => {
-        const optionKeys = Object.keys(option),
-          newOption = commandObject.options[index]
-
-        optionKeys.forEach(key => {
-          if (!newOption.hasOwnProperty(key)) newOption[key] = undefined
-        })
-
-        if (option.name === newOption.name)
-          option?.choices?.forEach((choice, jndex) => {
-            if (commandObject.options[index].choices) {
-              const choiceKeys = Object.keys(choice),
-                newChoice = commandObject.options[index].choices[jndex]
-
-              choiceKeys.forEach(key => {
-                if (!newChoice.hasOwnProperty(key)) newChoice[key] = undefined
-              })
-            }
-          })
-      })
-
-    if (!commandModule?.description) {
-      console.log(
-        `'${commandObject.name}' was not registered as a slash command because it's missing core components.`
-      )
-    } else if (
-      !existingCommand ||
-      existingCommand.description !== commandObject.description ||
-      !isEqual(existingCommand.options, commandObject.options) ||
-      existingCommand.defaultPermission !== commandObject.defaultPermission
-    ) {
-      console.log(`${commandObject.name} was generated.`)
-
-      if (existingCommand) await existingCommand.edit(commandObject)
-      else await commands?.create(commandObject)
-    }
-  }
 }
 
 export async function startup(bot) {
@@ -177,7 +92,12 @@ export async function startup(bot) {
 
   registerSlashCommands(bot)
 
-  // const guild = bot.guilds.cache.get(`711043006253367426`)
+  // const guild = bot.guilds.cache.get(`711043006253367426`),
+  //   channel = guild.channels.cache.get(`711043007545081949`),
+  //   thread = channel.threads.cache.get(`983291433001840660`),
+  //   members = thread.members.cache
+
+  // console.log(members)
 }
 
 export async function logMessageToChannel(message) {
@@ -458,7 +378,7 @@ export async function handleNewMember(guildMember) {
 export async function handleInteraction(interaction) {
   if (interaction.isButton()) {
     const buttonFunctionPath = `${srcPath}/button-commands/${
-      interaction.customId.match(`(?!!).+(?=:)`)[0]
+      interaction.customId.match(`(?!!).+(?=:\\s)`)[0]
     }.js`
 
     if (existsSync(buttonFunctionPath))
@@ -467,7 +387,12 @@ export async function handleInteraction(interaction) {
       )
 
     interaction.update({}).catch(error => {
-      if (error.message !== `Interaction has already been acknowledged.`)
+      if (
+        ![
+          `The reply to this interaction has already been sent or deferred.`,
+          `Interaction has already been acknowledged.`,
+        ].includes(error.message)
+      )
         console.log(error.message)
     })
   } else if (interaction.isCommand()) {
@@ -476,6 +401,12 @@ export async function handleInteraction(interaction) {
     )
 
     import(slashCommand.fullPath).then(module => module.default(interaction))
+  } else if (interaction.isModalSubmit()) {
+    const modalCommand = modalCommands.find(
+      modalCommand => modalCommand.baseName === interaction.customId
+    )
+
+    import(modalCommand.fullPath).then(module => module.default(interaction))
   }
 }
 

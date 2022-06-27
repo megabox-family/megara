@@ -77,7 +77,7 @@ export async function unarchiveThread(thread) {
 }
 
 export async function addMemberToThread(thread, member) {
-  if (!thread || !member) return
+  if (!thread || !member || thread.members.cache.get(member.id)) return
 
   const addMessage = await thread.send(`${member}`)
 

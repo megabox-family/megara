@@ -75,6 +75,22 @@ export async function getListInfo(id) {
   return result
 }
 
+export async function getGroupBy(id) {
+  return await pgPool
+    .query(
+      SQL`
+      select
+        group_by
+      from lists
+      where id = ${id}
+    `
+    )
+    .then(res => res.rows[0].group_by)
+    .catch(error => {
+      console.log(error)
+    })
+}
+
 export async function updateListPageData(id, pages) {
   pages = JSON.stringify(pages)
 

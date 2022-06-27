@@ -29,13 +29,17 @@ export default async function (interaction) {
     color = colors.find(color => color.name === colorName)
   }
 
-  const guildMember = interaction.member
+  const guildMember = interaction.member,
+    currentColorRoles = []
+
+  guildMember.roles.cache.forEach(role => {
+    if (role.name.match(`^~.+~$`)) currentColorRoles.push(role)
+    else if (role.name.match(`^<.+>$`)) role.delete()
+  })
+
+  if (currentColorRoles.length > 0) guildMember.roles.remove(currentColorRoles)
 
   if (colorName === `null`) {
-    guildMember.roles.cache.forEach(role => {
-      if (role.name.match(`^~.+~$`)) guildMember.roles.remove(role.id)
-    })
-
     interaction.reply({
       content: `All color roles have been removed from your user account 🧼`,
       ephemeral: true,
@@ -44,11 +48,6 @@ export default async function (interaction) {
     const guildMember = interaction.member
 
     await guildMember.roles.add(color.id)
-
-    guildMember.roles.cache.forEach(role => {
-      if (role.name.match(`^~.+~$`) && role.id !== color.id)
-        guildMember.roles.remove(role.id)
-    })
 
     interaction.reply({
       content: `Your color has been set to \`${colorName}\` 🤗`,

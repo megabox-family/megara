@@ -3,12 +3,13 @@ import camelize from 'camelize'
 import SQL from 'sql-template-strings'
 import { getWelcomeChannel } from './guilds.js'
 
-export async function getIdForJoinableChannel(guildId, channelName) {
-  const _welcomeChannelId = await getWelcomeChannel(guildId),
+export async function getIdForJoinableChannel(channel) {
+  const guild = channel.guild,
+    _welcomeChannelId = await getWelcomeChannel(guild.id),
     welcomeChannelId = _welcomeChannelId ? _welcomeChannelId : ``,
-    _roomChannelId = await getRoomChannelId(guildId),
+    _roomChannelId = await getRoomChannelId(guild.id),
     roomChannelId = _roomChannelId ? _roomChannelId : ``,
-    _unverifiedRoomId = await getUnverifiedRoomChannelId(guildId),
+    _unverifiedRoomId = await getUnverifiedRoomChannelId(guild.id),
     unverifiedRoomId = _unverifiedRoomId ? _unverifiedRoomId : ``
 
   return await pgPool
@@ -17,9 +18,7 @@ export async function getIdForJoinableChannel(guildId, channelName) {
         select 
           id 
         from channels 
-        where guild_id = ${guildId} and
-          name = ${channelName} and 
-          channel_type in ('archived', 'joinable', 'public') and
+        where id = ${channel.id} and 
           id not in (${welcomeChannelId}, ${roomChannelId}, ${unverifiedRoomId})
       `
     )
@@ -294,29 +293,35 @@ export async function getAlphabeticalChannelsByCategory(categoryId) {
 }
 
 export async function getJoinableChannelList(guildId) {
-  return await pgPool
+  const query = await pgPool
     .query(
       SQL`
-        select
-          categories.name as category_name,
-          channels.id as channel_id
-        from channels as categories, channels as channels
-        where categories.id = channels.category_id and
-          channels.channel_type = 'joinable' and
-          categories.guild_id = ${guildId}
-        order by categories.position, categories.id, channels.position;
-      `
+      select
+        categories.name as group,
+        concat('<#', channels.id, '>') as values
+      from channels as categories, channels as channels
+      where categories.id = channels.category_id and
+        channels.channel_type = 'joinable' and
+        categories.guild_id = ${guildId}
+      order by categories.position, categories.id, channels.position;
+    `
     )
     .then(res => camelize(res.rows))
+
+  query.forEach(
+    (record, index) => (record.values = `${index + 1}. ${record.values}`)
+  )
+
+  return query
 }
 
 export async function getArchivedChannelList(guildId) {
-  return await pgPool
+  const query = await pgPool
     .query(
       SQL`
         select
-          categories.name as category_name,
-          channels.id as channel_id
+          categories.name as group,
+          concat('<#', channels.id, '>') as values
         from channels as categories, channels as channels
         where categories.id = channels.category_id and
           channels.channel_type = 'archived' and
@@ -325,18 +330,23 @@ export async function getArchivedChannelList(guildId) {
       `
     )
     .then(res => camelize(res.rows))
+
+  query.forEach(
+    (record, index) => (record.values = `${index + 1}. ${record.values}`)
+  )
+
+  return query
 }
 
-export async function getPublicChannelList(guildId, welcomeChannelId) {
-  if (welcomeChannelId == null) welcomeChannelId = ''
-
-  return await pgPool
-    .query(
-      SQL`
+export async function getPublicChannelList(guildId) {
+  const _welcomeChannelId = await getWelcomeChannel(guildId),
+    welcomeChannelId = _welcomeChannelId ? _welcomeChannelId : ``,
+    query = await pgPool
+      .query(
+        SQL`
         select
-          categories.name as category_name,
-          channels.id as channel_id,
-          channels.name as channel_name
+          categories.name as group,
+          concat('<#', channels.id, '>') as values
         from channels as categories, channels as channels
         where categories.id = channels.category_id and
           channels.channel_type = 'public' and
@@ -345,8 +355,14 @@ export async function getPublicChannelList(guildId, welcomeChannelId) {
           channels.id != ${welcomeChannelId}
         order by categories.position, categories.id, channels.position;
       `
-    )
-    .then(res => camelize(res.rows))
+      )
+      .then(res => camelize(res.rows))
+
+  query.forEach(
+    (record, index) => (record.values = `${index + 1}. ${record.values}`)
+  )
+
+  return query
 }
 
 export async function deleteAllGuildChannels(guildId) {

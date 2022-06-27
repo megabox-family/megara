@@ -54,11 +54,11 @@ export default async function (interaction) {
           new MessageButton()
             .setCustomId(`!join-channel: ${record.channelId}`)
             .setLabel(`Join ${record.channelName}`)
-            .setStyle('SUCCESS'),
+            .setStyle('PRIMARY'),
           new MessageButton()
             .setCustomId(`!leave-channel: ${record.channelId}`)
             .setLabel(`Leave ${record.channelName}`)
-            .setStyle('DANGER')
+            .setStyle('SECONDARY')
         )
       )
     })

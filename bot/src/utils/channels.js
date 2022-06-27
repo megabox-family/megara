@@ -31,6 +31,7 @@ import {
   getRoomChannelId,
   getUnverifiedRoomChannelId,
 } from '../repositories/channels.js'
+import { getChannelBasename } from './voice.js'
 
 const setChannelFunction = {
     adminChannel: setAdminChannel,
@@ -745,23 +746,57 @@ export async function syncChannels(guild) {
   }
 }
 
-export async function addMemberToChannel(member, channelId, temporary = false) {
+export async function addMemberToDynamicChannels(
+  member,
+  permissions,
+  parentChannelName
+) {
+  const guild = member.guild,
+    channels = guild.channels.cache,
+    dynamicVoiceChannels = channels.filter(
+      channel =>
+        getChannelBasename(channel.name) === parentChannelName &&
+        channel.type === `GUILD_VOICE`
+    )
+
+  for (const [voiceChannelId, voiceChannel] of dynamicVoiceChannels) {
+    await new Promise(resolution => setTimeout(resolution, 5000))
+
+    if (voiceChannel)
+      await voiceChannel.permissionOverwrites
+        .create(member, permissions)
+        .catch(error =>
+          console.log(
+            `I was unable to add a member to a dynamic voice channel, it was probably deleted as I was adding them:\n${error}`
+          )
+        )
+  }
+}
+
+export async function CheckIfMemberNeedsToBeAdded(
+  member,
+  channelId,
+  temporary = false
+) {
   if (!channelId) return
 
-  let result = `already added`
-
-  const guild = member.guild
-
-  const welcomeChannelId = await getWelcomeChannel(guild.id),
+  const guild = member.guild,
+    welcomeChannelId = await getWelcomeChannel(guild.id),
     roomChannelId = await getRoomChannelId(guild.id),
     unverifiedRoomId = await getUnverifiedRoomChannelId(guild.id)
 
   if ([welcomeChannelId, roomChannelId, unverifiedRoomId].includes(channelId))
     return
 
-  const channel = guild.channels.cache.get(channelId),
-    channelType = await getChannelType(channel.id),
-    userOverwrite = channel.permissionOverwrites.cache.find(
+  const channel = guild.channels.cache.get(channelId)
+
+  if (!channel) return `not added`
+
+  const channelType = await getChannelType(channel.id)
+
+  if (channelType === `hidden`) return
+
+  const userOverwrite = channel.permissionOverwrites.cache.find(
       permissionOverwrite => permissionOverwrite.id === member.id
     ),
     comparedPermissions = comparePermissions(userOverwrite),
@@ -776,60 +811,111 @@ export async function addMemberToChannel(member, channelId, temporary = false) {
       CREATE_PUBLIC_THREADS: false,
     }
 
-    if (!userOverwrite) {
-      await channel.permissionOverwrites.create(member.id, archivedPermissions)
-
-      result = `added`
-    } else if (
+    if (!userOverwrite)
+      return { action: `create`, permissions: archivedPermissions }
+    else if (
       !comparedPermissions.VIEW_CHANNEL ||
       comparedPermissions.SEND_MESSAGES ||
       comparedPermissions.SEND_MESSAGES_IN_THREADS ||
       comparedPermissions.CREATE_PRIVATE_THREADS ||
       comparedPermissions.CREATE_PUBLIC_THREADS
-    ) {
-      await channel.permissionOverwrites.edit(member.id, archivedPermissions)
-
-      result = `added`
-    }
+    )
+      return { action: `edit`, permissions: archivedPermissions }
   } else if (channelType === `joinable`) {
     const joinablePermissions = temporary
       ? { VIEW_CHANNEL: true, SEND_MESSAGES: true }
       : { VIEW_CHANNEL: true, SEND_MESSAGES: null }
 
-    if (!userOverwrite) {
-      await channel.permissionOverwrites.create(member.id, joinablePermissions)
-
-      result = `added`
-    } else if (
+    if (!userOverwrite)
+      return { action: `create`, permissions: joinablePermissions }
+    else if (
       !comparedPermissions.VIEW_CHANNEL ||
       allowPermissions.SEND_MESSAGES
-    ) {
-      await channel.permissionOverwrites.edit(member.id, joinablePermissions)
-
-      result = `added`
-    }
+    )
+      return { action: `edit`, permissions: joinablePermissions }
   } else if (channelType === `public`) {
     if (temporary) {
-      if (userOverwrite && comparedPermissions?.VIEW_CHANNEL === false) {
-        await channel.permissionOverwrites.edit(member.id, {
-          VIEW_CHANNEL: true,
-          SEND_MESSAGES: true,
-        })
-
-        result = `added`
-      }
+      if (userOverwrite && comparedPermissions?.VIEW_CHANNEL === false)
+        return {
+          action: `edit`,
+          permissions: {
+            VIEW_CHANNEL: true,
+            SEND_MESSAGES: true,
+          },
+        }
     } else {
       if (userOverwrite) {
-        await userOverwrite.delete()
-
-        result = `added`
+        return { action: `delete` }
       }
     }
-  } else {
-    result = `not added`
+  } else if (channelType === `private`) {
+    const privatePermissions = { VIEW_CHANNEL: true }
+
+    if (!userOverwrite || !comparedPermissions.VIEW_CHANNEL) {
+      return { action: `create`, permissions: privatePermissions }
+    }
   }
 
-  return result
+  return `already added`
+}
+
+export async function addMemberToChannel(member, channelId, temporary = false) {
+  if (!channelId) return
+
+  const guild = member.guild,
+    channel = guild.channels.cache.get(channelId)
+
+  if (!channel) return `not added`
+
+  const userOverwrite = channel.permissionOverwrites.cache.find(
+      permissionOverwrite => permissionOverwrite.id === member.id
+    ),
+    context = await CheckIfMemberNeedsToBeAdded(member, channelId, temporary)
+
+  if (!context) return
+
+  const channelType = await getChannelType(channel.id)
+
+  if ([`not added`, `already added`].includes(context)) return context
+  else if (context.action === `delete`) {
+    await userOverwrite.delete()
+  } else {
+    await channel.permissionOverwrites[context.action](
+      member.id,
+      context.permissions
+    )
+
+    if (channelType === `private`)
+      addMemberToDynamicChannels(member, context.permissions, channel.name)
+  }
+
+  return `added`
+}
+
+export async function removeMemberFromDynamicChannels(
+  member,
+  parentChannelName
+) {
+  const guild = member.guild,
+    channels = guild.channels.cache,
+    dynamicVoiceChannels = channels.filter(
+      channel =>
+        getChannelBasename(channel.name) === parentChannelName &&
+        channel.type === `GUILD_VOICE`
+    )
+
+  for (const [voiceChannelId, voiceChannel] of dynamicVoiceChannels) {
+    await new Promise(resolution => setTimeout(resolution, 5000))
+
+    if (voiceChannel)
+      await voiceChannel.permissionOverwrites
+        .delete(member)
+        .catch(error =>
+          console.log(
+            `I was unable to remove a member from a dynamic voice channel, it was probably deleted as I was removing them:\n${error}`
+          )
+        )
+  }
 }
 
 export async function removeMemberFromChannel(member, channelId) {
@@ -837,25 +923,33 @@ export async function removeMemberFromChannel(member, channelId) {
 
   let result = `already removed`
 
-  const guild = member.guild
-
-  const welcomeChannelId = await getWelcomeChannel(guild.id),
+  const guild = member.guild,
+    welcomeChannelId = await getWelcomeChannel(guild.id),
     roomChannelId = await getRoomChannelId(guild.id),
     unverifiedRoomId = await getUnverifiedRoomChannelId(guild.id)
 
   if ([welcomeChannelId, roomChannelId, unverifiedRoomId].includes(channelId))
     return
 
-  const channel = guild.channels.cache.get(channelId),
-    channelType = await getChannelType(channel.id),
-    userOverwrite = channel.permissionOverwrites.cache.find(
+  const channel = guild.channels.cache.get(channelId)
+
+  if (!channel) return `not removed`
+
+  const channelType = await getChannelType(channel.id)
+
+  if (channelType === `hidden`) return
+
+  const userOverwrite = channel.permissionOverwrites.cache.find(
       permissionOverwrite => permissionOverwrite.id === member.id
     ),
     comparedPermissions = comparePermissions(userOverwrite)
 
-  if ([`archived`, `joinable`].includes(channelType)) {
+  if ([`archived`, `joinable`, `private`].includes(channelType)) {
     if (userOverwrite) {
       userOverwrite.delete()
+
+      if (channelType === `private`)
+        removeMemberFromDynamicChannels(member, channel.name)
 
       result = `removed`
     }
@@ -872,8 +966,6 @@ export async function removeMemberFromChannel(member, channelId) {
       })
 
       result = `removed`
-    } else {
-      result = `not removed`
     }
   }
 
