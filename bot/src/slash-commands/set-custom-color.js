@@ -5,11 +5,23 @@ export const defaultPermission = false,
   options = [
     {
       name: `color-hex-code`,
-      description: `The hex code that represents the color you'd like your name to display as.`,
+      description: `The hex code that represents the color you'd like your name to display as (input 'null' to clear).`,
       type: `STRING`,
       required: true,
     },
   ]
+
+async function clearOtherColorRoles(member) {
+  const currentColorRoles = []
+
+  member.roles.cache.forEach(role => {
+    if (role.name.match(`^~.+~$`)) {
+      currentColorRoles.push(role)
+    }
+  })
+
+  if (currentColorRoles.length > 0) await member.roles.remove(currentColorRoles)
+}
 
 function vaidateColorHexCode(colorHexCode) {
   return colorHexCode.match(`^#(?:[0-9a-fA-F]{3}){1,2}$`)
@@ -21,7 +33,22 @@ export default async function (interaction) {
   const guild = interaction.guild,
     options = interaction.options,
     _colorHexCode = options.getString(`color-hex-code`),
-    colorHexCode = _colorHexCode.match(`^#`)
+    member = interaction.member,
+    existingUserColor = guild.roles.cache.find(
+      role => role.name === `<${member.id}>`
+    )
+
+  if (_colorHexCode === `null`) {
+    await clearOtherColorRoles(member)
+
+    if (existingUserColor) await existingUserColor.delete()
+
+    await interaction.editReply(`Your custom color has been cleared 🧼`)
+
+    return
+  }
+
+  const colorHexCode = _colorHexCode.match(`^#`)
       ? _colorHexCode
       : `#${_colorHexCode}`,
     isHexCode = vaidateColorHexCode(colorHexCode)
@@ -34,26 +61,27 @@ export default async function (interaction) {
     return
   }
 
-  const member = interaction.member,
-    existingUserColor = guild.roles.cache.find(
-      role => role.name === `<${member.id}>`
-    )
+  await clearOtherColorRoles(member)
 
-  if (existingUserColor) existingUserColor.delete()
+  if (existingUserColor) {
+    await existingUserColor.edit({
+      color: colorHexCode,
+    })
+  } else {
+    const userColorRole = await guild.roles.create({
+      name: `<${member.id}>`,
+      color: colorHexCode,
+    })
 
-  const userColorRole = await guild.roles.create({
-    name: `<${member.id}>`,
-    color: colorHexCode,
-  })
-
-  await member.roles.add(userColorRole)
+    await member.roles.add(userColorRole)
+  }
 
   const seconds = roleSortPauseDuration / 1000
 
   await interaction.editReply({
     content: `
       Your custom color has been set 😁\
-      \nThough, it's going to take at least ${seconds} seconds to apply 🕑
+      \nThough, it may take up to ${seconds} seconds to apply 🕑
     `,
   })
 }
