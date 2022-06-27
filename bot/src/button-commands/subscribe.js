@@ -1,4 +1,6 @@
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     member = interaction.member,
     roleId = interaction.customId.match(`(?!:)[0-9]+`)[0],
@@ -19,7 +21,7 @@ export default async function (interaction) {
 
   member.roles.add(roleId)
 
-  interaction.reply({
+  await interaction.editReply({
     content: `You are now subscribed to ${roleName} notifications in the ${guild.name} server.`,
     ephemeral: true,
   })

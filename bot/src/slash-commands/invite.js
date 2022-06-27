@@ -3,10 +3,7 @@ import { directMessageError } from '../utils/error-logging.js'
 import { getIdForJoinableChannel } from '../repositories/channels.js'
 import { getRoleByName } from '../utils/roles.js'
 import { checkIfMemberIsPermissible } from '../utils/voice.js'
-import {
-  addMemberToChannel,
-  CheckIfMemberNeedsToBeAdded,
-} from '../utils/channels.js'
+import { CheckIfMemberNeedsToBeAdded } from '../utils/channels.js'
 
 export const description = `Allows you to invite an existing member to any channel you're a part of in this server.`
 export const defaultPermission = false,
@@ -50,6 +47,8 @@ function CheckIfVerificationLevelIsMismatched(member, _channel) {
 }
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     member = interaction.member,
     options = interaction.options,
@@ -68,9 +67,8 @@ export default async function (interaction) {
   }
 
   if (!invitedMember) {
-    interaction.reply({
+    await interaction.editReply({
       content: `You provided an invalid username & tag or id, keep in mind that this invite feature only works for users who are *already in the server* 🤔`,
-      ephemeral: true,
     })
 
     return
@@ -86,9 +84,8 @@ export default async function (interaction) {
   )
 
   if (mismatchedVerificationLevel) {
-    interaction.reply({
+    await interaction.editReply({
       content: `You tried inviting an unverified member to a verified channel, this member must first finish the verification process before gaining access to this channel 🤔`,
-      ephemeral: true,
     })
 
     return
@@ -130,9 +127,8 @@ export default async function (interaction) {
         .catch(error => directMessageError(error, invitedMember))
     }
 
-    interaction.reply({
+    await interaction.editReply({
       content: `I sent a message to ${invitedMember} inviting them to ${channel} 👍`,
-      ephemeral: true,
     })
   } else if (
     [`GUILD_PUBLIC_THREAD`, `GUILD_PRIVATE_THREAD`].includes(channel.type)
@@ -142,18 +138,16 @@ export default async function (interaction) {
       isJoinable = await getIdForJoinableChannel(parentChannel)
 
     if (!isJoinable) {
-      interaction.reply({
+      await interaction.editReply({
         content: `The ${channel} channel is not a channel that anyone can join or leave 🤔`,
-        ephemeral: true,
       })
 
       return
     }
 
     if (thread.members.cache.get(invitedMember.id)) {
-      interaction.reply({
+      await interaction.editReply({
         content: `${invitedMember} is already part of this thread 🤔`,
-        ephemeral: true,
       })
 
       return
@@ -183,24 +177,21 @@ export default async function (interaction) {
       })
       .catch(error => directMessageError(error, invitedMember))
 
-    interaction.reply({
+    await interaction.editReply({
       content: `I sent a message to ${invitedMember} inviting them to ${channel} 👍`,
-      ephemeral: true,
     })
   } else if (channel.type === `GUILD_TEXT`) {
     const context = await CheckIfMemberNeedsToBeAdded(invitedMember, channel.id)
 
     if (!context) {
-      interaction.reply({
+      await interaction.editReply({
         content: `${channel} is not a channel that anyone can be added to or removed from 🤔`,
-        ephemeral: true,
       })
 
       return
     } else if (context === `already added`) {
-      interaction.reply({
+      await interaction.editReply({
         content: `${invitedMember} is already a part of ${channel} 🤔`,
-        ephemeral: true,
       })
 
       return
@@ -225,9 +216,8 @@ export default async function (interaction) {
       })
       .catch(error => directMessageError(error, invitedMember))
 
-    interaction.reply({
+    await interaction.editReply({
       content: `I sent a message to ${invitedMember} inviting them to ${channel} 👍`,
-      ephemeral: true,
     })
   }
 }

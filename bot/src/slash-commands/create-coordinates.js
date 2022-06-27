@@ -50,6 +50,8 @@ export const defaultPermission = false,
   ]
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     member = interaction.member,
     options = interaction.options,
@@ -57,9 +59,8 @@ export default async function (interaction) {
     existingWorldId = await getWorldId(worldName, guild.id)
 
   if (!existingWorldId) {
-    interaction.reply({
+    await interaction.editReply({
       content: `A world named **${worldName}** doesn't exist, use the \`/list-worlds\` command to get a valid list of worlds.`,
-      ephemeral: true,
     })
 
     return
@@ -68,9 +69,8 @@ export default async function (interaction) {
     characterLimit = 36
 
   if (coordinatesName.length > characterLimit) {
-    interaction.reply({
+    await interaction.editReply({
       content: `Coordinate names must be under ${characterLimit} characters, please try again (pro tip: hit ctrl-z).`,
-      ephemeral: true,
     })
 
     return
@@ -83,9 +83,8 @@ export default async function (interaction) {
   )
 
   if (existingCoordinatesId) {
-    interaction.reply({
+    await interaction.editReply({
       content: `Coordinates named **${coordinatesName}** already exist for your user in **${worldName}**, one user cannot have multiple coordinates with the same name in the same world. 🤨`,
-      ephemeral: true,
     })
 
     return
@@ -106,8 +105,7 @@ export default async function (interaction) {
     dimension,
   ])
 
-  interaction.reply({
+  await interaction.editReply({
     content: `The **${coordinatesName}** coordinates in **${worldName}** have been created for your user 🧭`,
-    ephemeral: true,
   })
 }

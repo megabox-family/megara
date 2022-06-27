@@ -27,13 +27,14 @@ export const defaultPermission = false,
   ]
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     vipRoleId = await getVipRoleId(guild.id)
 
   if (!vipRoleId) {
-    interaction.reply({
+    await interaction.editReply({
       content: `There is no VIP role set for this server, please set the VIP role using the \`/set-vip-role\` command before using the \`/vip-user-override\` command 🤔`,
-      ephemeral: true,
     })
 
     return
@@ -44,13 +45,12 @@ export default async function (interaction) {
   if (!vipRole) {
     await setVipRoleId(null, guild.id)
 
-    interaction.reply({
+    await interaction.editReply({
       content: `
         The ID for the VIP role exists for this guild, but the role no longer exists. 🤔\
         \nBecause of this, the VIP role ID for this server has been removed.\ 
         \nPlease set a new VIP role using \`/set-vip-role\` before using \`/vip-user-override\`.
       `,
-      ephemeral: true,
     })
 
     return
@@ -62,9 +62,8 @@ export default async function (interaction) {
     vipMember = guild.members.cache.get(vipUserId)
 
   if (!vipMember) {
-    interaction.reply({
+    await interaction.editReply({
       content: `You provided an invalid user id, please try again.`,
-      ephemeral: true,
     })
 
     return
@@ -75,9 +74,8 @@ export default async function (interaction) {
 
   if (addOrRemove === `add`) {
     if (userVipOverrideId) {
-      interaction.reply({
+      await interaction.editReply({
         content: `${vipMember} is already in the VIP override list 🤔`,
-        ephemeral: true,
       })
 
       return
@@ -87,15 +85,14 @@ export default async function (interaction) {
 
     if (!memberHasVipRole) await vipMember.roles.add(vipRole)
 
-    interaction.reply({
+    await interaction.editReply({
       content: `${vipMember} has been added to the VIP User Overrides list and attributed the ${vipRole} role 😁`,
       ephemeral: true,
     })
   } else {
     if (!userVipOverrideId) {
-      interaction.reply({
+      await interaction.editReply({
         content: `${vipMember} isn't in the VIP User Overrides list 🤔`,
-        ephemeral: true,
       })
 
       return
@@ -106,9 +103,8 @@ export default async function (interaction) {
     const memberHasPremiumRole = vipMember.premiumSinceTimestamp
 
     if (memberHasPremiumRole) {
-      interaction.reply({
+      await interaction.editReply({
         content: `${vipMember} has been removed to the VIP User Overrides list but will retain the ${vipRole} role as they are currently a booster or premium subscriber 👍`,
-        ephemeral: true,
       })
 
       return
@@ -116,9 +112,8 @@ export default async function (interaction) {
 
     if (memberHasVipRole) await vipMember.roles.remove(vipRole)
 
-    interaction.reply({
+    await interaction.editReply({
       content: `${vipMember} has been removed to the VIP User Overrides list and the ${vipRole} role has been removed from their user 👋`,
-      ephemeral: true,
     })
   }
 }

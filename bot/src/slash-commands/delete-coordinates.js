@@ -22,6 +22,8 @@ export const defaultPermission = false,
   ]
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     member = interaction.member,
     options = interaction.options,
@@ -29,9 +31,8 @@ export default async function (interaction) {
     existingWorldId = await getWorldId(worldName, guild.id)
 
   if (!existingWorldId) {
-    interaction.reply({
+    await interaction.editReply({
       content: `A world named **${worldName}** doesn't exist, use the \`/list-worlds\` command to get a valid list of worlds.`,
-      ephemeral: true,
     })
 
     return
@@ -45,9 +46,8 @@ export default async function (interaction) {
     )
 
   if (!existingCoordinatesId) {
-    interaction.reply({
+    await interaction.editReply({
       content: `Coordinates named **${coordinatesName}** in **${worldName}** don't exist for your user. 🤔`,
-      ephemeral: true,
     })
 
     return
@@ -55,8 +55,7 @@ export default async function (interaction) {
 
   await deleteCoordinates(existingCoordinatesId)
 
-  interaction.reply({
+  await interaction.editReply({
     content: `The **${coordinatesName}** coordinates in **${worldName}** have been deleted for your user ⚰️`,
-    ephemeral: true,
   })
 }

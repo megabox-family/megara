@@ -12,6 +12,8 @@ export const defaultPermission = false,
   ]
 
 export default async function (interaction) {
+  await interaction.deferReply()
+
   const guild = interaction.guild,
     options = interaction.options,
     threadName = options.getString(`thread-name`),
@@ -44,13 +46,8 @@ export default async function (interaction) {
       .setStyle('SUCCESS')
   )
 
-  // interaction.deferReply()
-  // interaction.deleteReply()
-
-  interaction
-    .reply({
-      content: `A new private thread for **${threadName}** has been created, press the button below to join the thread (**spoiler warning**):`,
-      components: [threadButton],
-    })
-    .catch(error => directMessageError(error, guildMember))
+  await interaction.editReply({
+    content: `A new private thread for **${threadName}** has been created, press the button below to join the thread (**spoiler warning**):`,
+    components: [threadButton],
+  })
 }

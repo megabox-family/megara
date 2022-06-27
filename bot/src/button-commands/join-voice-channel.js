@@ -7,13 +7,14 @@ import {
 } from '../utils/voice.js'
 
 export default async function (interaction) {
+  await interaction.deferReply()
+
   const voiceChannelId = getButtonContext(interaction.customId),
     voiceChannel = getBot().channels.cache.get(voiceChannelId)
 
   if (!voiceChannel) {
-    interaction.reply({
+    await interaction.editReply({
       content: `The channel voice channel you're trying to join no long exists, sorry for the inconvenience 😬`,
-      ephemeral: true,
     })
 
     return
@@ -23,9 +24,8 @@ export default async function (interaction) {
     member = guild.members.cache.get(interaction.user.id)
 
   if (!member) {
-    interaction.reply({
+    await interaction.editReply({
       content: `You are no longer a member of ${guild.name}, you can't join a channel in a server you aren't a part of 🤔`,
-      ephemeral: true,
     })
 
     return
@@ -61,9 +61,8 @@ export default async function (interaction) {
     })
     await voiceChannel.permissionOverwrites.create(member, voicePermissons)
 
-    interaction.reply({
+    await interaction.editReply({
       content: interactionContent,
-      ephemeral: true,
     })
 
     for (const [voiceChannelId, voiceChannel] of otherVoiceChannels) {
@@ -79,8 +78,7 @@ export default async function (interaction) {
           )
     }
   } else
-    interaction.reply({
+    await interaction.editReply({
       content: interactionContent,
-      ephemeral: true,
     })
 }

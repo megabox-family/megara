@@ -7,17 +7,21 @@ import {
 import { sendVerificationInstructions } from '../utils/general.js'
 
 export default async function (interaction) {
+  await interaction.deferReply()
+
   const guildId = interaction.customId.match(`[0-9]+`)[0],
     guild = getBot().guilds.cache.get(guildId),
     guildMember = guild.members.cache.get(interaction.user.id)
 
-    if(!guildMember){
-      interaction.user.send(`You're not a part of ${guild.name} anymore, you'll need to be re-added before you can accept their rules.`)
+  if (!guildMember) {
+    await interaction.editReply(
+      `You're not a part of ${guild.name} anymore, you'll need to be re-added before you can accept their rules.`
+    )
 
-      return
-    }
+    return
+  }
 
-    const verificationChannelId = await getVerificationChannel(guild.id),
+  const verificationChannelId = await getVerificationChannel(guild.id),
     undergoingVerificationRole = guild.roles.cache.find(
       role => role.name === `undergoing verification`
     ),
@@ -29,38 +33,32 @@ export default async function (interaction) {
     welcomeChannelId = await getWelcomeChannel(guild.id)
 
   if (userUndergoingVerificationRole)
-    guildMember
-      .send(
-        `You've already accepted this server's rules, to continue please click the verification channel button linked above this message.`
-      )
-      .catch(error => directMessageError(error, guildMember))
+    await interaction.editReply(
+      `You've already accepted this server's rules, to continue please click the verification channel button linked above this message.`
+    )
   else if (userVerifiedRole)
-    guildMember
-      .send(
-        `You've already been verified in ${guild.name}, which means you've already accepted their rules.`
-      )
-      .catch(error => directMessageError(error, guildMember))
+    await interaction.editReply(
+      `You've already been verified in ${guild.name}, which means you've already accepted their rules.`
+    )
   else if (verificationChannelId && undergoingVerificationRole) {
     guildMember.roles.add(undergoingVerificationRole.id)
 
-    guildMember
-      .send(
-        `\
+    await interaction.editReply(
+      `\
         \nThank you for accepting ${guild.name}'s rules 😄\
         
         \nHowever, this server has one more step in their verification process.\ 
         \nTo continue, click here -----> <#${verificationChannelId}> <-----\
       `
-      )
-      .catch(error => directMessageError(error, guildMember))
+    )
 
     sendVerificationInstructions(guildMember)
   } else if (verifiedRole) {
     guildMember.roles.add(verifiedRole.id)
 
     if (welcomeChannelId)
-      guildMember
-        .send(
+      await interaction
+        .editReply(
           `\
         \nThank you for accepting ${guild.name}'s rules 😄\
         
@@ -70,8 +68,8 @@ export default async function (interaction) {
         )
         .catch(error => directMessageError(error, guildMember))
     else
-      guildMember
-        .send(
+      await interaction
+        .editReply(
           `\
         \nThank you for accepting ${guild.name}'s rules 😄\
         
@@ -81,8 +79,8 @@ export default async function (interaction) {
         )
         .catch(error => directMessageError(error, guildMember))
   } else {
-    guildMember
-      .send(
+    await interaction
+      .editReply(
         `Unfortunately something went wrong, try pressing the desired button again.`
       )
       .catch(error => directMessageError(error, guildMember))

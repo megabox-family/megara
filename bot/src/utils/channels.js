@@ -918,10 +918,8 @@ export async function removeMemberFromDynamicChannels(
   }
 }
 
-export async function removeMemberFromChannel(member, channelId) {
+export async function checkIfmemberneedsToBeRemoved(member, channelId) {
   if (!channelId) return
-
-  let result = `already removed`
 
   const guild = member.guild,
     welcomeChannelId = await getWelcomeChannel(guild.id),
@@ -945,29 +943,39 @@ export async function removeMemberFromChannel(member, channelId) {
     comparedPermissions = comparePermissions(userOverwrite)
 
   if ([`archived`, `joinable`, `private`].includes(channelType)) {
-    if (userOverwrite) {
-      userOverwrite.delete()
-
-      if (channelType === `private`)
-        removeMemberFromDynamicChannels(member, channel.name)
-
-      result = `removed`
-    }
+    if (userOverwrite) return { action: `delete` }
   } else if (channelType === `public`) {
-    if (!userOverwrite) {
-      channel.permissionOverwrites.create(member.id, {
-        VIEW_CHANNEL: false,
-      })
-
-      result = `removed`
-    } else if (comparedPermissions.VIEW_CHANNEL) {
-      channel.permissionOverwrites.edit(member.id, {
-        VIEW_CHANNEL: false,
-      })
-
-      result = `removed`
+    const permissions = {
+      VIEW_CHANNEL: false,
     }
+
+    if (!userOverwrite) return { action: `create`, permissions: permissions }
+    else if (comparedPermissions.VIEW_CHANNEL)
+      return { action: `edit`, permissions: permissions }
   }
 
-  return result
+  return `already removed`
+}
+
+export async function removeMemberFromChannel(member, channelId) {
+  if (!channelId) return
+
+  const context = await checkIfmemberneedsToBeRemoved(member, channelId)
+
+  if ([null, `not removed`].includes(context)) return context
+
+  const guild = member.guild,
+    channel = guild.channels.cache.get(channelId)
+
+  if (!channel) return `not removed`
+
+  if ([`edit`, `create`].includes(context?.action)) {
+    channel?.permissionOverwrites[context.action](member, context.permissions)
+
+    return `removed`
+  } else if (context?.action === `delete`) {
+    channel?.permissionOverwrites[context.action](member)
+
+    return `removed`
+  } else return `already removed`
 }

@@ -9,11 +9,13 @@ export const description = `Shows you the name guidelines for this sever.`,
   defaultPermission = false
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     nameGuidelines = await getNameGuidelines(guild.id)
 
   if (nameGuidelines)
-    interaction.reply({ content: nameGuidelines, ephemeral: true })
+    await interaction.editReply({ content: nameGuidelines, ephemeral: true })
   else {
     if ((await getCommandLevelForChannel(interaction.channel.id)) === `admin`) {
       const commandChannels = await getFormatedCommandChannels(
@@ -22,7 +24,7 @@ export default async function (interaction) {
         ),
         commandSymbol = await getCommandSymbol(guild.id)
 
-      interaction.reply({
+      await interaction.editReply({
         content: `
           Sorry, name guidelines have not been set for this server 😔\
           \nTo set name guidelines, use the \`${commandSymbol}setNameGuidelines\` command, example:\
@@ -36,7 +38,7 @@ export default async function (interaction) {
         ephemeral: true,
       })
     } else
-      interaction.reply({
+      await interaction.editReply({
         content: `Sorry, name guidelines have not been set for this server 😔`,
         ephemeral: true,
       })

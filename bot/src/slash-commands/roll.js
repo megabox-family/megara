@@ -34,6 +34,8 @@ export default async function (interaction) {
 
   makePrivate = makePrivate === null ? false : true
 
+  await interaction.deferReply({ ephemeral: makePrivate })
+
   let total = 0
   let rolls = []
 
@@ -42,7 +44,7 @@ export default async function (interaction) {
     total += result
     rolls.push(result)
   }
-  interaction.reply({
+  await interaction.editReply({
     content: `${numberOfDice} dice with ${numberOfSides} sides were rolled... \`\`\`md\n# Total: ${total}\nIndividual dice: (${rolls.join(
       ' '
     )})\`\`\``,

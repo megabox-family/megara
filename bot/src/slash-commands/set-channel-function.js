@@ -38,6 +38,8 @@ export const defaultPermission = false,
   ]
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     options = interaction.options,
     channelFunction = options.getString(`channel-function`),
@@ -47,9 +49,8 @@ export default async function (interaction) {
   if (!_optionChannelId) {
     await setCommands[channelFunction](guild.id, null)
 
-    interaction.reply({
+    await interaction.editReply({
       content: `The ${channelFunction} function has been removed from it's channel 😬`,
-      ephemeral: true,
     })
 
     return
@@ -58,9 +59,8 @@ export default async function (interaction) {
   const optionChannel = guild.channels.cache.get(optionChannelId)
 
   if (!optionChannel) {
-    interaction.reply({
+    await interaction.editReply({
       content: `You provided an invalid channel ID 🤔`,
-      ephemeral: true,
     })
 
     return
@@ -75,16 +75,14 @@ export default async function (interaction) {
       : null
 
   if (!guild.channels.cache.get(optionChannel.id)) {
-    interaction.reply({
+    await interaction.editReply({
       content: `${optionChannel} is not a valid channel id. 😔`,
-      ephemeral: true,
     })
 
     return
   } else if (isAlreadyFunctionChannel) {
-    interaction.reply({
+    await interaction.editReply({
       content: `${optionChannel} is already set as the ${existingChannelFunction} channel, and any given channel can only have one function 🤔`,
-      ephemeral: true,
     })
 
     return
@@ -93,9 +91,8 @@ export default async function (interaction) {
 
     pushToChannelVisibilityQueue(optionChannel.id)
 
-    interaction.reply({
+    await interaction.editReply({
       content: `The ${optionChannel} channel has been set as the ${channelFunction} channel! 👍`,
-      ephemeral: true,
     })
   }
 }

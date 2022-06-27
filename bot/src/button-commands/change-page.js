@@ -1,4 +1,5 @@
 import { MessageEmbed } from 'discord.js'
+import { directMessageError } from '../utils/error-logging.js'
 import {
   toggleListButtons,
   getColorButtons,
@@ -7,16 +8,20 @@ import {
 import { getGroupBy, getPageData } from '../repositories/lists.js'
 
 export default async function (interaction) {
+  await interaction.deferUpdate()
+
   const guild = interaction.guild,
     member = interaction.member,
     message = interaction.message,
     pages = await getPageData(message.id)
 
   if (!pages) {
-    interaction.reply({
-      content: `Something went wrong retreiving a page in the list, please dismiss the list message and run the slash command again.`,
-      ephemeral: true,
-    })
+    member
+      .send({
+        content: `Something went wrong retreiving a page in the list, please dismiss the list message and run the slash command again.`,
+        ephemeral: true,
+      })
+      .catch(error => directMessageError(error, member))
 
     return
   }
@@ -83,5 +88,5 @@ export default async function (interaction) {
     ? [paginationButtons, ...otherButtons]
     : [paginationButtons]
 
-  interaction.update({ embeds: [newEmbed], components: newComponents })
+  await interaction.editReply({ embeds: [newEmbed], components: newComponents })
 }

@@ -1,3 +1,4 @@
+import { directMessageError } from '../utils/error-logging.js'
 import {
   addMemberToChannel,
   removeMemberFromChannel,
@@ -6,6 +7,8 @@ import { getChannelButtons } from '../utils/buttons.js'
 import { getChannelType } from '../repositories/channels.js'
 
 export default async function (interaction) {
+  await interaction.deferUpdate()
+
   const guild = interaction.guild,
     member = interaction.member,
     channelNumber = interaction.customId.match(`(?<=:\\s)-?[0-9A-Za-z]+`)[0],
@@ -22,10 +25,13 @@ export default async function (interaction) {
     channel = guild.channels.cache.get(channelId)
 
   if (!channel) {
-    interaction.reply({
-      content: `The channel you tried interacting with no longer exists, please refresh the channel list 😬`,
-      ephemeral: true,
-    })
+    member
+      .send({
+        content: `The channel you tried interacting with no longer exists, please refresh the channel list 😬`,
+      })
+      .catch(error => directMessageError(error, member))
+
+    return
   }
 
   const channelType = await getChannelType(channel.id)
@@ -50,16 +56,19 @@ export default async function (interaction) {
 
   switch (result) {
     case `not added`:
-      interaction.reply({
-        content: `We failed to add you to the channel for an unknown reason, please try again 😬`,
-        ephemeral: true,
-      })
+      member
+        .send({
+          content: `We failed to add you to the channel for an unknown reason, please try again 😬`,
+        })
+        .catch(error => directMessageError(error, member))
       return
     case `not removed`:
-      interaction.reply({
-        content: `We failed to remove you from the channel for an unknown reason, please try again 😬`,
-        ephemeral: true,
-      })
+      member
+        .send({
+          content: `We failed to remove you from the channel for an unknown reason, please try again 😬`,
+          ephemeral: true,
+        })
+        .catch(error => directMessageError(error, member))
       return
   }
 
@@ -71,7 +80,7 @@ export default async function (interaction) {
     { channelId: channel.id, result: result }
   )
 
-  interaction.update({
+  await interaction.editReply({
     components: [message.components[0], ...channelButtonComponents],
   })
 }

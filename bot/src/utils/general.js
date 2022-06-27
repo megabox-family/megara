@@ -378,7 +378,7 @@ export async function handleNewMember(guildMember) {
 export async function handleInteraction(interaction) {
   if (interaction.isButton()) {
     const buttonFunctionPath = `${srcPath}/button-commands/${
-      interaction.customId.match(`(?!!).+(?=:\\s)`)[0]
+      interaction.customId.match(`(?!!).+(?=:\\s|:$)`)[0]
     }.js`
 
     if (existsSync(buttonFunctionPath))

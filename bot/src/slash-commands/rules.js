@@ -9,10 +9,12 @@ export const description = `Shows you the rules for this sever.`,
   defaultPermission = false
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     rules = await getRules(guild.id)
 
-  if (rules) interaction.reply({ content: rules, ephemeral: true })
+  if (rules) await interaction.editReply({ content: rules })
   else {
     const channel = interaction.channel
 
@@ -23,7 +25,7 @@ export default async function (interaction) {
         ),
         commandSymbol = await getCommandSymbol(guild.id)
 
-      interaction.reply({
+      await interaction.editReply({
         content: `
           Sorry, rules have not been set for this server 😔\
           \nTo set rules, use the \`${commandSymbol}setRules\` command, example:\
@@ -35,12 +37,10 @@ export default async function (interaction) {
           \n\`\`\`\
           \nThe \`!setRules\` command can be used in these channels: ${commandChannels}
         `,
-        ephemeral: true,
       })
     } else
-      interaction.reply({
+      await interaction.editReply({
         content: `Sorry, rules have not been set for this server 😔`,
-        ephemeral: true,
       })
   }
 }

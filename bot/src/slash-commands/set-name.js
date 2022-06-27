@@ -59,7 +59,7 @@ export default async function (interaction) {
   if (!isNicknameValid(nickname, allowedSymbols)) {
     const allowedSymbolList = allowedSymbols.join(`\`, \``)
 
-    interaction.reply({
+    await interaction.reply({
       content: `
         \nSorry, names must be below 32 characters and cannot contain numbers or most special characters. 😔\
         \nHere's a list of acceptable special characters: \`${allowedSymbolList}\` (not including commas)\
@@ -76,7 +76,7 @@ export default async function (interaction) {
     isOwner = member.id === guild.ownerId ? true : false
 
   if (isOwner) {
-    interaction.reply({
+    await interaction.reply({
       content: `I cannot change the nickname of the owner of the server, your permissions are too great. 🙇`,
       ephemeral: true,
     })
@@ -121,7 +121,7 @@ export default async function (interaction) {
       failed = true
       handleNicknameFailure(error, guild)
 
-      interaction.reply({
+      await interaction.reply({
         content: `Sorry I wasn't able to change your nickname, you may have a role that is above mine, which prevents me from doing so. 🙇`,
         ephemeral: true,
       })
@@ -145,13 +145,15 @@ export default async function (interaction) {
     )
 
   if (member.roles.cache.get(verifiedRole.id)) {
-    interaction.reply({
+    await interaction.reply({
       content: `You're nickname as been set to **${newNickname}** 😁`,
       ephemeral: true,
     })
 
     return
   }
+
+  await interaction.deferReply()
 
   // Attempt to set verified role
   try {
@@ -183,9 +185,8 @@ export default async function (interaction) {
     failed = true
     handleNicknameFailure(error, guild)
 
-    interaction.reply({
+    await interaction.editReply({
       content: `Sorry I wasn't able to change your nickname, you may have a role that is above mine, which prevents me from doing so. 🙇`,
-      ephemeral: true,
     })
   }
 
@@ -199,7 +200,7 @@ export default async function (interaction) {
 
   if (userUndergoingVerificationRole) {
     if (welcomeChannelId)
-      await interaction.reply({
+      await interaction.editReply({
         content: `\
           \nCongratulations! 🎉\
           \nYour nickname has been changed to **${newNickname}**, and you've been fully verified!\
@@ -207,7 +208,7 @@ export default async function (interaction) {
         `,
       })
     else
-      await interaction.reply({
+      await interaction.editReply({
         content: `\
         \nCongratulations! 🎉\
         \nYour nickname has been changed to **${newNickname}**, and you've been fully verified!\
@@ -217,9 +218,8 @@ export default async function (interaction) {
 
     member.roles.remove(undergoingVerificationRoleId)
   } else if (!failed) {
-    interaction.reply({
+    await interaction.editReply({
       content: `Your nickname has been changed to **${newNickname}** 🥰`,
-      ephemeral: true,
     })
   }
 }

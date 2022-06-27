@@ -16,6 +16,8 @@ function vaidateColorHexCode(colorHexCode) {
 }
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     options = interaction.options,
     _colorHexCode = options.getString(`color-hex-code`),
@@ -25,9 +27,8 @@ export default async function (interaction) {
     isHexCode = vaidateColorHexCode(colorHexCode)
 
   if (!isHexCode) {
-    interaction.reply({
+    await interaction.editReply({
       content: `Invlaid input, input must be a color hex code (ex: \`#4fa3ab\`, \`4fa3ab\`) 🤔`,
-      ephemeral: true,
     })
 
     return
@@ -49,11 +50,10 @@ export default async function (interaction) {
 
   const seconds = roleSortPauseDuration / 1000
 
-  interaction.reply({
+  await interaction.editReply({
     content: `
       Your custom color has been set 😁\
       \nThough, it's going to take at least ${seconds} seconds to apply 🕑
     `,
-    ephemeral: true,
   })
 }

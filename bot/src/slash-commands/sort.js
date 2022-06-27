@@ -24,6 +24,8 @@ export const defaultPermission = false,
   ]
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     options = interaction.options,
     whatToSort = options.getString(`what-to-sort`),
@@ -42,13 +44,11 @@ export default async function (interaction) {
       pushToChannelSortingQueue(guild.id)
     else pushToRoleSortingQueue(guild.id)
 
-    interaction.reply({
+    await interaction.editReply({
       content: `${formatedSortingType} sorting has been enabled, watch em sort! 🤩`,
-      ephemeral: true,
     })
   } else
-    interaction.reply({
+    await interaction.editReply({
       content: `${formatedSortingType} sorting has been disabled, have fun sorting them yourself 😜`,
-      ephemeral: true,
     })
 }

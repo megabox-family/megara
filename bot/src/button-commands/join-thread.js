@@ -1,6 +1,8 @@
 import { getThreadById, unarchiveThread } from '../utils/threads.js'
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     channel = interaction.channel,
     user = interaction.user,
@@ -13,12 +15,16 @@ export default async function (interaction) {
 
     await thread.members
       .add(user.id)
-      .catch(error =>
+      .then(await interaction.editReply(`You've been added to ${thread} 👍`))
+      .catch(error => {
+        await interaction.editReply(
+          `There was a problem adding you to the thread, please contact an administrator 😬`
+        )
+
         console.log(`Unable to add user to thread, see error below:\n${error}`)
-      )
+      })
   } else
-    interaction.reply({
+  await interaction.editReply({
       content: `The thread you tried joining no longer exits in the ${channel} channel within the ${guild} server.`,
-      ephemeral: true,
     })
 }

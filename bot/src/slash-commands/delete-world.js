@@ -12,6 +12,8 @@ export const defaultPermission = false,
   ]
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     member = interaction.member,
     options = interaction.options,
@@ -19,9 +21,8 @@ export default async function (interaction) {
     existingWorldId = await getWorldId(worldName, guild.id)
 
   if (!existingWorldId) {
-    interaction.reply({
+    await interaction.editReply({
       content: `A world named **${worldName}** doesn't exists in **${guild.name}** 🤔`,
-      ephemeral: true,
     })
 
     return
@@ -29,8 +30,7 @@ export default async function (interaction) {
 
   await deleteWorld(existingWorldId)
 
-  interaction.reply({
+  await interaction.editReply({
     content: `The world with name **${worldName}** has been destroyed 💥`,
-    ephemeral: true,
   })
 }

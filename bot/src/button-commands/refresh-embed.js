@@ -1,17 +1,23 @@
+import { directMessageError } from '../utils/error-logging.js'
 import { getPages, generateListMessage } from '../utils/slash-commands.js'
 import { getColorButtons, getChannelButtons } from '../utils/buttons.js'
 import { getListInfo, updateListPageData } from '../repositories/lists.js'
 
 export default async function (interaction) {
+  await interaction.deferUpdate()
+
   const guild = interaction.guild,
     message = interaction.message,
+    member = interaction.member,
     listInfo = await getListInfo(message.id)
 
   if (!listInfo) {
-    interaction.reply({
-      content: `Something went wrong retreiving a page in the list, please dismiss the list message and run the slash command again.`,
-      ephemeral: true,
-    })
+    member
+      .send({
+        content: `Something went wrong retreiving a page in the list, please dismiss the list message and run the slash command again.`,
+        ephemeral: true,
+      })
+      .catch(error => directMessageError(error, member))
 
     return
   }
@@ -22,20 +28,21 @@ export default async function (interaction) {
     pages = await getPages(recordsPerPage, group, guild, filters)
 
   if (pages.length === 0) {
-    interaction.reply({
-      content: `There was an error refreshing the list, please dismiss the list message and create a new one 😬`,
-      ephemeral: true,
-    })
+    member
+      .send({
+        content: `There was an error refreshing the list, please dismiss the list message and create a new one 😬`,
+        ephemeral: true,
+      })
+      .catch(error => directMessageError(error, member))
 
     return
   }
 
   const messageContent = await generateListMessage(
-      pages,
-      listInfo.title,
-      listInfo.description
-    ),
-    member = interaction.member
+    pages,
+    listInfo.title,
+    listInfo.description
+  )
 
   const groupBy = listInfo.groupBy
 
@@ -64,5 +71,5 @@ export default async function (interaction) {
 
   await updateListPageData(message.id, pages)
 
-  interaction.update(messageContent)
+  await interaction.editReply(messageContent)
 }

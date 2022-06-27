@@ -14,6 +14,8 @@ export const defaultPermission = false,
   ]
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     options = interaction.options,
     _vipRoleId = options.getString(`vip-role-id`).toLowerCase(),
@@ -22,9 +24,8 @@ export default async function (interaction) {
     vipMemberArray = await getVipMemberArray(guild)
 
   if (!vipRoleId && !oldVipRoleId) {
-    interaction.reply({
+    await interaction.editReply({
       content: `You don't have a VIP role set, there is nothing to clear 🤔`,
-      ephemeral: true,
     })
 
     return
@@ -36,9 +37,8 @@ export default async function (interaction) {
     const oldVipRole = guild.roles.cache.get(oldVipRoleId)
 
     if (!oldVipRole) {
-      interaction.reply({
+      await interaction.editReply({
         content: `You no longer have a VIP role set on this server, VIP functionality will no longer work 😬`,
-        ephemeral: true,
       })
 
       return
@@ -49,22 +49,20 @@ export default async function (interaction) {
     )
 
     if (!oldVipRole || curratedVipMembers.length === 0) {
-      interaction.reply({
+      await interaction.editReply({
         content: `You no longer have a VIP role set on this server, VIP functionality will no longer work 😬`,
-        ephemeral: true,
       })
 
       return
     } else {
       const alphaRunTime = getExpectedRunTime(curratedVipMembers.length)
 
-      interaction.reply({
+      await interaction.editReply({
         content: `
           The ${oldVipRole} role has been cleared for this server 🧼\
           \nThis role will automatically be removed from the ${curratedVipMembers.length} boosters / premium subscribers / vip override users in this server.\
           \nHowever, it's going to take around ${alphaRunTime} to finish 🕑
         `,
-        ephemeral: true,
       })
 
       batchRemoveRole(curratedVipMembers, oldVipRole.id)
@@ -73,9 +71,8 @@ export default async function (interaction) {
     const vipRole = guild.roles.cache.get(vipRoleId)
 
     if (!vipRole) {
-      interaction.reply({
+      await interaction.editReply({
         content: `You provided an invalid role ID, please try again 🤔`,
-        ephemeral: true,
       })
 
       return
@@ -88,20 +85,18 @@ export default async function (interaction) {
     )
 
     if (curratedVipMembers.length === 0) {
-      interaction.reply({
+      await interaction.editReply({
         content: `The ${vipRole} role has been set as the VIP role 🥇`,
-        ephemeral: true,
       })
     } else {
       const alphaRunTime = getExpectedRunTime(curratedVipMembers.length)
 
-      interaction.reply({
+      await interaction.editReply({
         content: `
           The ${vipRole} role has been set as the VIP role 🥇\
           \nThis role will automatically be added to the ${curratedVipMembers.length} boosters / premium subscribers / vip override users in this server.\
           \nHowever, it's going to take around ${alphaRunTime} to finish 🕑
         `,
-        ephemeral: true,
       })
 
       batchAddRole(curratedVipMembers, vipRole.id)

@@ -57,6 +57,8 @@ export const defaultPermission = false,
   ]
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     member = interaction.member,
     options = interaction.options,
@@ -69,7 +71,7 @@ export default async function (interaction) {
     const worldId = await getWorldId(_worldFilter, guild.id)
 
     if (!worldId) {
-      interaction.reply({
+      await interaction.editReply({
         content: `A world named ${_worldFilter} doesn't exist, use the \`/list-worlds\` command to get a valid lis of worlds.`,
         ephemeral: true,
       })
@@ -84,7 +86,7 @@ export default async function (interaction) {
     const userId = await getCoordinatesUserId(member.id)
 
     if (!userId) {
-      interaction.reply({
+      await interaction.editReply({
         content: `There are no coordinates for your user in **${guild.name}**.`,
         ephemeral: true,
       })
@@ -106,7 +108,7 @@ export default async function (interaction) {
     pages = await getPages(recordsPerPage, groupBy, guild, filters)
 
   if (pages.length === 0) {
-    interaction.reply({
+    await interaction.editReply({
       content: `The are no Minecraft coordinates with this criteria in **${guild.name}** 🤔`,
       ephemeral: true,
     })
@@ -118,7 +120,7 @@ export default async function (interaction) {
     description = `group by: ${_groupBy} \nkey: 🟢 = overworld, 🔴 = nether, 🟣 = end \nfilters: world = ${worldFilter}, dimension = ${dimensionFilter}, user = ${userFilter}`,
     messageContents = await generateListMessage(pages, title, description)
 
-  await interaction.reply(messageContents)
+  await interaction.editReply(messageContents)
 
   const message = await interaction.fetchReply()
 

@@ -62,6 +62,8 @@ export const defaultPermission = false,
   ]
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     member = interaction.member,
     options = interaction.options,
@@ -69,9 +71,8 @@ export default async function (interaction) {
     existingWorldId = await getWorldId(worldName, guild.id)
 
   if (!existingWorldId) {
-    interaction.reply({
+    await interaction.editReply({
       content: `A world named **${worldName}** doesn't exist, use the \`/list-worlds\` command to get a valid list of worlds.`,
-      ephemeral: true,
     })
 
     return
@@ -84,9 +85,8 @@ export default async function (interaction) {
     )
 
   if (!existingCoordinates?.id) {
-    interaction.reply({
+    await interaction.editReply({
       content: `Coordinates named **${coordinatesName}** don't exist in **${worldName}** for your user, and this is not the field that you put a coordinates new name in 🤔`,
-      ephemeral: true,
     })
 
     return
@@ -101,9 +101,8 @@ export default async function (interaction) {
     newExistingWorldId = await getWorldId(newWorldName, guild.id)
 
     if (!newExistingWorldId) {
-      interaction.reply({
+      await interaction.editReply({
         content: `A world named **${newWorldName}** doesn't exist. Therefore, you can't change a coordinate to it. Use the \`/list-worlds\` command to get a valid list of worlds.`,
-        ephemeral: true,
       })
 
       return
@@ -132,9 +131,8 @@ export default async function (interaction) {
     )
 
   if (allValuesAreNull) {
-    interaction.reply({
+    await interaction.editReply({
       content: `You need to change at least one property of the original coordinates to edit them 🤔`,
-      ephemeral: true,
     })
 
     return
@@ -147,7 +145,7 @@ export default async function (interaction) {
 
   await editCoordinates(newCoordinates)
 
-  interaction.reply({
+  await interaction.editReply({
     content: `
       The **${existingCoordinates.name}** coordinates in **${newWorldName}** have been edited for your user 📝
       \nOld:\
@@ -167,6 +165,5 @@ export default async function (interaction) {
       \nz: ${newCoordinates.z},\
       \n\`\`\`\
     `,
-    ephemeral: true,
   })
 }

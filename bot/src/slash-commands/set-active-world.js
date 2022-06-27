@@ -13,6 +13,8 @@ export const defaultPermission = false,
   ]
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     options = interaction.options,
     _worldName = options.getString(`world-name`),
@@ -24,9 +26,8 @@ export default async function (interaction) {
     existingWorldId = await getWorldId(worldName, guild.id)
 
     if (!existingWorldId) {
-      interaction.reply({
+      await interaction.editReply({
         content: `A world named **${worldName}** doesn't exists in **${guild.name}** 🤔`,
-        ephemeral: true,
       })
 
       return
@@ -38,13 +39,11 @@ export default async function (interaction) {
   await setActiveWorld(existingWorldId, guild.id)
 
   if (worldName)
-    interaction.reply({
+    await interaction.editReply({
       content: `The **${worldName}** world is now set as the active world for **${guild.name}** 🌍`,
-      ephemeral: true,
     })
   else
-    interaction.reply({
+    await interaction.editReply({
       content: `There is no longer an active world set in **${guild.name}** 😵`,
-      ephemeral: true,
     })
 }

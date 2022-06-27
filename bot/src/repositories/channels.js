@@ -365,6 +365,28 @@ export async function getPublicChannelList(guildId) {
   return query
 }
 
+export async function getPublicChannels(guildId) {
+  const _welcomeChannelId = await getWelcomeChannel(guildId),
+    welcomeChannelId = _welcomeChannelId ? _welcomeChannelId : ``
+
+  return await pgPool
+    .query(
+      SQL`
+        select
+          channels.id,
+          channels.name
+        from channels as categories, channels as channels
+        where categories.id = channels.category_id and
+          channels.channel_type = 'public' and
+          channels.name not like 'room%' and
+          categories.guild_id = ${guildId} and
+          channels.id != ${welcomeChannelId}
+        order by categories.position, categories.id, channels.position;
+      `
+    )
+    .then(res => camelize(res.rows))
+}
+
 export async function deleteAllGuildChannels(guildId) {
   return await pgPool
     .query(

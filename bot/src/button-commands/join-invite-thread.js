@@ -4,14 +4,15 @@ import { addMemberToChannel } from '../utils/channels.js'
 import { getThreadById, unarchiveThread } from '../utils/threads.js'
 
 export default async function (interaction) {
+  await interaction.deferReply()
+
   const context = JSON.parse(getButtonContext(interaction.customId)),
     channel = getBot().channels.cache.get(context.channel),
     guild = channel.guild
 
   if (!channel) {
-    interaction.reply({
+    await interaction.editReply({
       content: `The channel housing the thread you're tyring to join no longer exists within the ${guild} server 😬`,
-      ephemeral: true,
     })
 
     return
@@ -21,9 +22,8 @@ export default async function (interaction) {
     thread = await getThreadById(channel, threadId)
 
   if (!thread) {
-    interaction.reply({
+    await interaction.editReply({
       content: `The thread you tried joining no longer exits in the ${channel} channel within the ${guild} server 😬`,
-      ephemeral: true,
     })
 
     return
@@ -44,11 +44,10 @@ export default async function (interaction) {
   const category = guild.channels.cache.get(channel.parentId),
     categoryContext = category ? ` in the **${category.name}** category` : ``
 
-  interaction.reply({
+  await interaction.editReply({
     content: `
       You've been added to the **${thread}** thread in the **${channel}** channel${categoryContext} within the **${guild.name}** server 🙌\
       \nYou can jump to this thread from this message by clicking here → **${thread}**
     `,
-    ephemeral: true,
   })
 }

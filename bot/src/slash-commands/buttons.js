@@ -1,6 +1,5 @@
 import { MessageActionRow, MessageButton } from 'discord.js'
-import { getWelcomeChannel } from '../repositories/guilds.js'
-import { getPublicChannelList } from '../repositories/channels.js'
+import { getPublicChannels } from '../repositories/channels.js'
 
 export const description = `Generate public channel or notification buttons in a specified channel.`
 export const defaultPermission = false,
@@ -24,6 +23,8 @@ export const defaultPermission = false,
   ]
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     options = interaction.options,
     buttonType = options.getString(`button-type`),
@@ -31,8 +32,8 @@ export default async function (interaction) {
     optionChannel = guild.channels.cache.get(channelId)
 
   if (!optionChannel) {
-    interaction.reply({
-      contents: `You provided an invalid channel id, please try again.`,
+    await interaction.editReply({
+      content: `You provided an invalid channel id, please try again.`,
       ephemeral: true,
     })
 
@@ -40,8 +41,7 @@ export default async function (interaction) {
   }
 
   if (buttonType === `public`) {
-    const welcomeChannelId = await getWelcomeChannel(guild.id),
-      publicChannelIds = await getPublicChannelList(guild.id, welcomeChannelId)
+    const publicChannelIds = await getPublicChannels(guild.id)
 
     if (publicChannelIds.length === 0) return
 
@@ -52,12 +52,12 @@ export default async function (interaction) {
       buttonArray.push(
         new MessageActionRow().addComponents(
           new MessageButton()
-            .setCustomId(`!join-channel: ${record.channelId}`)
-            .setLabel(`Join ${record.channelName}`)
+            .setCustomId(`!join-channel: ${record.id}`)
+            .setLabel(`Join ${record.name}`)
             .setStyle('PRIMARY'),
           new MessageButton()
-            .setCustomId(`!leave-channel: ${record.channelId}`)
-            .setLabel(`Leave ${record.channelName}`)
+            .setCustomId(`!leave-channel: ${record.id}`)
+            .setLabel(`Leave ${record.name}`)
             .setStyle('SECONDARY')
         )
       )
@@ -128,7 +128,7 @@ export default async function (interaction) {
     })
   }
 
-  await interaction.reply({
+  await interaction.editReply({
     content: `${buttonType} buttons were sent to ${optionChannel} 🤓`,
     ephemeral: true,
   })

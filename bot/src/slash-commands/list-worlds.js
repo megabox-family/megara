@@ -19,6 +19,8 @@ export const defaultPermission = false,
   ]
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     options = interaction.options,
     _recordsPerPage = options.getInteger(`records-per-page`),
@@ -27,9 +29,8 @@ export default async function (interaction) {
     pages = await getPages(recordsPerPage, group, guild)
 
   if (pages.length === 0) {
-    interaction.reply({
+    await interaction.editReply({
       content: `The are no Minecraft worlds in **${guild.name}** to list 🤔`,
-      ephemeral: true,
     })
 
     return
@@ -39,7 +40,7 @@ export default async function (interaction) {
 
   const messageContents = await generateListMessage(pages, title)
 
-  await interaction.reply(messageContents)
+  await interaction.editReply(messageContents)
 
   const message = await interaction.fetchReply()
 

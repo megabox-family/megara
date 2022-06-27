@@ -26,14 +26,15 @@ export const description = `Lets you set the command symbol for commands that ar
   ]
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     options = interaction.options,
     commandSymbol = options.getString(`command-symbol`)
 
   await setCommandSymbol(guild.id, commandSymbol)
 
-  interaction.reply({
+  await interaction.editReply({
     content: `\`${commandSymbol}\` has been set as the new command symbol for commands that are not slash commands!`,
-    ephemeral: true,
   })
 }

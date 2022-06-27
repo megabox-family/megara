@@ -1,9 +1,14 @@
 import { getBot } from '../cache-bot.js'
-import { directMessageError } from '../utils/error-logging.js'
 import { removeMemberFromChannel } from '../utils/channels.js'
 import { getChannelType } from '../repositories/channels.js'
 
 export default async function (interaction) {
+  let isEphemeral = false
+
+  if (interaction?.guild) isEphemeral = true
+
+  await interaction.deferReply({ ephemeral: isEphemeral })
+
   const leaveChannel = getBot().channels.cache.get(
       interaction.customId.match(`(?!:)[0-9]+`)[0]
     ),
@@ -11,11 +16,9 @@ export default async function (interaction) {
     guildMember = guild.members.cache.get(interaction.user.id)
 
   if (!leaveChannel) {
-    guildMember
-      .send(
-        `You tried leaving a channel that no longer exists, sorry for the trouble 🥺`
-      )
-      .catch(error => directMessageError(error, guildMember))
+    await interaction.editReply(
+      `You tried leaving a channel that no longer exists, sorry for the trouble 🥺`
+    )
 
     return
   }
@@ -24,11 +27,11 @@ export default async function (interaction) {
 
   if (!result) {
     if (!interaction?.guild)
-      interaction.reply({
+      await interaction.editReply({
         content: `${leaveChannel} is not a leavable channel in **${guild.name}** 🤔`,
       })
     else
-      interaction.reply({
+      await interaction.editReply({
         content: `${leaveChannel} is not a leavable channel 🤔`,
       })
 
@@ -67,8 +70,7 @@ export default async function (interaction) {
     else messageContent = `You aren't in **${leaveChannel}** 🤔`
   }
 
-  interaction.reply({
+  await interaction.editReply({
     content: messageContent,
-    ephemeral: true,
   })
 }

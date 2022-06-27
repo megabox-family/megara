@@ -33,25 +33,30 @@ export default async function (interaction) {
     teams = []
 
   if (!voiceChannelMemberNames) {
-    interaction.reply({
+    await interaction.reply({
       content: `You must be in a call to use the \`/teams\` command 🤔`,
       ephemeral: true,
     })
 
     return
   } else if (voiceChannelMemberNames.length < 2) {
-    interaction.reply({
+    await interaction.reply({
       content: `You need at least 2 people in a call to use the \`/teams\` command 🤔`,
       ephemeral: true,
     })
 
     return
-  } else if (voiceChannelMemberNames.length < numberOfTeams)
+  } else if (voiceChannelMemberNames.length < numberOfTeams) {
+    await interaction.deferReply()
+
     voiceChannelMemberNames.forEach(() => teams.push([]))
-  else
+  } else {
+    await interaction.deferReply()
+
     for (let i = 0; i < numberOfTeams; i++) {
       teams.push([])
     }
+  }
 
   while (voiceChannelMemberNames.length > 0) {
     teams.forEach(team => {
@@ -77,5 +82,5 @@ export default async function (interaction) {
 
   replyMessage += '```'
 
-  interaction.reply(replyMessage)
+  await interaction.editReply(replyMessage)
 }

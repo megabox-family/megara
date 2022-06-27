@@ -6,6 +6,8 @@ export const description = `Displays a list of colors that you can choose from t
   defaultPermission = false
 
 export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
   const guild = interaction.guild,
     member = interaction.member,
     groupBy = `roles-color`,
@@ -18,7 +20,7 @@ export default async function (interaction) {
 
   listMessage.components = [...listMessage.components, ...colorButtonComponents]
 
-  await interaction.reply(listMessage)
+  await interaction.editReply(listMessage)
 
   const message = await interaction.fetchReply()
 

@@ -1,34 +1,37 @@
 import { getBot } from '../cache-bot.js'
-import { directMessageError } from '../utils/error-logging.js'
 import { addMemberToChannel } from '../utils/channels.js'
 import { getChannelType } from '../repositories/channels.js'
 
 export default async function (interaction) {
+  let isEphemeral = false
+
+  if (interaction?.guild) isEphemeral = true
+
+  await interaction.deferReply({ ephemeral: isEphemeral })
+
   const joinChannel = getBot().channels.cache.get(
-      interaction.customId.match(`(?!:)[0-9]+`)[0]
-    ),
-    guild = joinChannel.guild,
-    guildMember = guild.members.cache.get(interaction.user.id)
+    interaction.customId.match(`(?!:)[0-9]+`)[0]
+  )
 
   if (!joinChannel) {
-    guildMember
-      .send(
-        `You tried joining a channel that no longer exists, sorry for the trouble 🥺`
-      )
-      .catch(error => directMessageError(error, guildMember))
+    await interaction.editReply(
+      `You tried joining a channel that no longer exists, sorry for the trouble 🥺`
+    )
 
     return
   }
 
-  const result = await addMemberToChannel(guildMember, joinChannel.id)
+  const guild = joinChannel.guild,
+    guildMember = guild.members.cache.get(interaction.user.id),
+    result = await addMemberToChannel(guildMember, joinChannel.id)
 
   if (!result) {
     if (!interaction?.guild)
-      interaction.reply({
+      await interaction.editReply({
         content: `${joinChannel} is not a joinable channel in **${guild.name}** 🤔`,
       })
     else
-      interaction.reply({
+      await interaction.editReply({
         content: `${joinChannel} is not a joinable channel 🤔`,
       })
 
@@ -67,7 +70,7 @@ export default async function (interaction) {
     else messageContent = `You already have access to **${joinChannel}** 🤔`
   }
 
-  interaction.reply({
+  await interaction.editReply({
     content: messageContent,
     ephemeral: true,
   })

@@ -38,7 +38,7 @@ export default async function (interaction) {
         .setStyle('SUCCESS')
     )
 
-    interaction.reply({
+    await interaction.reply({
       content: `The thread for **${threadName}** already exists, click the join button below to join it.`,
       components: [episodeButton],
       ephemeral: true,
@@ -46,6 +46,8 @@ export default async function (interaction) {
 
     return
   }
+
+  await interaction.deferReply()
 
   let thread, threadType
 
@@ -76,10 +78,8 @@ export default async function (interaction) {
   // interaction.deferReply()
   // interaction.deleteReply()
 
-  interaction
-    .reply({
-      content: `A new thread for **${channel.name} season ${seasonNumber} episode ${episodeNumber}** has been created, press the button below to join the thread (**spoiler warning**):`,
-      components: [episodeButton],
-    })
-    .catch(error => directMessageError(error, guildMember))
+  await interaction.editReply({
+    content: `A new thread for **${channel.name} season ${seasonNumber} episode ${episodeNumber}** has been created, press the button below to join the thread (**spoiler warning**):`,
+    components: [episodeButton],
+  })
 }
