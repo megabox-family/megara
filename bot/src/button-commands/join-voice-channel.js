@@ -36,7 +36,7 @@ export default async function (interaction) {
     categoryContext = category ? ` in the **${category.name}** category` : ``,
     interactionContent = `
       You've been added to ${voiceChannel}${categoryContext} within the **${guild}** server 👍\
-      \nYou can join this voice channel from this message by clicking here → **${voiceChannel}**
+      \nYou can join said voice channel from this message by clicking here → **${voiceChannel}**
     `
 
   if (isMemberPermissible !== true) {

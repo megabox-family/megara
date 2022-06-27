@@ -31,7 +31,7 @@ export const defaultPermission = false,
     },
     {
       name: `channel-id`,
-      description: `The channel id for the channel you want to give or remove the channel function from.`,
+      description: `The id for the channel you want to give the function to (input 'null' to remove).`,
       type: `STRING`,
       required: true,
     },
@@ -42,13 +42,29 @@ export default async function (interaction) {
     options = interaction.options,
     channelFunction = options.getString(`channel-function`),
     optionChannelId = options.getString(`channel-id`),
-    optionChannel = guild.channels.cache.get(optionChannelId)
+    _optionChannelId = optionChannelId === `null` ? null : optionChannelId
 
-  if (!optionChannel)
+  if (!_optionChannelId) {
+    await setCommands[channelFunction](guild.id, null)
+
+    interaction.reply({
+      content: `The ${channelFunction} function has been removed from it's channel 😬`,
+      ephemeral: true,
+    })
+
+    return
+  }
+
+  const optionChannel = guild.channels.cache.get(optionChannelId)
+
+  if (!optionChannel) {
     interaction.reply({
       content: `You provided an invalid channel ID 🤔`,
       ephemeral: true,
     })
+
+    return
+  }
 
   const functionChannels = await getFunctionChannels(guild.id),
     isAlreadyFunctionChannel = Object.keys(functionChannels).find(
@@ -65,15 +81,6 @@ export default async function (interaction) {
     })
 
     return
-  } else if (
-    isAlreadyFunctionChannel &&
-    existingChannelFunction === channelFunction
-  ) {
-    await setCommands[channelFunction](guild.id, null)
-    interaction.reply({
-      content: `The ${channelFunction} function has been removed from ${optionChannel} 😬`,
-      ephemeral: true,
-    })
   } else if (isAlreadyFunctionChannel) {
     interaction.reply({
       content: `${optionChannel} is already set as the ${existingChannelFunction} channel, and any given channel can only have one function 🤔`,
