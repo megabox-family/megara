@@ -218,10 +218,6 @@ async function announceColorChange(oldRole, newRole) {
     ),
     buttonRow = new MessageActionRow().addComponents(
       new MessageButton()
-        .setCustomId(`!subscribe: ${colorNotificationSquad.id}`)
-        .setLabel(`Subscribe to color notifications`)
-        .setStyle('PRIMARY'),
-      new MessageButton()
         .setCustomId(`!unsubscribe: ${colorNotificationSquad.id}`)
         .setLabel(`Unsubscribe from color notifications`)
         .setStyle('SECONDARY')

@@ -182,14 +182,6 @@ export async function announceNewChannel(newChannel) {
       new MessageButton()
         .setCustomId(`!join-channel: ${newChannel.id}`)
         .setLabel(`Join ${newChannel.name}`)
-        .setStyle('SUCCESS'),
-      new MessageButton()
-        .setCustomId(`!leave-channel: ${newChannel.id}`)
-        .setLabel(`Leave ${newChannel.name}`)
-        .setStyle('DANGER'),
-      new MessageButton()
-        .setCustomId(`!subscribe: ${channelNotificationSquad.id}`)
-        .setLabel(`Subscribe to channel notifications`)
         .setStyle('PRIMARY'),
       new MessageButton()
         .setCustomId(`!unsubscribe: ${channelNotificationSquad.id}`)
@@ -220,8 +212,8 @@ export async function announceNewChannel(newChannel) {
       content: `
         ${channelNotificationSquad} Hey guys! 😁\
         \n${channelTypeMessage}, **<#${newChannel.id}>**, in the **${categoryName}** category. ${channelTypeDetails} \
-
-        \nUse the buttons below this message to join / leave **<#${newChannel.id}>** and or to manage these notifications. You can also join / leave channels using text commands, for more information use the \`${commandSymbol}help\` command in these channels: ${commandChannels}
+        
+        \nUse the buttons below this message to join **<#${newChannel.id}>** and or to manage these notifications. You can also join and leave channels using the \`/channel-list\` command.
       `,
       components: [buttonRow],
     })
