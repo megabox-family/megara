@@ -82,13 +82,13 @@ export default async function (interaction) {
     }
   } else {
     const serverNotificationSquad = guild.roles.cache.find(
-        role => role.name === `server notification squad`
+        role => role.name === `-server notifications-`
       ),
       channelNotificationSquad = guild.roles.cache.find(
-        role => role.name === `channel notification squad`
+        role => role.name === `-channel notifications-`
       ),
       colorNotificationSquad = guild.roles.cache.find(
-        role => role.name === `color notification squad`
+        role => role.name === `-color notifications-`
       ),
       notificationButtons = [
         new MessageActionRow().addComponents(

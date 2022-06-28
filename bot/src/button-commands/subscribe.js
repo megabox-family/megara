@@ -1,28 +1,27 @@
+import {
+  getButtonContext,
+  getNotificationRoleBasename,
+} from '../utils/validation.js'
+
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })
 
   const guild = interaction.guild,
     member = interaction.member,
-    roleId = interaction.customId.match(`(?!:)[0-9]+`)[0],
-    role = guild.roles.cache.get(roleId)
+    roleId = getButtonContext(interaction.customId),
+    role = guild.roles.cache.get(roleId),
+    roleBasename = getNotificationRoleBasename(role.name)
 
-  let roleName
+  if (!member._roles.includes(roleId)) {
+    await member.roles.add(roleId)
 
-  switch (role.name) {
-    case `server notification squad`:
-      roleName = `server`
-      break
-    case `channel notification squad`:
-      roleName = `channel`
-      break
-    default:
-      roleName = `color`
-  }
-
-  member.roles.add(roleId)
-
-  await interaction.editReply({
-    content: `You are now subscribed to ${roleName} notifications in the ${guild.name} server.`,
-    ephemeral: true,
-  })
+    await interaction.editReply({
+      content: `You are now subscribed to ${roleBasename} in the ${guild.name} server 🔔`,
+      ephemeral: true,
+    })
+  } else
+    await interaction.editReply({
+      content: `You are already subscribed to ${roleBasename} in the ${guild.name} server 🤔`,
+      ephemeral: true,
+    })
 }

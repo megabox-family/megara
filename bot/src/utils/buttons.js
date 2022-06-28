@@ -1,8 +1,5 @@
-import {
-  CommandInteractionOptionResolver,
-  MessageActionRow,
-  MessageButton,
-} from 'discord.js'
+import { MessageActionRow, MessageButton } from 'discord.js'
+import { getButtonNumber, getRoleIdFromTag } from './validation.js'
 
 export async function toggleListButtons(
   newPage,
@@ -95,6 +92,84 @@ export function getColorButtons(fields, memberRoles, override) {
         buttonArrays[lastArray].push(
           new MessageButton()
             .setCustomId(`!color-role: ${buttonNumber}`)
+            .setLabel(`${buttonNumber}`)
+            .setStyle('SECONDARY')
+        )
+    }
+  }
+
+  const colorButtonComponents = []
+
+  buttonArrays.forEach(buttonArray =>
+    colorButtonComponents.push(
+      new MessageActionRow().addComponents(buttonArray)
+    )
+  )
+
+  return colorButtonComponents
+}
+
+export function getNotificationButtons(fields, memberRoles, override) {
+  const valueArray = fields[0].value.split(`\n`),
+    buttonArrays = []
+
+  let counter = 0
+
+  for (let i = 0; i < 4; i++) {
+    buttonArrays.push([])
+
+    const lastArray = buttonArrays.length - 1
+
+    for (let j = 0; j < 5; j++) {
+      const value = valueArray.shift()
+
+      if (!value) {
+        buttonArrays[lastArray].push(
+          new MessageButton()
+            .setCustomId(`!notification-role: ${counter}`)
+            .setLabel(` `)
+            .setStyle('SECONDARY')
+            .setDisabled(true)
+        )
+
+        counter--
+
+        continue
+      }
+
+      const roleId = getRoleIdFromTag(value),
+        buttonNumber = getButtonNumber(value)
+
+      if (override?.roleId === roleId) {
+        if (!override.removed)
+          buttonArrays[lastArray].push(
+            new MessageButton()
+              .setCustomId(`!notification-role: ${buttonNumber}`)
+              .setLabel(`${buttonNumber}`)
+              .setStyle('SUCCESS')
+          )
+        else
+          buttonArrays[lastArray].push(
+            new MessageButton()
+              .setCustomId(`!notification-role: ${buttonNumber}`)
+              .setLabel(`${buttonNumber}`)
+              .setStyle('SECONDARY')
+          )
+
+        continue
+      }
+
+      if (memberRoles.includes(roleId))
+        buttonArrays[lastArray].push(
+          new MessageButton()
+            .setCustomId(`!notification-role: ${buttonNumber}`)
+            .setLabel(`${buttonNumber}`)
+            .setStyle('SUCCESS')
+        )
+      else
+        buttonArrays[lastArray].push(
+          new MessageButton()
+            .setCustomId(`!notification-role: ${buttonNumber}`)
             .setLabel(`${buttonNumber}`)
             .setStyle('SECONDARY')
         )

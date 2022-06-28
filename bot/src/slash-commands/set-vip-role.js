@@ -65,7 +65,7 @@ export default async function (interaction) {
         `,
       })
 
-      batchRemoveRole(curratedVipMembers, oldVipRole.id)
+      batchRemoveRole(curratedVipMembers, oldVipRole)
     }
   } else {
     const vipRole = guild.roles.cache.get(vipRoleId)
@@ -99,7 +99,7 @@ export default async function (interaction) {
         `,
       })
 
-      batchAddRole(curratedVipMembers, vipRole.id)
+      batchAddRole(curratedVipMembers, vipRole)
     }
   }
 }

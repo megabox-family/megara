@@ -5,25 +5,26 @@ import {
   MessageEmbed,
 } from 'discord.js'
 import { getBot } from '../cache-bot.js'
-import { pauseDuation } from './members.js'
+import { isColorRole, isNotificationRole } from './validation.js'
+import { getExpectedRunTime, pauseDuation } from './members.js'
 import {
   getRoleSorting,
   getAdminChannel,
   getAnnouncementChannel,
-  getCommandSymbol,
   getVipRoleId,
   setVipRoleId,
 } from '../repositories/guilds.js'
-import { getFormatedCommandChannels } from '../repositories/channels.js'
+
+const validator = { isColorRole, isNotificationRole }
 
 export const roleSortPauseDuration = 3000
 
 const requiredRoles = [
     `verified`,
     `undergoing verification`,
-    `server notification squad`,
-    `channel notification squad`,
-    `color notification squad`,
+    `-server notifications-`,
+    `-channel notifications-`,
+    `-color notifications-`,
     `!channel type: archived`,
     `!channel type: hidden`,
     `!channel type: joinable`,
@@ -43,8 +44,7 @@ const requiredRoles = [
     `!position override: -4`,
     `!position override: -5`,
   ],
-  roleSortingQueue = [],
-  colorUpdateQueue = []
+  roleSortingQueue = []
 
 async function emptyRoleSortingQueue() {
   if (roleSortingQueue.length === 0) return
@@ -93,12 +93,15 @@ export async function sortRoles(guildId) {
     )
 
   let colorRoles = [],
+    notificationRoles = [],
     functionalRoles = [],
     normalRoles = []
 
   roles.forEach(role => {
     if (role.name.match(`^~.+~$|^<.+>$`))
       colorRoles.push({ name: role.name, id: role.id })
+    else if (role.name.match(`^-.+-$`))
+      notificationRoles.push({ name: role.name, id: role.id })
     else if (role.name.match(`^!.+:`))
       functionalRoles.push({ name: role.name, id: role.id })
     else
@@ -114,11 +117,17 @@ export async function sortRoles(guildId) {
     sensitivity: 'base',
   })
 
-  functionalRoles.sort((a, b) => (a.name > b.name ? -1 : 1))
+  functionalRoles.sort((a, b) => collator.compare(b.name, a.name))
+  notificationRoles.sort((a, b) => collator.compare(b.name, a.name))
   normalRoles.sort((a, b) => collator.compare(a.position, b.position))
-  colorRoles.sort((a, b) => (a.name > b.name ? -1 : 1))
+  colorRoles.sort((a, b) => collator.compare(b.name, a.name))
 
-  const sortedRoleArray = [...functionalRoles, ...normalRoles, ...colorRoles]
+  const sortedRoleArray = [
+    ...functionalRoles,
+    ...notificationRoles,
+    ...normalRoles,
+    ...colorRoles,
+  ]
 
   const finalRoleArray = sortedRoleArray.map((sortedRole, index) => {
       return { role: sortedRole.id, position: index + 1, name: sortedRole.name }
@@ -128,9 +137,6 @@ export async function sortRoles(guildId) {
     })
 
   currentRolePositions.sort((a, b) => collator.compare(a.position, b.position))
-
-  // console.log(finalRoleArray, `\n\n`)
-  // console.log(currentRolePositions, `\n\n\n\n\n`)
 
   console.log(`tried sorting roles`)
 
@@ -155,9 +161,11 @@ export async function syncCustomColors(guild) {
   })
 
   for (const unusedCustomRole of unusedCustomColorRoles) {
-    unusedCustomRole.delete()
+    await unusedCustomRole
+      .delete()
+      .catch(error => `I was unable to delete a custom color role:\n${error}`)
 
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    await new Promise(resolve => setTimeout(resolve, 10000))
   }
 }
 
@@ -206,7 +214,7 @@ async function announceColorChange(oldRole, newRole) {
 
   const announcementChannel = guild.channels.cache.get(announcementChannelId),
     colorNotificationSquad = guild.roles.cache.find(
-      role => role.name === `color notification squad`
+      role => role.name === `-color notifications-`
     ),
     buttonRow = new MessageActionRow().addComponents(
       new MessageButton()
@@ -316,8 +324,26 @@ export async function createRole(role) {
         `
       )
     return
-  } else if (role.name.match(`^~.+~$`)) {
+  } else if (isColorRole(role.name)) {
     announceColorChange(role)
+  } else if (isNotificationRole(role.name)) {
+    const allMembers = guild.members.cache.map(member => member)
+
+    batchAddRole(allMembers, role)
+
+    const adminChannelId = await getAdminChannel(guild.id),
+      adminChannel = adminChannelId
+        ? guild.channels.cache.get(adminChannelId)
+        : null
+
+    if (adminChannel) {
+      const alphaRunTime = getExpectedRunTime(allMembers.length)
+
+      adminChannel.send(`
+        A new notification role, ${role}, has been created 🔔\
+        \nThis role will be automatically added to all ${allMembers.length} members in the server, but it's going to take around ${alphaRunTime} to finish 🕑
+      `)
+    }
   }
 
   if (role.position < botRole.position && role.name !== `new role`) {
@@ -365,6 +391,56 @@ export async function modifyRole(oldRole, newRole) {
   ) {
     await new Promise(resolve => setTimeout(resolve, roleSortPauseDuration))
     announceColorChange(oldRole, newRole)
+  } else if (
+    !isNotificationRole(oldRole.name) &&
+    isNotificationRole(newRole.name)
+  ) {
+    const relevantMembers = guild.members.cache
+      .filter(member => !member._roles.includes(newRole.id))
+      .map(member => member)
+
+    if (relevantMembers.length > 0) {
+      batchAddRole(relevantMembers, newRole)
+
+      const adminChannelId = await getAdminChannel(guild.id),
+        adminChannel = adminChannelId
+          ? guild.channels.cache.get(adminChannelId)
+          : null
+
+      if (adminChannel) {
+        const alphaRunTime = getExpectedRunTime(relevantMembers.length)
+
+        await adminChannel.send(`
+          A role's name was changed from **${oldRole.name}** to **${newRole.name}**, and is therefore a notification role 🔔\
+          \nThis role will be automatically be added to ${relevantMembers.length} members in the server, but it's going to take me around ${alphaRunTime} to do so 🕑
+        `)
+      }
+    }
+  } else if (
+    isNotificationRole(oldRole.name) &&
+    !isNotificationRole(newRole.name)
+  ) {
+    const relevantMembers = guild.members.cache
+      .filter(member => member._roles.includes(newRole.id))
+      .map(member => member)
+
+    if (relevantMembers.length > 0) {
+      batchRemoveRole(relevantMembers, newRole)
+
+      const adminChannelId = await getAdminChannel(guild.id),
+        adminChannel = adminChannelId
+          ? guild.channels.cache.get(adminChannelId)
+          : null
+
+      if (adminChannel) {
+        const alphaRunTime = getExpectedRunTime(relevantMembers.length)
+
+        await adminChannel.send(`
+          A notification role's name was changed form **${oldRole.name}** to **${newRole.name}**, and is therefore no longer a notification role 🔕\
+          \nThis role will be automatically be removed from ${relevantMembers.length} members in the server, but it's going to take me around ${alphaRunTime} to do so 🕑
+        `)
+      }
+    }
   }
 
   if (
@@ -415,74 +491,117 @@ export async function deleteRole(role) {
   } else if (role.name.match(`^~.+~$`)) {
     await new Promise(resolve => setTimeout(resolve, roleSortPauseDuration))
     announceColorChange(role)
+  } else if (isNotificationRole(role.name)) {
+    const adminChannelId = await getAdminChannel(guild.id),
+      adminChannel = adminChannelId
+        ? guild.channels.cache.get(adminChannelId)
+        : null
+
+    await adminChannel?.send(`
+      Just thought I'd let you guys know that a notification role, **${role.name}**, has been deleted 😬
+    `)
   }
 }
 
-export async function batchAddRole(members, roleId) {
+export async function batchAddRole(members, role) {
+  const guild = role.guild,
+    adminChannelId = await getAdminChannel(guild.id),
+    adminChannel = adminChannelId
+      ? guild.channels.cache.get(adminChannelId)
+      : null
+
   for (const member of members) {
-    const guild = member.guild,
-      role = guild.roles.cache.get(roleId)
+    if (!role) {
+      adminChannel?.send(
+        `A role was deleted while I was batch adding it to members 🤔`
+      )
 
-    if (!role) return false
+      return false
+    }
 
-    if (!member._roles.includes(roleId)) {
-      member.roles
-        .add(roleId)
+    if (!member._roles.includes(role.id)) {
+      await member.roles
+        .add(role)
         .catch(
           error =>
-            `Unable to add role to user via batch, see error below:\n${error}`
+            `I was unable to add role to user via batch, see error below:\n${error}`
         )
 
       await new Promise(resolve => setTimeout(resolve, pauseDuation * 1000))
     }
   }
 
+  adminChannel?.send(
+    `I just finished adding the **${role.name}** role to ${members.length} members 👍`
+  )
+
   return true
 }
 
-export async function batchRemoveRole(members, roleId) {
+export async function batchRemoveRole(members, role) {
+  const guild = role.guild,
+    adminChannelId = await getAdminChannel(guild.id),
+    adminChannel = adminChannelId
+      ? guild.channels.cache.get(adminChannelId)
+      : null
+
   for (const member of members) {
-    const guild = member.guild,
-      role = guild.roles.cache.get(roleId)
+    if (!role) {
+      adminChannel?.send(
+        `A role was deleted while I was batch removing it from members 🤔`
+      )
 
-    if (!role) return false
+      return false
+    }
 
-    if (member._roles.includes(roleId)) {
-      member.roles
-        .remove(roleId)
+    if (member._roles.includes(role.id)) {
+      await member.roles
+        .remove(role)
         .catch(
           error =>
-            `Unable to remove role from user via batch, see error below:\n${error}`
+            `I was unable to remove role from user via batch, see error below:\n${error}`
         )
 
       await new Promise(resolve => setTimeout(resolve, pauseDuation * 1000))
     }
   }
 
+  adminChannel?.send(
+    `I just finished removing the **${role.name}** role from ${members.length} members 👍`
+  )
+
   return true
 }
 
-export function getColorRoles(guild) {
+export function getListRoles(guild, type) {
   const collator = new Intl.Collator(undefined, {
     numeric: true,
     sensitivity: 'base',
   })
 
-  let formattedColorRoles
+  let formattedRoles, validationFunction
 
-  formattedColorRoles = guild.roles.cache
-    .filter(role => role.name.match(`^~.+~$`))
+  switch (type) {
+    case `colors`:
+      validationFunction = `isColorRole`
+      break
+    case `notifications`:
+      validationFunction = `isNotificationRole`
+  }
+
+  formattedRoles = guild.roles.cache
+    .filter(role => validator[validationFunction](role.name))
     .map(role => {
       return { group: `roles`, values: `<@&${role.id}>`, name: role.name }
     })
 
-  formattedColorRoles.sort((a, b) => collator.compare(a.name, b.name))
+  formattedRoles.sort((a, b) => collator.compare(a.name, b.name))
 
-  formattedColorRoles.forEach(
+  formattedRoles.forEach(
     (record, index) => (record.values = `${index + 1}. ${record.values}`)
   )
 
-  return formattedColorRoles
+  return formattedRoles
 }
 
 export function getRoleByName(roles, roleName) {

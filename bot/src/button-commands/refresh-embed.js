@@ -1,6 +1,10 @@
 import { directMessageError } from '../utils/error-logging.js'
 import { getPages, generateListMessage } from '../utils/slash-commands.js'
-import { getColorButtons, getChannelButtons } from '../utils/buttons.js'
+import {
+  getColorButtons,
+  getChannelButtons,
+  getNotificationButtons,
+} from '../utils/buttons.js'
 import { getListInfo, updateListPageData } from '../repositories/lists.js'
 
 export default async function (interaction) {
@@ -50,6 +54,8 @@ export default async function (interaction) {
 
   if (groupBy === `roles-color`)
     otherButtons = getColorButtons(pages[0], member._roles)
+  if (groupBy === `roles-notifications`)
+    otherButtons = getNotificationButtons(pages[0], member._roles)
   else if (
     [`channels-joinable`, `channels-public`, `channels-archived`].includes(
       groupBy

@@ -9,7 +9,7 @@ import {
   getVipUserIdArray,
 } from '../repositories/vip-user-overrides.js'
 
-export const pauseDuation = 2
+export const pauseDuation = 5
 
 export async function getVipMemberArray(guild) {
   const vipMemberArray = []
@@ -92,7 +92,7 @@ export async function syncVipMembers(guild) {
         `Some VIP members do not have the VIP role, attributing ${newVipMembers.length} member(s) the VIP role, this will take around ${alphaRunTime} to finish 🕑`
       )
 
-    batchAddRole(newVipMembers, vipRole.id)
+    batchAddRole(newVipMembers, vipRole)
   }
 
   if (noLongerVipMembers.length > 0) {
@@ -103,7 +103,7 @@ export async function syncVipMembers(guild) {
         `Some members no longer qualify for VIP status, removing the VIP role from ${noLongerVipMembers.length} member(s), this will take around ${alphaRunTime} to finish 🕑`
       )
 
-    batchRemoveRole(noLongerVipMembers, vipRole.id)
+    batchRemoveRole(noLongerVipMembers, vipRole)
   }
 }
 

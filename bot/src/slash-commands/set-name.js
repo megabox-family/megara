@@ -1,6 +1,7 @@
 import { getBot } from '../cache-bot.js'
 import { logErrorMessageToChannel } from '../utils/general.js'
 import { getWelcomeChannel } from '../repositories/guilds.js'
+import { isNotificationRole } from '../utils/validation.js'
 
 export const description = `Allows you to set your nickname within this server, and verifies you if you haven't been.`
 export const defaultPermission = false,
@@ -134,15 +135,9 @@ export default async function (interaction) {
   }
 
   const verifiedRole = guild.roles.cache.find(role => role.name === `verified`),
-    serverNotificationRole = guild.roles.cache.find(
-      role => role.name === `server notification squad`
-    ),
-    channelNotificationRole = guild.roles.cache.find(
-      role => role.name === `channel notification squad`
-    ),
-    colorNotificationRole = guild.roles.cache.find(
-      role => role.name === `color notification squad`
-    )
+    notificationRoles = guild.roles.cache
+      .filter(role => isNotificationRole(role.name))
+      .map(role => role.id)
 
   if (member.roles.cache.get(verifiedRole.id)) {
     await interaction.reply({
@@ -161,12 +156,12 @@ export default async function (interaction) {
     let attempts = 0
 
     while (!roleIsUpdated) {
-      await member.roles.add([
-        verifiedRole.id,
-        serverNotificationRole.id,
-        channelNotificationRole.id,
-        colorNotificationRole.id,
-      ])
+      await member.roles
+        .add([verifiedRole.id, ...notificationRoles])
+        .catch(
+          error =>
+            `I couldn't add the verified role and notifications roles to a new user:\n${error}`
+        )
       await new Promise(resolution => setTimeout(resolution, 1000))
 
       roleIsUpdated = await member.roles.cache.some(

@@ -1,7 +1,7 @@
 import { MessageEmbed, MessageActionRow, MessageButton } from 'discord.js'
 import { isEqual } from 'lodash-es'
 import { slashCommands } from './general.js'
-import { getColorRoles } from './roles.js'
+import { getListRoles } from './roles.js'
 import { getActiveWorld } from '../repositories/guilds.js'
 import {
   getJoinableChannelList,
@@ -201,7 +201,10 @@ export async function getPages(recordsPerPage, groupBy, guild, filters) {
       activeWorldName = await getWorldName(activeWorldId)
       break
     case `roles-color`:
-      query = getColorRoles(guild)
+      query = getListRoles(guild, `colors`)
+      break
+    case `roles-notifications`:
+      query = getListRoles(guild, `notifications`)
       break
     case `channels-joinable`:
       query = await getJoinableChannelList(guild.id)

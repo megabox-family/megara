@@ -4,6 +4,7 @@ import {
   toggleListButtons,
   getColorButtons,
   getChannelButtons,
+  getNotificationButtons,
 } from '../utils/buttons.js'
 import { getGroupBy, getPageData } from '../repositories/lists.js'
 
@@ -72,6 +73,8 @@ export default async function (interaction) {
 
   if (groupBy === `roles-color`)
     otherButtons = getColorButtons(newPage, member._roles)
+  if (groupBy === `roles-notifications`)
+    otherButtons = getNotificationButtons(newPage, member._roles)
   else if (
     [`channels-joinable`, `channels-public`, `channels-archived`].includes(
       groupBy

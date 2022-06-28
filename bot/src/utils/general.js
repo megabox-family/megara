@@ -26,6 +26,11 @@ import {
   getFormatedCommandChannels,
   getChannelType,
 } from '../repositories/channels.js'
+import {
+  isNotificationRole,
+  getRoleIdsFromMessage,
+  getNotificationRoleBasename,
+} from './validation.js'
 
 const relativePath = dirname(fileURLToPath(import.meta.url)),
   srcPath = dirname(relativePath),
@@ -164,7 +169,7 @@ export async function announceNewChannel(newChannel) {
   if ([`category`, `hidden`, `private`, `voice`].includes(channelType)) return
 
   const channelNotificationSquad = guild.roles.cache.find(
-      role => role.name === `channel notification squad`
+      role => role.name === `-channel notifications-`
     ),
     commandChannels = await getFormatedCommandChannels(
       guild.id,
@@ -222,41 +227,73 @@ export async function announceNewChannel(newChannel) {
     })
 }
 
-function sendServerSubscriptionMessage(announcementChannel) {
-  const guild = announcementChannel.guild,
-    serverNotificationSquad = guild.roles.cache.find(
-      role => role.name === `server notification squad`
-    ),
-    buttonRow = new MessageActionRow().addComponents(
+function generateNotificationButtons(notificationRoles) {
+  const collator = new Intl.Collator(undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    }),
+    buttons = [],
+    rows = []
+
+  notificationRoles.sort((a, b) => collator.compare(a.name, b.name))
+
+  let counter = 0
+
+  for (const [roleId, role] of notificationRoles) {
+    if (counter === 25) break
+
+    buttons.push(
       new MessageButton()
-        .setCustomId(`!subscribe: ${serverNotificationSquad.id}`)
-        .setLabel(`Subscribe to server notifications`)
-        .setStyle('PRIMARY'),
-      new MessageButton()
-        .setCustomId(`!unsubscribe: ${serverNotificationSquad.id}`)
-        .setLabel(`Unsubscribe from server notifications`)
+        .setCustomId(`!unsubscribe: ${role.id}`)
+        .setLabel(`Unsubscribe from ${getNotificationRoleBasename(role.name)}`)
         .setStyle('SECONDARY')
     )
+    counter++
+  }
 
-  announcementChannel.send({
-    components: [buttonRow],
-  })
+  const chunkSize = 4
+  for (let i = 0; i < buttons.length; i += chunkSize) {
+    rows.push(
+      new MessageActionRow().addComponents(buttons.slice(i, i + chunkSize))
+    )
+  }
+
+  return rows
+}
+
+function checkIfMessageHasNotificationRole(message) {
+  if (!message?.content) return
+
+  const roleTags = getRoleIdsFromMessage(message.content)
+
+  if (!roleTags) return
+
+  const guild = message.guild,
+    notificationRoles = guild.roles.cache.filter(
+      role => isNotificationRole(role.name) && roleTags.includes(role.id)
+    )
+
+  if (notificationRoles.size > 0) return notificationRoles
 }
 
 export async function handleMessage(message) {
-  if (message.author.bot) return
+  if (message.author.id === message.client.user.id) return
   if (!message?.guild) return
 
-  const messageText = message.content
+  const guild = message.guild,
+    messageText = message.content,
+    notificationRoles = checkIfMessageHasNotificationRole(message)
 
-  if (messageText.substring(0, 3) === `<@&`) {
-    const channel = message.channel,
-      announcementChannelId = await getAnnouncementChannel(message.guild.id)
+  if (notificationRoles) {
+    const components = generateNotificationButtons(notificationRoles)
 
-    if (announcementChannelId === channel.id)
-      sendServerSubscriptionMessage(channel)
-
-    return
+    message.reply({
+      content: `
+      Use the buttons below to unsubscribe from notification roles mentioned in this message.\
+      \n*Tip: use the \`/notification-manager\` command to subscribe or unsubscribe from any notification role in ${guild.name}.*
+    `,
+      components: components,
+    })
   }
 
   if (!validCommandSymbols.includes(messageText.substring(0, 1))) return
