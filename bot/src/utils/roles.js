@@ -392,7 +392,10 @@ export async function modifyRole(oldRole, newRole) {
     isNotificationRole(newRole.name)
   ) {
     const relevantMembers = guild.members.cache
-      .filter(member => !member._roles.includes(newRole.id))
+      .filter(
+        member =>
+          !member._roles.includes(newRole.id) && member.id !== getBot().user.id
+      )
       .map(member => member)
 
     if (relevantMembers.length > 0) {
@@ -417,7 +420,10 @@ export async function modifyRole(oldRole, newRole) {
     !isNotificationRole(newRole.name)
   ) {
     const relevantMembers = guild.members.cache
-      .filter(member => member._roles.includes(newRole.id))
+      .filter(
+        member =>
+          member._roles.includes(newRole.id) && member.id !== getBot().user.id
+      )
       .map(member => member)
 
     if (relevantMembers.length > 0) {

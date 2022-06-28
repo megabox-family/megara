@@ -212,7 +212,7 @@ export async function announceNewChannel(newChannel) {
       content: `
         ${channelNotificationSquad} Hey guys! 😁\
         \n${channelTypeMessage}, **<#${newChannel.id}>**, in the **${categoryName}** category. ${channelTypeDetails} \
-        
+
         \nUse the buttons below this message to join **<#${newChannel.id}>** and or to manage these notifications. You can also join and leave channels using the \`/channel-list\` command.
       `,
       components: [buttonRow],
@@ -281,9 +281,8 @@ export async function handleMessage(message) {
 
     message.reply({
       content: `
-      Use the buttons below to unsubscribe from notification roles mentioned in this message.\
-      \n*Tip: use the \`/notification-manager\` command to subscribe or unsubscribe from any notification role in ${guild.name}.*
-    `,
+        Use the buttons below to unsubscribe from notification roles mentioned in this message.\
+      `,
       components: components,
     })
   }
