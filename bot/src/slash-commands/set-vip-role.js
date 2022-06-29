@@ -1,6 +1,10 @@
 import { getVipRoleId, setVipRoleId } from '../repositories/guilds.js'
 import { getVipMemberArray, getExpectedRunTime } from '../utils/members.js'
-import { batchAddRole, batchRemoveRole } from '../utils/roles.js'
+import {
+  addToBatchRoleQueue,
+  batchRemoveRole,
+  getTotalBatchRoleQueueMembers,
+} from '../utils/roles.js'
 
 export const description = `Allows you to manually attribute the contributor role regardless of premium or nitro status.`
 export const defaultPermission = false,
@@ -55,17 +59,22 @@ export default async function (interaction) {
 
       return
     } else {
-      const alphaRunTime = getExpectedRunTime(curratedVipMembers.length)
+      addToBatchRoleQueue(oldVipRole.id, {
+        addOrRemove: `remove`,
+        members: curratedVipMembers,
+        role: oldVipRole,
+      })
+
+      const totalQueuedMembers = getTotalBatchRoleQueueMembers(),
+        alphaRunTime = getExpectedRunTime(totalQueuedMembers)
 
       await interaction.editReply({
         content: `
           The ${oldVipRole} role has been cleared for this server 🧼\
           \nThis role will automatically be removed from the ${curratedVipMembers.length} boosters / premium subscribers / vip override users in this server.\
-          \nHowever, it's going to take around ${alphaRunTime} to finish 🕑
+          \nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑
         `,
       })
-
-      batchRemoveRole(curratedVipMembers, oldVipRole)
     }
   } else {
     const vipRole = guild.roles.cache.get(vipRoleId)
@@ -89,17 +98,22 @@ export default async function (interaction) {
         content: `The ${vipRole} role has been set as the VIP role 🥇`,
       })
     } else {
-      const alphaRunTime = getExpectedRunTime(curratedVipMembers.length)
+      addToBatchRoleQueue(vipRole.id, {
+        addOrRemove: `add`,
+        members: curratedVipMembers,
+        role: vipRole,
+      })
+
+      const totalQueuedMembers = getTotalBatchRoleQueueMembers(),
+        alphaRunTime = getExpectedRunTime(totalQueuedMembers)
 
       await interaction.editReply({
         content: `
           The ${vipRole} role has been set as the VIP role 🥇\
           \nThis role will automatically be added to the ${curratedVipMembers.length} boosters / premium subscribers / vip override users in this server.\
-          \nHowever, it's going to take around ${alphaRunTime} to finish 🕑
+          \nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑
         `,
       })
-
-      batchAddRole(curratedVipMembers, vipRole)
     }
   }
 }

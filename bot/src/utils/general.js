@@ -98,11 +98,9 @@ export async function startup(bot) {
   registerSlashCommands(bot)
 
   // const guild = bot.guilds.cache.get(`711043006253367426`),
-  //   channel = guild.channels.cache.get(`711043007545081949`),
-  //   thread = channel.threads.cache.get(`983291433001840660`),
-  //   members = thread.members.cache
+  //   botUser = guild.members.cache.get(bot.user.id)
 
-  // console.log(members)
+  // console.log(botUser.roles.cache)
 }
 
 export async function logMessageToChannel(message) {
@@ -182,7 +180,7 @@ export async function announceNewChannel(newChannel) {
       new MessageButton()
         .setCustomId(`!join-channel: ${newChannel.id}`)
         .setLabel(`Join ${newChannel.name}`)
-        .setStyle('PRIMARY'),
+        .setStyle('SUCCESS'),
       new MessageButton()
         .setCustomId(`!unsubscribe: ${channelNotificationSquad.id}`)
         .setLabel(`Unsubscribe from channel notifications`)
@@ -281,7 +279,7 @@ export async function handleMessage(message) {
 
     message.reply({
       content: `
-        Use the buttons below to unsubscribe from notification roles mentioned in this message.\
+        Use the button(s) below to unsubscribe from notification roles mentioned in this message.\
       `,
       components: components,
     })

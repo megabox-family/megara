@@ -44,7 +44,54 @@ const requiredRoles = [
     `!position override: -4`,
     `!position override: -5`,
   ],
-  roleSortingQueue = []
+  roleSortingQueue = [],
+  batchRoleQueue = new Map()
+
+export function getTotalBatchRoleQueueMembers() {
+  let totalMembers = 0
+
+  if (batchRoleQueue.size === 0) return 0
+
+  batchRoleQueue.forEach(
+    queuedRole => (totalMembers += queuedRole.members.length)
+  )
+
+  return totalMembers
+}
+
+async function emptyBatchRoleQueue() {
+  if (batchRoleQueue.size === 0) return
+
+  const [roleId] = batchRoleQueue.keys(),
+    firstValue = batchRoleQueue.get(roleId),
+    addOrRemove = firstValue.addOrRemove,
+    members = firstValue.members,
+    role = firstValue.role
+
+  if (role) {
+    await batchAddOrRemoveRole(members, role, addOrRemove)
+  }
+
+  batchRoleQueue.delete(roleId)
+
+  emptyBatchRoleQueue()
+}
+
+export async function addToBatchRoleQueue(roleId, context) {
+  if (!batchRoleQueue.has(roleId)) {
+    batchRoleQueue.set(roleId, context)
+
+    if (batchRoleQueue.size === 1) emptyBatchRoleQueue()
+  } else {
+    batchRoleQueue.delete(roleId)
+
+    await new Promise(resolve => setTimeout(resolve, pauseDuation))
+
+    batchRoleQueue.set(roleId, context)
+
+    if (batchRoleQueue.size === 1) emptyBatchRoleQueue()
+  }
+}
 
 async function emptyRoleSortingQueue() {
   if (roleSortingQueue.length === 0) return
@@ -86,7 +133,7 @@ export async function sortRoles(guildId) {
   await guild.roles.fetch()
 
   const botRole = guild.roles.cache.find(
-      role => role.name === getBot().user.username
+      role => role.tags?.botId === getBot().user.id
     ),
     roles = guild.roles.cache.filter(
       role => role.position < botRole.position && role.name !== `@everyone`
@@ -294,7 +341,7 @@ async function announceColorChange(oldRole, newRole) {
 export async function createRole(role) {
   const guild = role.guild,
     roles = guild.roles.cache,
-    botRole = roles.find(role => role.name === getBot().user.username)
+    botRole = roles.find(role => role.tags?.botId === getBot().user.id)
 
   roles.forEach(async _role => {
     if (_role.name === `new role` && _role.id !== role.id && !_role.deleted)
@@ -323,22 +370,33 @@ export async function createRole(role) {
   } else if (isColorRole(role.name)) {
     announceColorChange(role)
   } else if (isNotificationRole(role.name)) {
-    const allMembers = guild.members.cache.map(member => member)
+    const relevantMembers = guild.members.cache
+      .filter(member => member.id !== getBot().user.id)
+      .map(member => member)
 
-    batchAddRole(allMembers, role)
+    if (relevantMembers.length > 0) {
+      await addToBatchRoleQueue(role.id, {
+        addOrRemove: `add`,
+        members: relevantMembers,
+        role: role,
+      })
 
-    const adminChannelId = await getAdminChannel(guild.id),
-      adminChannel = adminChannelId
-        ? guild.channels.cache.get(adminChannelId)
-        : null
+      const totalQueuedMembers = getTotalBatchRoleQueueMembers()
 
-    if (adminChannel) {
-      const alphaRunTime = getExpectedRunTime(allMembers.length)
+      if (totalQueuedMembers > 0) {
+        const adminChannelId = await getAdminChannel(guild.id),
+          adminChannel = adminChannelId
+            ? guild.channels.cache.get(adminChannelId)
+            : null
 
-      adminChannel.send(`
-        A new notification role, ${role}, has been created 🔔\
-        \nThis role will be automatically added to all ${allMembers.length} members in the server, but it's going to take around ${alphaRunTime} to finish 🕑
-      `)
+        const alphaRunTime = getExpectedRunTime(totalQueuedMembers)
+
+        await adminChannel?.send(`
+          A new notification role, **${newRole.name}**, has been created 🔔\
+          \nThis role will automatically be added to ${relevantMembers.length} members in the server.\
+          \nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑
+        `)
+      }
     }
   }
 
@@ -350,7 +408,7 @@ export async function createRole(role) {
 export async function modifyRole(oldRole, newRole) {
   const guild = newRole.guild,
     botRole = guild.roles.cache.find(
-      role => role.name === getBot().user.username
+      role => role.tags?.botId === getBot().user.id
     )
 
   if (
@@ -399,19 +457,26 @@ export async function modifyRole(oldRole, newRole) {
       .map(member => member)
 
     if (relevantMembers.length > 0) {
-      batchAddRole(relevantMembers, newRole)
+      await addToBatchRoleQueue(newRole.id, {
+        addOrRemove: `add`,
+        members: relevantMembers,
+        role: newRole,
+      })
 
-      const adminChannelId = await getAdminChannel(guild.id),
-        adminChannel = adminChannelId
-          ? guild.channels.cache.get(adminChannelId)
-          : null
+      const totalQueuedMembers = getTotalBatchRoleQueueMembers()
 
-      if (adminChannel) {
-        const alphaRunTime = getExpectedRunTime(relevantMembers.length)
+      if (totalQueuedMembers > 0 && relevantMembers.length > 0) {
+        const adminChannelId = await getAdminChannel(guild.id),
+          adminChannel = adminChannelId
+            ? guild.channels.cache.get(adminChannelId)
+            : null
 
-        await adminChannel.send(`
+        const alphaRunTime = getExpectedRunTime(totalQueuedMembers)
+
+        await adminChannel?.send(`
           A role's name was changed from **${oldRole.name}** to **${newRole.name}**, and is therefore a notification role 🔔\
-          \nThis role will be automatically be added to ${relevantMembers.length} members in the server, but it's going to take me around ${alphaRunTime} to do so 🕑
+          \nThis role will automatically be added to ${relevantMembers.length} members in the server.\
+          \nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑
         `)
       }
     }
@@ -427,19 +492,26 @@ export async function modifyRole(oldRole, newRole) {
       .map(member => member)
 
     if (relevantMembers.length > 0) {
-      batchRemoveRole(relevantMembers, newRole)
+      await addToBatchRoleQueue(newRole.id, {
+        addOrRemove: `remove`,
+        members: relevantMembers,
+        role: newRole,
+      })
 
-      const adminChannelId = await getAdminChannel(guild.id),
-        adminChannel = adminChannelId
-          ? guild.channels.cache.get(adminChannelId)
-          : null
+      const totalQueuedMembers = getTotalBatchRoleQueueMembers()
 
-      if (adminChannel) {
-        const alphaRunTime = getExpectedRunTime(relevantMembers.length)
+      if (totalQueuedMembers > 0 && relevantMembers.length > 0) {
+        const adminChannelId = await getAdminChannel(guild.id),
+          adminChannel = adminChannelId
+            ? guild.channels.cache.get(adminChannelId)
+            : null
 
-        await adminChannel.send(`
-          A notification role's name was changed form **${oldRole.name}** to **${newRole.name}**, and is therefore no longer a notification role 🔕\
-          \nThis role will be automatically be removed from ${relevantMembers.length} members in the server, but it's going to take me around ${alphaRunTime} to do so 🕑
+        const alphaRunTime = getExpectedRunTime(totalQueuedMembers)
+
+        await adminChannel?.send(`
+          A notification role's name was changed from **${oldRole.name}** to **${newRole.name}**, and is therefore no longer a notification role 🔕\
+          \nThis role will automatically be removed from ${relevantMembers.length} members in the server.\
+          \nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑
         `)
       }
     }
@@ -494,47 +566,73 @@ export async function deleteRole(role) {
     await new Promise(resolve => setTimeout(resolve, roleSortPauseDuration))
     announceColorChange(role)
   } else if (isNotificationRole(role.name)) {
+    batchRoleQueue.delete(role.id)
+
     const adminChannelId = await getAdminChannel(guild.id),
       adminChannel = adminChannelId
         ? guild.channels.cache.get(adminChannelId)
         : null
 
     await adminChannel?.send(`
-      Just thought I'd let you guys know that a notification role, **${role.name}**, has been deleted 😬
+      Just thought I'd let you guys know that a notification role, **${role.name}**, has been deleted 🔕
     `)
   }
 }
 
-export async function batchAddRole(members, role) {
+export async function batchAddOrRemoveRole(members, role, addOrRemove) {
+  if (!role) return
+
   const guild = role.guild,
     adminChannelId = await getAdminChannel(guild.id),
     adminChannel = adminChannelId
       ? guild.channels.cache.get(adminChannelId)
-      : null
+      : null,
+    toOrFrom = addOrRemove === `add` ? `to` : `from`,
+    originalMemberCount = members.length
 
-  for (const member of members) {
-    if (!role) {
+  let counter = 0
+
+  while (members.length !== 0) {
+    const member = members.shift()
+
+    if (!guild.roles.cache.has(role.id)) {
       adminChannel?.send(
-        `A role was deleted while I was batch adding it to members 🤔`
+        `A role was deleted while in the **batch ${addOrRemove}** queue 🤔`
       )
 
       return false
     }
 
-    if (!member._roles.includes(role.id)) {
-      await member.roles
-        .add(role)
-        .catch(
-          error =>
-            `I was unable to add role to user via batch, see error below:\n${error}`
-        )
+    for (let i = 0; i < pauseDuation; i++) {
+      if (!batchRoleQueue.has(role.id)) {
+        if (!guild.roles.cache.has(role.id)) {
+          adminChannel?.send(
+            `A role was deleted while in the **batch ${addOrRemove}** queue 🤔`
+          )
 
-      await new Promise(resolve => setTimeout(resolve, pauseDuation * 1000))
+          return false
+        } else if (counter > 0)
+          adminChannel?.send(`
+              The **${role.name}** role has been removed from the **batch ${addOrRemove}** queue 😬\
+              \nI was able to *${addOrRemove}* **${role.name}** ${toOrFrom} ${counter} members before it was removed from the queue.
+            `)
+
+        return
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1000))
     }
+
+    await member.roles[addOrRemove](role).catch(
+      error =>
+        `I was unable to ${addOrRemove} ${role.name} ${toOrFrom} user via batch, see error below:\n${error}`
+    )
+
+    counter++
   }
 
   adminChannel?.send(
-    `I just finished adding the **${role.name}** role to ${members.length} members 👍`
+    `The **batch ${addOrRemove}** queue for **${role.name}** is complete, **${originalMemberCount}** members were affected 👍`
   )
 
   return true

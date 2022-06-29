@@ -1,4 +1,4 @@
-import { batchAddRole, batchRemoveRole } from './roles.js'
+import { addToBatchRoleQueue, batchRemoveRole } from './roles.js'
 import {
   getAdminChannel,
   getVipRoleId,
@@ -33,17 +33,26 @@ export async function getVipMemberArray(guild) {
 
 export function getExpectedRunTime(vipMemberCount) {
   const totalSeconds = vipMemberCount * pauseDuation,
+    hours = Math.floor(totalSeconds / 3600),
     minutes = Math.floor(totalSeconds / 60),
     seconds = totalSeconds % 60
 
   let alphaRunTime
 
-  if (minutes === 0) {
+  if (hours === 0 && minutes === 0) {
     alphaRunTime = `${seconds} seconds`
-  } else if (seconds === 0) {
+  } else if (hours === 0 && seconds === 0) {
     alphaRunTime = `${minutes} minutes`
-  } else {
+  } else if (minutes === 0 && seconds === 0) {
+    alphaRunTime = `${hours} hours`
+  } else if (hours === 0) {
     alphaRunTime = `${minutes} minutes, and ${seconds} seconds`
+  } else if (minutes === 0) {
+    alphaRunTime = `${hours} hours, and ${seconds} seconds`
+  } else if (seconds === 0) {
+    alphaRunTime = `${hours} hours, and ${minutes} minutes`
+  } else {
+    alphaRunTime = `${hours} hours, ${minutes} minutes, and ${seconds} seconds`
   }
 
   return alphaRunTime
@@ -85,25 +94,35 @@ export async function syncVipMembers(guild) {
       .map(member => member)
 
   if (newVipMembers.length > 0) {
-    const alphaRunTime = getExpectedRunTime(newVipMembers.length)
+    addToBatchRoleQueue(vipRole.id, {
+      addOrRemove: `add`,
+      members: newVipMembers,
+      role: vipRole,
+    })
 
-    if (adminChannel)
-      adminChannel.send(
-        `Some VIP members do not have the VIP role, attributing ${newVipMembers.length} member(s) the VIP role, this will take around ${alphaRunTime} to finish 🕑`
-      )
+    const totalQueuedMembers = getTotalBatchRoleQueueMembers(),
+      alphaRunTime = getExpectedRunTime(totalQueuedMembers)
 
-    batchAddRole(newVipMembers, vipRole)
+    adminChannel?.send(`
+      Some VIP members do not have the VIP role, attributing ${newVipMembers.length} member(s) the VIP role.\
+      \nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑
+    `)
   }
 
   if (noLongerVipMembers.length > 0) {
-    const alphaRunTime = getExpectedRunTime(noLongerVipMembers.length)
+    addToBatchRoleQueue(vipRole.id, {
+      addOrRemove: `remove`,
+      members: noLongerVipMembers,
+      role: vipRole,
+    })
 
-    if (adminChannel)
-      adminChannel.send(
-        `Some members no longer qualify for VIP status, removing the VIP role from ${noLongerVipMembers.length} member(s), this will take around ${alphaRunTime} to finish 🕑`
-      )
+    const totalQueuedMembers = getTotalBatchRoleQueueMembers(),
+      alphaRunTime = getExpectedRunTime(totalQueuedMembers)
 
-    batchRemoveRole(noLongerVipMembers, vipRole)
+    adminChannel?.send(`
+    Some members no longer qualify for VIP status, removing the VIP role from ${noLongerVipMembers.length} member(s).\
+      \nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑
+    `)
   }
 }
 
