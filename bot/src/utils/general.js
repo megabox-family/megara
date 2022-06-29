@@ -241,7 +241,7 @@ function generateNotificationButtons(notificationRoles) {
     counter++
   }
 
-  const chunkSize = 4
+  const chunkSize = 5
   for (let i = 0; i < buttons.length; i += chunkSize) {
     rows.push(
       new MessageActionRow().addComponents(buttons.slice(i, i + chunkSize))
