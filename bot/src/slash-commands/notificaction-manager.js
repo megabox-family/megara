@@ -2,7 +2,7 @@ import { getPages, generateListMessage } from '../utils/slash-commands.js'
 import { getColorButtons, getNotificationButtons } from '../utils/buttons.js'
 import { createList } from '../repositories/lists.js'
 
-export const description = `Displays a list of colors that you can choose from to change your name color.`,
+export const description = `Allows you to subscribe and unsubscribe from notification roles in this server.`,
   defaultPermission = false
 
 export default async function (interaction) {

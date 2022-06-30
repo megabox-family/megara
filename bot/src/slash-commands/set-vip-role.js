@@ -6,12 +6,12 @@ import {
   getTotalBatchRoleQueueMembers,
 } from '../utils/roles.js'
 
-export const description = `Allows you to manually attribute the contributor role regardless of premium or nitro status.`
+export const description = `Allows you to choose which role in your server represents VIP status.`
 export const defaultPermission = false,
   options = [
     {
       name: `vip-role-id`,
-      description: `The id of the role you'd like to represent this guild VIP role (input 'null' to clear).`,
+      description: `The id of the role you'd like to represent this guilds VIP role (input 'null' to clear).`,
       type: `STRING`,
       required: true,
     },
