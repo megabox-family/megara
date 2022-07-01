@@ -5,7 +5,7 @@ import { getRoleByName } from '../utils/roles.js'
 import { checkIfMemberIsPermissible } from '../utils/voice.js'
 import { CheckIfMemberNeedsToBeAdded } from '../utils/channels.js'
 
-export const description = `Allows you to invite an existing member to any channel you're a part of in this server.`
+export const description = `Allows you to invite an existing member to the channel you use this command in.`
 export const defaultPermission = false,
   options = [
     {
