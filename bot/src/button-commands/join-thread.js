@@ -16,7 +16,7 @@ export default async function (interaction) {
     await thread.members
       .add(user.id)
       .then(await interaction.editReply(`You've been added to ${thread} 👍`))
-      .catch(error => {
+      .catch(async error => {
         await interaction.editReply(
           `There was a problem adding you to the thread, please contact an administrator 😬`
         )
