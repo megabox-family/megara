@@ -65,9 +65,7 @@ const Home = () => {
         </div>
       </div>
       <div className="content">
-        <span className="coming-soon-message">
-          💰 Donations Coming Soon! 💰
-        </span>
+        <span className="coming-soon-message">💰 Donations Coming Soon 💰</span>
         <span className="coming-soon-subtitle">Just you wait...</span>
       </div>
       <div className="donation-button" onClick={handleDonoButtonClick}>
