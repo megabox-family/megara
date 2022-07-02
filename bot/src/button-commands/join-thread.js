@@ -24,7 +24,9 @@ export default async function (interaction) {
         console.log(`Unable to add user to thread, see error below:\n${error}`)
       })
   } else
-  await interaction.editReply({
+    await interaction.editReply({
       content: `The thread you tried joining no longer exits in the ${channel} channel within the ${guild} server.`,
     })
 }
+
+//test
