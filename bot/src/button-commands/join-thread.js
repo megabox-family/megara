@@ -28,5 +28,3 @@ export default async function (interaction) {
       content: `The thread you tried joining no longer exits in the ${channel} channel within the ${guild} server.`,
     })
 }
-
-//pp
