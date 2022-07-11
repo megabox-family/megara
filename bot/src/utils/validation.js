@@ -25,3 +25,7 @@ export function getButtonNumber(listItem) {
 export function getRoleIdsFromMessage(message) {
   return message.match(/(?<=<@&)[0-9]{18}(?=>)/g)
 }
+
+export function isDynamicThread(threadName) {
+  return threadName.match(`(?!.*-)[0-9]+$`)
+}

@@ -24,7 +24,7 @@ export function getChannelBasename(voiceChannelName) {
 export function getChannelNumber(voiceChannelName) {
   if (!voiceChannelName) return
 
-  return voiceChannelName.match(`(?!.*-)[0-9]+$`)?.[0]
+  return voiceChannelName.match(`(?<=-)[0-9]+$`)?.[0]
 }
 
 export async function checkIfRoomOrTextChannel(voiceChannel, guild) {
