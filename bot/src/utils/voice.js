@@ -544,8 +544,6 @@ export function checkIfMemberIsPermissible(channel, member) {
     let _viewChannel, _connect
 
     if (!allowPermissions.VIEW_CHANNEL && !denyPermissions.VIEW_CHANNEL) {
-      console.log(`view`)
-
       if (rolePermissions.VIEW_CHANNEL) _viewChannel = true
     } else {
       _viewChannel = allowPermissions.VIEW_CHANNEL
@@ -566,8 +564,6 @@ export function checkIfMemberIsPermissible(channel, member) {
       if (_connect == true) connect = true
       else if (_connect == false) connect = false
     }
-
-    console.log(viewChannel, connect)
 
     if (viewChannel !== undefined && connect !== undefined) break
   }
