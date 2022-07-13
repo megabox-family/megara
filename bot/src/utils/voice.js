@@ -539,25 +539,35 @@ export function checkIfMemberIsPermissible(channel, member) {
   for (const relevantOverwrite of relevantOverwrites) {
     const allowPermissions = relevantOverwrite.overwrite.allow.serialize(),
       denyPermissions = relevantOverwrite.overwrite.deny.serialize(),
-      rolePermissions = relevantOverwrite.role.permissions.serialize(),
-      _viewChannel =
-        !allowPermissions.VIEW_CHANNEL && !denyPermissions.VIEW_CHANNEL
-          ? rolePermissions.VIEW_CHANNEL
-          : allowPermissions.VIEW_CHANNEL,
-      _connect =
-        !allowPermissions.CONNECT && !denyPermissions.CONNECT
-          ? rolePermissions.CONNECT
-          : allowPermissions.CONNECT
+      rolePermissions = relevantOverwrite.role.permissions.serialize()
+
+    let _viewChannel, _connect
+
+    if (!allowPermissions.VIEW_CHANNEL && !denyPermissions.VIEW_CHANNEL) {
+      console.log(`view`)
+
+      if (rolePermissions.VIEW_CHANNEL) _viewChannel = true
+    } else {
+      _viewChannel = allowPermissions.VIEW_CHANNEL
+    }
+
+    if (!allowPermissions.CONNECT && !denyPermissions.CONNECT) {
+      if (rolePermissions.CONNECT) _connect = true
+    } else {
+      _connect = allowPermissions.CONNECT
+    }
 
     if (viewChannel === undefined) {
-      if (_viewChannel) viewChannel = true
-      else if (!denyPermissions.VIEW_CHANNEL) viewChannel = false
+      if (_viewChannel == true) viewChannel = true
+      else if (_viewChannel == false) viewChannel = false
     }
 
     if (connect === undefined) {
-      if (_connect) connect = true
-      else if (!denyPermissions.CONNECT) connect = false
+      if (_connect == true) connect = true
+      else if (_connect == false) connect = false
     }
+
+    console.log(viewChannel, connect)
 
     if (viewChannel !== undefined && connect !== undefined) break
   }
