@@ -1,5 +1,6 @@
 import { MessageEmbed, MessageActionRow, MessageButton } from 'discord.js'
 import { isEqual } from 'lodash-es'
+import { directMessageError } from './error-logging.js'
 import { slashCommands } from './general.js'
 import { getListRoles } from './roles.js'
 import { getActiveWorld } from '../repositories/guilds.js'
@@ -16,6 +17,7 @@ import {
   getCoordinatesByUser,
   getCoordinatesByAll,
 } from '../repositories/coordinates.js'
+import { checkIfMemberIsPermissible } from './voice.js'
 
 export const defaultRecordsPerPage = 20,
   dimensions = [`overworld`, `nether`, `end`]
@@ -338,4 +340,44 @@ export async function generateListMessage(pages, title, description) {
     components: [listButtons],
     ephemeral: true,
   }
+}
+
+export async function handleVoiceChannel(channel, invitedMember, interaction) {
+  const guild = channel.guild,
+    member = interaction.member,
+    memberIsPermissible = checkIfMemberIsPermissible(channel, invitedMember),
+    category = guild.channels.cache.get(channel.parentId),
+    categoryContext = category ? ` in the **${category.name}** category` : ``
+
+  let messageContent = `${member} from the **${guild}** server has invited you to the **${channel}** voice channel${categoryContext} 🙌`
+
+  if (memberIsPermissible === true) {
+    messageContent += `\nIf you're interested you can join this voice channel from this message by clicking here → ${channel}`
+
+    invitedMember
+      .send({
+        content: messageContent,
+      })
+      .catch(error => directMessageError(error, invitedMember))
+  } else {
+    const joinChannelButton = new MessageActionRow().addComponents(
+      new MessageButton()
+        .setCustomId(`!join-voice-channel: ${channel.id}`)
+        .setLabel(`Join ${channel.name}`)
+        .setStyle('PRIMARY')
+    )
+
+    messageContent += `\nHowever, you currently don't have access to this voice channel, click the button below to gain access.`
+
+    invitedMember
+      .send({
+        content: messageContent,
+        components: [joinChannelButton],
+      })
+      .catch(error => directMessageError(error, invitedMember))
+  }
+
+  await interaction.editReply({
+    content: `I sent a message to ${invitedMember} inviting them to ${channel} 👍`,
+  })
 }

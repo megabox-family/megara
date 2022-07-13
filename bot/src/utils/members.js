@@ -1,4 +1,4 @@
-import { addToBatchRoleQueue, batchRemoveRole } from './roles.js'
+import { addToBatchRoleQueue, getRoleByName } from './roles.js'
 import {
   getAdminChannel,
   getVipRoleId,
@@ -211,4 +211,34 @@ async function handleVipRole(oldMember, newMember) {
 export async function handleMemberUpdate(oldMember, newMember) {
   handlePremiumRole(oldMember, newMember)
   handleVipRole(oldMember, newMember)
+}
+
+export function CheckIfVerificationLevelIsMismatched(member, _channel) {
+  const guild = member.guild,
+    channelId = [`GUILD_PUBLIC_THREAD`, `GUILD_PRIVATE_THREAD`].includes(
+      _channel.type
+    )
+      ? _channel.parentId
+      : null,
+    channel = channelId ? guild.channels.cache.get(channelId) : _channel,
+    guildRoles = guild.roles.cache,
+    verifiedRole = getRoleByName(guildRoles, `verified`),
+    memberVerificationLevel = member._roles.includes(verifiedRole.id)
+      ? `verified`
+      : `unverified`,
+    everyoneRole = getRoleByName(guildRoles, `@everyone`),
+    channelEveryoneOverwrite = channel.permissionOverwrites.cache.get(
+      everyoneRole.id
+    ),
+    everyoneAllowPermissions = channelEveryoneOverwrite.allow.serialize(),
+    everyoneDenyPermissions = channelEveryoneOverwrite.deny.serialize(),
+    everyoneRolePermissions = everyoneRole.permissions.serialize(),
+    isUnverified =
+      !everyoneAllowPermissions.VIEW_CHANNEL &&
+      !everyoneDenyPermissions.VIEW_CHANNEL
+        ? everyoneRolePermissions.VIEW_CHANNEL
+        : everyoneAllowPermissions.VIEW_CHANNEL
+
+  if (memberVerificationLevel === `unverified` && !isUnverified) return true
+  else return false
 }

@@ -1,10 +1,9 @@
 import { MessageActionRow, MessageButton } from 'discord.js'
 import { directMessageError } from '../utils/error-logging.js'
-import { getIdForJoinableChannel } from '../repositories/channels.js'
-import { getRoleByName } from '../utils/roles.js'
-import { checkIfMemberIsPermissible } from '../utils/voice.js'
+import { CheckIfVerificationLevelIsMismatched } from '../utils/members.js'
 import { CheckIfMemberNeedsToBeAdded } from '../utils/channels.js'
-import { isDynamicThread } from '../utils/validation.js'
+import { getIdForJoinableChannel } from '../repositories/channels.js'
+import { handleVoiceChannel } from '../utils/slash-commands.js'
 
 export const description = `Allows you to invite an existing member to the channel you use this command in.`
 export const defaultPermission = false,
@@ -16,76 +15,6 @@ export const defaultPermission = false,
       required: true,
     },
   ]
-
-function CheckIfVerificationLevelIsMismatched(member, _channel) {
-  const guild = member.guild,
-    channelId = [`GUILD_PUBLIC_THREAD`, `GUILD_PRIVATE_THREAD`].includes(
-      _channel.type
-    )
-      ? _channel.parentId
-      : null,
-    channel = channelId ? guild.channels.cache.get(channelId) : _channel,
-    guildRoles = guild.roles.cache,
-    verifiedRole = getRoleByName(guildRoles, `verified`),
-    memberVerificationLevel = member._roles.includes(verifiedRole.id)
-      ? `verified`
-      : `unverified`,
-    everyoneRole = getRoleByName(guildRoles, `@everyone`),
-    channelEveryoneOverwrite = channel.permissionOverwrites.cache.get(
-      everyoneRole.id
-    ),
-    everyoneAllowPermissions = channelEveryoneOverwrite.allow.serialize(),
-    everyoneDenyPermissions = channelEveryoneOverwrite.deny.serialize(),
-    everyoneRolePermissions = everyoneRole.permissions.serialize(),
-    isUnverified =
-      !everyoneAllowPermissions.VIEW_CHANNEL &&
-      !everyoneDenyPermissions.VIEW_CHANNEL
-        ? everyoneRolePermissions.VIEW_CHANNEL
-        : everyoneAllowPermissions.VIEW_CHANNEL
-
-  if (memberVerificationLevel === `unverified` && !isUnverified) return true
-  else return false
-}
-
-async function handleVoiceChannel(channel, invitedMember, interaction) {
-  const guild = channel.guild,
-    member = interaction.member,
-    memberIsPermissible = checkIfMemberIsPermissible(channel, invitedMember),
-    category = guild.channels.cache.get(channel.parentId),
-    categoryContext = category ? ` in the **${category.name}** category` : ``
-
-  let messageContent = `${member} from the **${guild}** server has invited you to the **${channel}** voice channel${categoryContext} 🙌`
-
-  if (memberIsPermissible === true) {
-    messageContent += `\nIf you're interested you can join this voice channel from this message by clicking here → ${channel}`
-
-    invitedMember
-      .send({
-        content: messageContent,
-      })
-      .catch(error => directMessageError(error, invitedMember))
-  } else {
-    const joinChannelButton = new MessageActionRow().addComponents(
-      new MessageButton()
-        .setCustomId(`!join-voice-channel: ${channel.id}`)
-        .setLabel(`Join ${channel.name}`)
-        .setStyle('PRIMARY')
-    )
-
-    messageContent += `\nHowever, you currently don't have access to this voice channel, click the button below to gain access.`
-
-    invitedMember
-      .send({
-        content: messageContent,
-        components: [joinChannelButton],
-      })
-      .catch(error => directMessageError(error, invitedMember))
-  }
-
-  await interaction.editReply({
-    content: `I sent a message to ${invitedMember} inviting them to ${channel} 👍`,
-  })
-}
 
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })
@@ -138,19 +67,6 @@ export default async function (interaction) {
     [`GUILD_PUBLIC_THREAD`, `GUILD_PRIVATE_THREAD`].includes(channel.type)
   ) {
     const thread = channel
-
-    if (isDynamicThread(thread.name)) {
-      const voiceChannel = guild.channels.cache.find(
-        channel =>
-          channel.name === thread.name && channel.type === `GUILD_VOICE`
-      )
-
-      if (voiceChannel) {
-        await handleVoiceChannel(voiceChannel, invitedMember, interaction)
-
-        return
-      }
-    }
 
     const parentChannel = guild.channels.cache.get(thread.parentId),
       isJoinable = await getIdForJoinableChannel(parentChannel)
