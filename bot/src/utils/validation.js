@@ -29,3 +29,7 @@ export function getRoleIdsFromMessage(message) {
 export function isDynamicThread(threadName) {
   return threadName.match(`(?!.*-)[0-9]+$`)
 }
+
+export function getUserIdFromTag(userTag) {
+  return userTag.match(`((?<=^<@!)|(?<=^<@))[0-9]+(?=>$)`)?.[0]
+}

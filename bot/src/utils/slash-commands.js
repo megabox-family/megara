@@ -352,7 +352,7 @@ export async function handleVoiceChannel(channel, invitedMember, interaction) {
   let messageContent = `${member} from the **${guild}** server has invited you to the **${channel}** voice channel${categoryContext} 🙌`
 
   if (memberIsPermissible === true) {
-    messageContent += `\nIf you're interested you can join this voice channel from this message by clicking here → ${channel}`
+    messageContent += `\n\nIf you're interested, you can join this voice channel from this message by clicking here → ${channel}`
 
     invitedMember
       .send({
@@ -367,7 +367,7 @@ export async function handleVoiceChannel(channel, invitedMember, interaction) {
         .setStyle('PRIMARY')
     )
 
-    messageContent += `\nHowever, you currently don't have access to this voice channel, click the button below to gain access.`
+    messageContent += `\n\nHowever, you currently don't have access to this voice channel, click the button below to gain access.`
 
     invitedMember
       .send({

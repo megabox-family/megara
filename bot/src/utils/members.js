@@ -8,6 +8,7 @@ import {
   getVipOverriedId,
   getVipUserIdArray,
 } from '../repositories/vip-user-overrides.js'
+import { getTotalBatchRoleQueueMembers } from './roles.js'
 
 export const pauseDuation = 5
 
