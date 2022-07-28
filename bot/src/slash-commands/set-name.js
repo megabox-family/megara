@@ -4,7 +4,7 @@ import { getWelcomeChannel } from '../repositories/guilds.js'
 import { isNotificationRole } from '../utils/validation.js'
 
 export const description = `Allows you to set your nickname within this server, and verifies you if you haven't been.`
-export const defaultPermission = false,
+export const dmPermission = false,
   options = [
     {
       name: `name`,

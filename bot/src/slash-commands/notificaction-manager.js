@@ -3,7 +3,7 @@ import { getColorButtons, getNotificationButtons } from '../utils/buttons.js'
 import { createList } from '../repositories/lists.js'
 
 export const description = `Allows you to subscribe and unsubscribe from notification roles in this server.`,
-  defaultPermission = false
+  dmPermission = false
 
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })

@@ -6,7 +6,7 @@ import {
 import { getCommandSymbol } from '../repositories/guilds.js'
 
 export const description = `Shows you the rules for this sever.`,
-  defaultPermission = false
+  dmPermission = false
 
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })

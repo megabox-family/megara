@@ -2,7 +2,7 @@ import { MessageActionRow, MessageButton } from 'discord.js'
 import { getThreadByName } from '../utils/threads.js'
 
 export const description = `Generates a joinable private thread in relation to an episode in a series to hide spoilers.`
-export const defaultPermission = false,
+export const dmPermission = false,
   options = [
     {
       name: `season-number`,

@@ -1,7 +1,7 @@
 import { getAllVoiceChannelIds } from '../repositories/channels.js'
 
 export const description = `Creates a sepcificed number of randomized teams composed of people in the voice channel you're in.`
-export const defaultPermission = false,
+export const dmPermission = false,
   options = [
     {
       name: `number-of-teams`,

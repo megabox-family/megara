@@ -11,7 +11,7 @@ import {
 import { createList } from '../repositories/lists.js'
 
 export const description = `Shows you all the Minecraft coordinates within various groups.`
-export const defaultPermission = false,
+export const dmPermission = false,
   options = [
     {
       name: `group-by`,

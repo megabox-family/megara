@@ -2,7 +2,7 @@ import { MessageActionRow, MessageButton } from 'discord.js'
 import { getPublicChannels } from '../repositories/channels.js'
 
 export const description = `Generate public channel or notification buttons in a specified channel.`
-export const defaultPermission = false,
+export const dmPermission = false,
   options = [
     {
       name: `button-type`,

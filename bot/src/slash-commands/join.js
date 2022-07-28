@@ -1,5 +1,5 @@
 export const description = `You can no longer join channels using this command, please use \`/channel-list\` instead.`
-export const defaultPermission = false
+export const dmPermission = false
 
 export default async function (interaction) {
   await interaction.reply({

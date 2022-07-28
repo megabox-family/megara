@@ -14,7 +14,7 @@ validCommandSymbols.forEach(symbol => {
 })
 
 export const description = `Lets you set the command symbol for commands that are not slash commands.`,
-  defaultPermission = false,
+  dmPermission = false,
   options = [
     {
       name: `command-symbol`,

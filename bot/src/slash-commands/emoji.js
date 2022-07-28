@@ -1,5 +1,5 @@
 export const description = `Frick around and find out 😏`
-export const defaultPermission = false,
+export const dmPermission = false,
   options = [
     {
       name: `emoji`,

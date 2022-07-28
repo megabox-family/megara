@@ -1,5 +1,5 @@
 export const description = `Lets you roll dice and returns the result.`
-export const defaultPermission = false,
+export const dmPermission = false,
   options = [
     {
       name: `number-of-dice`,

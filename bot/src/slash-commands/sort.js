@@ -3,7 +3,7 @@ import { pushToRoleSortingQueue } from '../utils/roles.js'
 import { setChannelSorting, setRoleSorting } from '../repositories/guilds.js'
 
 export const description = `Enables or disables automatic sorting for channels and roles.`
-export const defaultPermission = false,
+export const dmPermission = false,
   options = [
     {
       name: `what-to-sort`,

@@ -6,7 +6,7 @@ import {
 } from '../repositories/coordinates.js'
 
 export const description = `Allows you to record the coordinates of a location in Minecraft.`
-export const defaultPermission = false,
+export const dmPermission = false,
   options = [
     {
       name: `world-name`,

@@ -1,7 +1,7 @@
 import { getWorldId, editWorld } from '../repositories/coordinates.js'
 
 export const description = `Allows you to edit a world record in the worlds table for Minecraft.`
-export const defaultPermission = false,
+export const dmPermission = false,
   options = [
     {
       name: `world-name`,

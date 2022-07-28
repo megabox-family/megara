@@ -2,7 +2,7 @@ import { getWorldId } from '../repositories/coordinates.js'
 import { setActiveWorld } from '../repositories/guilds.js'
 
 export const description = `Allows you to set the active Minecraft world within your Discord server, distinguished when listed.`
-export const defaultPermission = false,
+export const dmPermission = false,
   options = [
     {
       name: `world-name`,

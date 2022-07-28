@@ -49,7 +49,6 @@ async function registerDevCommands(guild) {
         name: slashCommand.baseName,
         description: commandModule?.description,
         options: commandModule?.options,
-        defaultPermission: commandModule?.defaultPermission,
       },
       existingCommand = commandCache.find(
         command => command.name === slashCommand.baseName
@@ -90,9 +89,10 @@ async function registerDevCommands(guild) {
     } else if (
       !existingCommand ||
       existingCommand.description !== commandObject.description ||
-      !isEqual(existingCommand.options, commandObject.options) ||
-      existingCommand.defaultPermission !== commandObject.defaultPermission
+      !isEqual(existingCommand.options, commandObject.options)
     ) {
+      console.log(existingCommand.dmPermission !== commandObject.dmPermission)
+
       console.log(`${commandObject.name} was generated.`)
 
       if (existingCommand) await existingCommand.edit(commandObject)
@@ -119,7 +119,7 @@ async function registerProdCommands(bot) {
         name: slashCommand.baseName,
         description: commandModule?.description,
         options: commandModule?.options,
-        defaultPermission: commandModule?.defaultPermission,
+        dmPermission: commandModule?.dmPermission,
       },
       existingCommand = commandCache.find(
         command => command.name === slashCommand.baseName
@@ -159,12 +159,10 @@ async function registerProdCommands(bot) {
       !existingCommand ||
       existingCommand.description !== commandObject.description ||
       !isEqual(existingCommand.options, commandObject.options) ||
-      existingCommand.defaultPermission !== commandObject.defaultPermission
+      existingCommand.dmPermission !== commandObject.dmPermission
     )
       updateCommands = true
   }
-
-  console.log(commandsArray)
 
   if (updateCommands) {
     console.log(`New commands were generated`)

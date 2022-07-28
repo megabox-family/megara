@@ -6,7 +6,7 @@ import { getIdForJoinableChannel } from '../repositories/channels.js'
 import { handleVoiceChannel } from '../utils/slash-commands.js'
 
 export const description = `Allows you to invite an existing member to the channel you use this command in.`
-export const defaultPermission = false,
+export const dmPermission = false,
   options = [
     {
       name: `username-and-tag-or-id`,

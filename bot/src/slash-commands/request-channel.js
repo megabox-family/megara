@@ -1,7 +1,7 @@
 import { MessageActionRow, Modal, TextInputComponent } from 'discord.js'
 
 export const description = `Generates a modal that allows you to request a new channel, note that anyone can join this channel.`
-export const defaultPermission = false
+export const dmPermission = false
 
 export default async function (interaction) {
   const channelRequestModal = new Modal()

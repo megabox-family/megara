@@ -3,7 +3,7 @@ import { CheckIfVerificationLevelIsMismatched } from '../utils/members.js'
 import { handleVoiceChannel } from '../utils/slash-commands.js'
 
 export const description = `Allows you to invite an existing member to the voice channel you're currently in.`
-export const defaultPermission = false,
+export const dmPermission = false,
   options = [
     {
       name: `username-and-tag-or-id`,
