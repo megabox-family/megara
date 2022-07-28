@@ -164,6 +164,8 @@ async function registerProdCommands(bot) {
       updateCommands = true
   }
 
+  console.log(commandsArray)
+
   if (updateCommands) {
     console.log(`New commands were generated`)
 
