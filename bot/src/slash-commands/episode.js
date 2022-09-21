@@ -27,7 +27,7 @@ export default async function (interaction) {
     episodeNumber = options.getInteger(`episode-number`),
     premiumTier = guild.premiumTier,
     channel = interaction.channel,
-    threadName = `${channel.name} season ${seasonNumber} episode ${episodeNumber}`,
+    threadName = `${channel.name} S${seasonNumber} E${episodeNumber}`,
     existingThread = await getThreadByName(channel, threadName)
 
   if (existingThread) {
@@ -79,7 +79,7 @@ export default async function (interaction) {
   // interaction.deleteReply()
 
   await interaction.editReply({
-    content: `A new thread for **${channel.name} season ${seasonNumber} episode ${episodeNumber}** has been created, press the button below to join the thread (**spoiler warning**):`,
+    content: `A new thread for **${threadName}** has been created, press the button below to join the thread (**spoiler warning**):`,
     components: [episodeButton],
   })
 }
