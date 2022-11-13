@@ -91,7 +91,7 @@ async function registerDevCommands(guild) {
       existingCommand.description !== commandObject.description ||
       !isEqual(existingCommand.options, commandObject.options)
     ) {
-      console.log(existingCommand.dmPermission !== commandObject.dmPermission)
+      console.log(existingCommand?.dmPermission !== commandObject?.dmPermission)
 
       console.log(`${commandObject.name} was generated.`)
 
