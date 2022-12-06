@@ -1,4 +1,4 @@
-let _commands = null
+let _commands = []
 
 export function cacheCommands(commands) {
   _commands = [..._commands, ...commands]
