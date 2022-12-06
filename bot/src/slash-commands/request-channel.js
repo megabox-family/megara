@@ -7,7 +7,7 @@ import {
 
 export const description = `Generates a modal that allows you to request a new channel, note that anyone can join this channel.`
 export const dmPermission = false,
-  defaultMemberPermissions = 0
+  defaultMemberPermissions = `0`
 
 export default async function (interaction) {
   const channelRequestModal = new ModalBuilder()

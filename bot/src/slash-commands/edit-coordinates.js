@@ -8,7 +8,7 @@ import {
 
 export const description = `Allows you to edit the coordinates of a location in Minecraft.`
 export const dmPermission = false,
-  defaultMemberPermissions = 0,
+  defaultMemberPermissions = `0`,
   options = [
     {
       name: `world-name`,

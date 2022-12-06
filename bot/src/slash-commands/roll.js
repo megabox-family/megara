@@ -2,7 +2,7 @@ import { ApplicationCommandOptionType } from 'discord.js'
 
 export const description = `Lets you roll dice and returns the result.`
 export const dmPermission = false,
-  defaultMemberPermissions = 0,
+  defaultMemberPermissions = `0`,
   options = [
     {
       name: `number-of-dice`,

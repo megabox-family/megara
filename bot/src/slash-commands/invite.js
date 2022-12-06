@@ -13,7 +13,7 @@ import { handleVoiceChannel } from '../utils/slash-commands.js'
 
 export const description = `Allows you to invite an existing member to the channel you use this command in.`
 export const dmPermission = false,
-  defaultMemberPermissions = 0,
+  defaultMemberPermissions = `0`,
   options = [
     {
       name: `username-and-tag-or-id`,

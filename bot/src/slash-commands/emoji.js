@@ -1,7 +1,7 @@
 import { ApplicationCommandOptionType } from 'discord.js'
 export const description = `Frick around and find out 😏`
 export const dmPermission = false,
-  defaultMemberPermissions = 0,
+  defaultMemberPermissions = `0`,
   options = [
     {
       name: `emoji`,

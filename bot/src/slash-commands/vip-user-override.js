@@ -8,7 +8,7 @@ import { getVipRoleId, setVipRoleId } from '../repositories/guilds.js'
 
 export const description = `Allows you to manually attribute the contributor role regardless of premium or nitro status.`
 export const dmPermission = false,
-  defaultMemberPermissions = 0,
+  defaultMemberPermissions = `0`,
   options = [
     {
       name: `add-or-remove`,

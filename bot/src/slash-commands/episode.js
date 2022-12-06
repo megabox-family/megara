@@ -9,7 +9,7 @@ import { getThreadByName } from '../utils/threads.js'
 
 export const description = `Generates a joinable private thread in relation to an episode in a series to hide spoilers.`
 export const dmPermission = false,
-  defaultMemberPermissions = 0,
+  defaultMemberPermissions = `0`,
   options = [
     {
       name: `season-number`,

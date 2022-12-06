@@ -3,7 +3,7 @@ import { getWorldId, createWorld } from '../repositories/coordinates.js'
 
 export const description = `Allows you to create a world record in the worlds table for Minecraft.`
 export const dmPermission = false,
-  defaultMemberPermissions = 0,
+  defaultMemberPermissions = `0`,
   options = [
     {
       name: `world-name`,

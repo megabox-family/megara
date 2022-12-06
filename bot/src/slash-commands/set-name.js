@@ -6,7 +6,7 @@ import { isNotificationRole } from '../utils/validation.js'
 
 export const description = `Allows you to set your nickname within this server, and verifies you if you haven't been.`
 export const dmPermission = false,
-  defaultMemberPermissions = 0,
+  defaultMemberPermissions = `0`,
   options = [
     {
       name: `name`,

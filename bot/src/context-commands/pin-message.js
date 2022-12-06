@@ -3,7 +3,7 @@ import { addPinnedMessage } from '../repositories/pinned-messages.js'
 
 export const type = ApplicationCommandType.Message,
   dmPermission = false,
-  defaultMemberPermissions = 0
+  defaultMemberPermissions = `0`
 
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })

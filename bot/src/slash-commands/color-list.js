@@ -4,7 +4,7 @@ import { createList } from '../repositories/lists.js'
 
 export const description = `Displays a list of colors that you can choose from to change your name color.`,
   dmPermission = false,
-  defaultMemberPermissions = 0
+  defaultMemberPermissions = `0`
 
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })
