@@ -84,7 +84,7 @@ async function registerProdContextCommands(bot) {
     }
   }
 
-  if (updateCommands) {
+  if (updateContextCommands) {
     console.log(`New context commands were generated`)
 
     commands.set(contextCommandArry)
