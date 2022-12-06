@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
-import Modal from 'react-modal'
+import ModalBuilder from 'react-modal'
 import { Navigate } from 'react-router-dom'
 import Nav from '../nav/nav'
 import './home.scss'
@@ -72,7 +72,7 @@ const Home = () => {
         <span>click on tomato if ur generous</span>
         <img className="tomato-boy" src={tomat} />
       </div>
-      <Modal
+      <ModalBuilder
         isOpen={modalIsOpen}
         onRequestClose={closeModal}
         style={modalStyles}
@@ -85,7 +85,7 @@ const Home = () => {
         <button className="cancel-button" onClick={closeModal}>
           Cancel
         </button>
-      </Modal>
+      </ModalBuilder>
       <div className="footer">
         <div className="footer-content">
           <img className="footer-image" src={megaboxGray} />

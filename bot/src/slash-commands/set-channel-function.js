@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 import { pushToChannelVisibilityQueue } from '../utils/channels.js'
 import {
   setAdminChannel,
@@ -20,7 +21,7 @@ export const dmPermission = false,
     {
       name: `channel-function`,
       description: `The function you want to give or remove from a channel.`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
       choices: [
         { name: `admin`, value: `admin` },
@@ -32,7 +33,7 @@ export const dmPermission = false,
     {
       name: `channel-id`,
       description: `The id for the channel you want to give the function to (input 'null' to remove).`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
   ]

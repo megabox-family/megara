@@ -1,7 +1,13 @@
-import { Permissions } from 'discord.js'
+import {
+  ChannelType,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  OverwriteType,
+  PermissionsBitField,
+} from 'discord.js'
 import { getBot } from '../cache-bot.js'
 import {
-  announceNewChannel,
   getIndividualPermissionSets,
   comparePermissions,
 } from '../utils/general.js'
@@ -18,6 +24,7 @@ import {
   getAnnouncementChannel,
   getVerificationChannel,
   getWelcomeChannel,
+  getPauseChannelNotifications,
 } from '../repositories/guilds.js'
 import {
   createChannelRecord,
@@ -30,6 +37,7 @@ import {
   getChannelType,
   getRoomChannelId,
   getUnverifiedRoomChannelId,
+  getCategoryName,
 } from '../repositories/channels.js'
 import { getChannelBasename } from './voice.js'
 
@@ -81,13 +89,15 @@ export function pushToChannelSortingQueue(GuildId) {
 
 export function checkType(channel) {
   switch (channel.type) {
-    case `GUILD_CATEGORY`:
+    case ChannelType.GuildCategory:
       return `category`
-    case `GUILD_VOICE`:
+    case ChannelType.GuildVoice:
       return `voice`
-    case `GUILD_PUBLIC_THREAD`:
+    case ChannelType.GuildStageVoice:
+      return `voice`
+    case ChannelType.PublicThread:
       return `public thread`
-    case `GUILD_PRIVATE_THREAD`:
+    case ChannelType.PrivateThread:
       return `private thread`
   }
 
@@ -143,33 +153,33 @@ function unarchiveUserOverwrites(overwrites) {
     const denyPermissions = overwrite.deny.serialize()
 
     if (
-      overwrite.type === `member` &&
-      (denyPermissions.SEND_MESSAGES ||
-        denyPermissions.SEND_MESSAGES_IN_THREADS ||
-        denyPermissions.CREATE_PRIVATE_THREADS ||
-        denyPermissions.CREATE_PUBLIC_THREADS ||
-        denyPermissions?.USE_PRIVATE_THREADS ||
-        denyPermissions?.USE_PUBLIC_THREADS)
+      overwrite.type === OverwriteType.Member &&
+      (denyPermissions.SendMessages ||
+        denyPermissions.SendMessagesInThreads ||
+        denyPermissions.CreatePrivateThreads ||
+        denyPermissions.CreatePublicThreads ||
+        denyPermissions?.CreatePrivateThreads ||
+        denyPermissions?.CreatePublicThreads)
     ) {
       const newOverwrite = overwrites.get(overwrite.id),
         permissionSets = getIndividualPermissionSets(overwrite)
 
-      permissionSets.allow.delete(`SEND_MESSAGES`)
-      permissionSets.allow.delete(`SEND_MESSAGES_IN_THREADS`)
-      permissionSets.allow.delete(`CREATE_PRIVATE_THREADS`)
-      permissionSets.allow.delete(`CREATE_PUBLIC_THREADS`)
-      permissionSets.allow.delete(`USE_PRIVATE_THREADS`)
-      permissionSets.allow.delete(`USE_PUBLIC_THREADS`)
+      permissionSets.allow.delete(`SendMessages`)
+      permissionSets.allow.delete(`SendMessagesInThreads`)
+      permissionSets.allow.delete(`CreatePrivateThreads`)
+      permissionSets.allow.delete(`CreatePublicThreads`)
+      permissionSets.allow.delete(`CreatePrivateThreads`)
+      permissionSets.allow.delete(`CreatePublicThreads`)
 
-      permissionSets.deny.delete(`SEND_MESSAGES`)
-      permissionSets.deny.delete(`SEND_MESSAGES_IN_THREADS`)
-      permissionSets.deny.delete(`CREATE_PRIVATE_THREADS`)
-      permissionSets.deny.delete(`CREATE_PUBLIC_THREADS`)
-      permissionSets.deny.delete(`USE_PRIVATE_THREADS`)
-      permissionSets.deny.delete(`USE_PUBLIC_THREADS`)
+      permissionSets.deny.delete(`SendMessages`)
+      permissionSets.deny.delete(`SendMessagesInThreads`)
+      permissionSets.deny.delete(`CreatePrivateThreads`)
+      permissionSets.deny.delete(`CreatePublicThreads`)
+      permissionSets.deny.delete(`CreatePrivateThreads`)
+      permissionSets.deny.delete(`CreatePublicThreads`)
 
-      newOverwrite.allow = new Permissions([...permissionSets.allow])
-      newOverwrite.deny = new Permissions([...permissionSets.deny])
+      newOverwrite.allow = new PermissionsBitField([...permissionSets.allow])
+      newOverwrite.deny = new PermissionsBitField([...permissionSets.deny])
 
       permissionsHaveChanged = true
     }
@@ -242,37 +252,41 @@ export async function setChannelVisibility(channelId) {
       const comparedPermissions = comparePermissions(verifiedOverwrite)
 
       if (
-        !comparedPermissions.VIEW_CHANNEL ||
-        comparedPermissions.SEND_MESSAGES ||
-        comparedPermissions.SEND_MESSAGES_IN_THREADS ||
-        comparedPermissions.CREATE_PUBLIC_THREADS ||
-        comparedPermissions.CREATE_PRIVATE_THREADS
+        !comparedPermissions.ViewChannel ||
+        comparedPermissions.SendMessages ||
+        comparedPermissions.SendMessagesInThreads ||
+        comparedPermissions.CreatePublicThreads ||
+        comparedPermissions.CreatePrivateThreads
       )
         await verifiedOverwrite.edit({
-          VIEW_CHANNEL: true,
-          SEND_MESSAGES: false,
-          SEND_MESSAGES_IN_THREADS: false,
-          CREATE_PUBLIC_THREADS: false,
-          CREATE_PRIVATE_THREADS: false,
+          ViewChannel: true,
+          SendMessages: false,
+          SendMessagesInThreads: false,
+          CreatePublicThreads: false,
+          CreatePrivateThreads: false,
         })
     } else
       await channel.permissionOverwrites.create(verifiedRoleId, {
-        VIEW_CHANNEL: true,
-        SEND_MESSAGES: false,
-        SEND_MESSAGES_IN_THREADS: false,
-        CREATE_PUBLIC_THREADS: false,
-        CREATE_PRIVATE_THREADS: false,
+        ViewChannel: true,
+        SendMessages: false,
+        SendMessagesInThreads: false,
+        CreatePublicThreads: false,
+        CreatePrivateThreads: false,
       })
   } else if (channel.id === verificationChannelId) {
     if (hiddenOverwrite) await hiddenOverwrite.delete()
     if (archivedOverwrite) await archivedOverwrite.delete()
     if (joinableOverwrite) await joinableOverwrite.delete()
     if (publicOverwrite) await publicOverwrite.delete()
-    if (verifiedOverwrite) await verifiedOverwrite.delete()
     if (!undergoingVerificationOverwrite && undergoingVerificationRoleId)
       await channel.permissionOverwrites.create(undergoingVerificationRoleId, {
-        VIEW_CHANNEL: true,
-        SEND_MESSAGES: true,
+        ViewChannel: true,
+        SendMessages: true,
+      })
+
+    if (!verifiedOverwrite && verifiedRoleId)
+      await channel.permissionOverwrites.create(verifiedRoleId, {
+        ViewChannel: false,
       })
   } else if (channelType === `hidden`) {
     if (archivedOverwrite) await archivedOverwrite.delete()
@@ -283,20 +297,20 @@ export async function setChannelVisibility(channelId) {
 
     if (!verifiedOverwrite) {
       await channel.permissionOverwrites.create(verifiedRoleId, {
-        VIEW_CHANNEL: false,
+        ViewChannel: false,
       })
     } else {
       const allowPermissions = verifiedOverwrite.allow.serialize()
 
-      if (allowPermissions.VIEW_CHANNEL) {
-        verifiedOverwrite.edit({ VIEW_CHANNEL: false })
+      if (allowPermissions.ViewChannel) {
+        verifiedOverwrite.edit({ ViewChannel: false })
       }
     }
 
     const denyPermissions = everyoneOverwrite.deny.serialize()
 
-    if (denyPermissions.VIEW_CHANNEL) {
-      everyoneOverwrite.edit({ VIEW_CHANNEL: true })
+    if (denyPermissions.ViewChannel) {
+      everyoneOverwrite.edit({ ViewChannel: true })
     }
 
     let permissionsHaveChanged = unarchiveUserOverwrites(overwrites)
@@ -322,27 +336,27 @@ export async function setChannelVisibility(channelId) {
       const comparedPermissions = comparePermissions(overwrite)
 
       if (
-        overwrite.type === `member` &&
-        (comparedPermissions.SEND_MESSAGES ||
-          comparedPermissions.SEND_MESSAGES_IN_THREADS ||
-          comparedPermissions.CREATE_PRIVATE_THREADS ||
-          comparedPermissions.CREATE_PUBLIC_THREADS)
+        overwrite.type === OverwriteType.Member &&
+        (comparedPermissions.SendMessages ||
+          comparedPermissions.SendMessagesInThreads ||
+          comparedPermissions.CreatePrivateThreads ||
+          comparedPermissions.CreatePublicThreads)
       ) {
         const newOverwrite = overwrites.get(overwrite.id),
           permissionSets = getIndividualPermissionSets(overwrite)
 
-        permissionSets.allow.delete(`SEND_MESSAGES`)
-        permissionSets.allow.delete(`SEND_MESSAGES_IN_THREADS`)
-        permissionSets.allow.delete(`CREATE_PRIVATE_THREADS`)
-        permissionSets.allow.delete(`CREATE_PUBLIC_THREADS`)
+        permissionSets.allow.delete(`SendMessages`)
+        permissionSets.allow.delete(`SendMessagesInThreads`)
+        permissionSets.allow.delete(`CreatePrivateThreads`)
+        permissionSets.allow.delete(`CreatePublicThreads`)
 
-        permissionSets.deny.add(`SEND_MESSAGES`)
-        permissionSets.deny.add(`SEND_MESSAGES_IN_THREADS`)
-        permissionSets.deny.add(`CREATE_PRIVATE_THREADS`)
-        permissionSets.deny.add(`CREATE_PUBLIC_THREADS`)
+        permissionSets.deny.add(`SendMessages`)
+        permissionSets.deny.add(`SendMessagesInThreads`)
+        permissionSets.deny.add(`CreatePrivateThreads`)
+        permissionSets.deny.add(`CreatePublicThreads`)
 
-        newOverwrite.allow = new Permissions([...permissionSets.allow])
-        newOverwrite.deny = new Permissions([...permissionSets.deny])
+        newOverwrite.allow = new PermissionsBitField([...permissionSets.allow])
+        newOverwrite.deny = new PermissionsBitField([...permissionSets.deny])
 
         permissionsHaveChanged = true
       }
@@ -364,7 +378,7 @@ export async function setChannelVisibility(channelId) {
       await undergoingVerificationOverwrite.delete()
     if (!verifiedOverwrite && verifiedRoleId)
       await channel.permissionOverwrites.create(verifiedRoleId, {
-        VIEW_CHANNEL: true,
+        ViewChannel: true,
       })
 
     let permissionsHaveChanged = unarchiveUserOverwrites(overwrites)
@@ -389,7 +403,9 @@ export async function sortChannels(guildId) {
   const guild = getBot().guilds.cache.get(guildId),
     channels = guild.channels.cache.filter(
       channel =>
-        ![`GUILD_PUBLIC_THREAD`, `GUILD_PRIVATE_THREAD`].includes(channel.type)
+        ![ChannelType.PublicThread, ChannelType.PrivateThread].includes(
+          channel.type
+        )
     ),
     alphabeticalCategories = await getAlphabeticalCategories(guildId),
     alphabeticalBuckets = [alphabeticalCategories],
@@ -417,7 +433,7 @@ export async function sortChannels(guildId) {
       const positionOverride = getPositionOverride(channel)
 
       if (positionOverride) {
-        if (channel.type === `GUILD_VOICE`)
+        if (channel.type === ChannelType.GuildVoice)
           voiceChannelsWithPositionOverrides[channel.id] = positionOverride
         else channelsWithPositionOverrides[channel.id] = positionOverride
       }
@@ -623,7 +639,7 @@ export async function modifyChannel(
           `Channel type ${oldChannelType} changed to ${newChannelType} in ${newChannel.name}.`
         )
 
-        announceNewChannel(newChannel)
+        if (newChannelType !== `private`) announceNewChannel(newChannel)
       }
     }
   }
@@ -681,8 +697,9 @@ export async function syncChannels(guild) {
 
   channels.forEach(channel => {
     if (
-      !channel.deleted &&
-      ![`GUILD_PUBLIC_THREAD`, `GUILD_PRIVATE_THREAD`].includes(channel.type)
+      ![ChannelType.PublicThread, ChannelType.PrivateThread].includes(
+        channel.type
+      )
     )
       liveChannelIds.push(channel.id)
   })
@@ -756,7 +773,7 @@ export async function addMemberToDynamicChannels(
     dynamicVoiceChannels = channels.filter(
       channel =>
         getChannelBasename(channel.name) === parentChannelName &&
-        channel.type === `GUILD_VOICE`
+        channel.type === ChannelType.GuildVoice
     )
 
   for (const [voiceChannelId, voiceChannel] of dynamicVoiceChannels) {
@@ -804,43 +821,40 @@ export async function CheckIfMemberNeedsToBeAdded(
 
   if (channelType === `archived`) {
     const archivedPermissions = {
-      VIEW_CHANNEL: true,
-      SEND_MESSAGES: false,
-      SEND_MESSAGES_IN_THREADS: false,
-      CREATE_PRIVATE_THREADS: false,
-      CREATE_PUBLIC_THREADS: false,
+      ViewChannel: true,
+      SendMessages: false,
+      SendMessagesInThreads: false,
+      CreatePrivateThreads: false,
+      CreatePublicThreads: false,
     }
 
     if (!userOverwrite)
       return { action: `create`, permissions: archivedPermissions }
     else if (
-      !comparedPermissions.VIEW_CHANNEL ||
-      comparedPermissions.SEND_MESSAGES ||
-      comparedPermissions.SEND_MESSAGES_IN_THREADS ||
-      comparedPermissions.CREATE_PRIVATE_THREADS ||
-      comparedPermissions.CREATE_PUBLIC_THREADS
+      !comparedPermissions.ViewChannel ||
+      comparedPermissions.SendMessages ||
+      comparedPermissions.SendMessagesInThreads ||
+      comparedPermissions.CreatePrivateThreads ||
+      comparedPermissions.CreatePublicThreads
     )
       return { action: `edit`, permissions: archivedPermissions }
   } else if (channelType === `joinable`) {
     const joinablePermissions = temporary
-      ? { VIEW_CHANNEL: true, SEND_MESSAGES: true }
-      : { VIEW_CHANNEL: true, SEND_MESSAGES: null }
+      ? { ViewChannel: true, SendMessages: true }
+      : { ViewChannel: true, SendMessages: null }
 
     if (!userOverwrite)
       return { action: `create`, permissions: joinablePermissions }
-    else if (
-      !comparedPermissions.VIEW_CHANNEL ||
-      allowPermissions.SEND_MESSAGES
-    )
+    else if (!comparedPermissions.ViewChannel || allowPermissions.SendMessages)
       return { action: `edit`, permissions: joinablePermissions }
   } else if (channelType === `public`) {
     if (temporary) {
-      if (userOverwrite && comparedPermissions?.VIEW_CHANNEL === false)
+      if (userOverwrite && comparedPermissions?.ViewChannel === false)
         return {
           action: `edit`,
           permissions: {
-            VIEW_CHANNEL: true,
-            SEND_MESSAGES: true,
+            ViewChannel: true,
+            SendMessages: true,
           },
         }
     } else {
@@ -849,9 +863,9 @@ export async function CheckIfMemberNeedsToBeAdded(
       }
     }
   } else if (channelType === `private`) {
-    const privatePermissions = { VIEW_CHANNEL: true }
+    const privatePermissions = { ViewChannel: true }
 
-    if (!userOverwrite || !comparedPermissions.VIEW_CHANNEL) {
+    if (!userOverwrite || !comparedPermissions.ViewChannel) {
       return { action: `create`, permissions: privatePermissions }
     }
   }
@@ -901,7 +915,7 @@ export async function removeMemberFromDynamicChannels(
     dynamicVoiceChannels = channels.filter(
       channel =>
         getChannelBasename(channel.name) === parentChannelName &&
-        channel.type === `GUILD_VOICE`
+        channel.type === ChannelType.GuildVoice
     )
 
   for (const [voiceChannelId, voiceChannel] of dynamicVoiceChannels) {
@@ -946,11 +960,11 @@ export async function checkIfmemberneedsToBeRemoved(member, channelId) {
     if (userOverwrite) return { action: `delete` }
   } else if (channelType === `public`) {
     const permissions = {
-      VIEW_CHANNEL: false,
+      ViewChannel: false,
     }
 
     if (!userOverwrite) return { action: `create`, permissions: permissions }
-    else if (comparedPermissions.VIEW_CHANNEL)
+    else if (comparedPermissions.ViewChannel)
       return { action: `edit`, permissions: permissions }
   }
 
@@ -978,4 +992,89 @@ export async function removeMemberFromChannel(member, channelId) {
 
     return `removed`
   } else return `already removed`
+}
+
+export async function announceNewChannel(newChannel) {
+  const guild = newChannel.guild,
+    pauseChannelNotifications = await getPauseChannelNotifications(guild.id)
+
+  if (pauseChannelNotifications) return
+
+  const announcementChannelId = await getAnnouncementChannel(guild.id)
+
+  if (!announcementChannelId) return
+
+  const welcomeChannelId = await getWelcomeChannel(guild.id)
+
+  if (
+    welcomeChannelId === newChannel.id ||
+    [`rooms`, `unverified-rooms`].includes(newChannel.name)
+  )
+    return
+
+  const channelType = await getChannelType(newChannel.id)
+
+  if ([`category`, `hidden`, `private`, `voice`].includes(channelType)) return
+
+  const channelNotificationSquad = guild.roles.cache.find(
+      role => role.name === `-channel notifications-`
+    ),
+    categoryName = await getCategoryName(newChannel.parentId),
+    announcementChannel = guild.channels.cache.get(announcementChannelId),
+    joinButtonRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`!join-channel: ${newChannel.id}`)
+        .setLabel(`Join ${newChannel.name}`)
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`!unsubscribe: ${channelNotificationSquad.id}`)
+        .setLabel(`Unsubscribe from channel notifications`)
+        .setStyle(ButtonStyle.Secondary)
+    ),
+    leaveButtonRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`!leave-channel: ${newChannel.id}`)
+        .setLabel(`Leave ${newChannel.name}`)
+        .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId(`!unsubscribe: ${channelNotificationSquad.id}`)
+        .setLabel(`Unsubscribe from channel notifications`)
+        .setStyle(ButtonStyle.Secondary)
+    )
+
+  let channelTypeMessage,
+    channelTypeDetails,
+    buttonRow = joinButtonRow,
+    joinOrLeave = `join`
+
+  switch (channelType) {
+    case `public`:
+      channelTypeMessage = `We've added a new ${channelType} channel`
+      channelTypeDetails = `By default, all members are added to public channels.`
+      joinOrLeave = `leave`
+      buttonRow = leaveButtonRow
+      break
+    case `joinable`:
+      channelTypeMessage = `We've added a new ${channelType} channel`
+      channelTypeDetails = `By default, members are not added to joinable channels.`
+      break
+    default:
+      channelTypeMessage = `A channel has been archived`
+      channelTypeDetails =
+        `Messages cannot be sent in archived channels, but you can still access them to view message history. ` +
+        `By default, members are not removed from archived channels unless the channel was previously public.`
+      joinOrLeave = `leave`
+      buttonRow = leaveButtonRow
+  }
+
+  if (announcementChannel)
+    announcementChannel.send({
+      content: `
+        ${channelNotificationSquad} Hey guys! 😁\
+        \n${channelTypeMessage}, **<#${newChannel.id}>**, in the **${categoryName}** category. ${channelTypeDetails} \
+
+        \nUse the buttons below this message to ${joinOrLeave} **<#${newChannel.id}>** and or to manage these notifications. You can also join and leave channels using the \`/channel-list\` command.
+      `,
+      components: [buttonRow],
+    })
 }

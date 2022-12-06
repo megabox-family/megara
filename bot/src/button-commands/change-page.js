@@ -1,4 +1,4 @@
-import { MessageEmbed } from 'discord.js'
+import { EmbedBuilder } from 'discord.js'
 import { directMessageError } from '../utils/error-logging.js'
 import {
   toggleListButtons,
@@ -54,7 +54,7 @@ export default async function (interaction) {
   else newPageNo = _newPageNo <= 0 ? 1 : _newPageNo
 
   const newPage = pages[newPageNo - 1],
-    newEmbed = new MessageEmbed()
+    newEmbed = new EmbedBuilder()
       .setColor(existingEmbed.color)
       .setTitle(existingEmbed.title)
       .setDescription(existingEmbed.description)

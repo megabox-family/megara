@@ -1,8 +1,8 @@
 import {
-  Permissions,
-  MessageActionRow,
-  MessageButton,
-  MessageEmbed,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
 } from 'discord.js'
 import { getBot } from '../cache-bot.js'
 import { isColorRole, isNotificationRole } from './validation.js'
@@ -13,6 +13,7 @@ import {
   getAnnouncementChannel,
   getVipRoleId,
   setVipRoleId,
+  getPauseColorNotifications,
 } from '../repositories/guilds.js'
 
 const validator = { isColorRole, isNotificationRole }
@@ -222,8 +223,8 @@ export async function syncRoles(guild) {
       await guild.roles.create({
         name: requiredRole,
         permissions: [
-          Permissions.FLAGS.VIEW_CHANNEL,
-          Permissions.FLAGS.SEND_MESSAGES,
+          Permissions.FLAGS.ViewChannel,
+          Permissions.FLAGS.SendMessages,
           Permissions.FLAGS.READ_MESSAGE_HISTORY,
         ],
       })
@@ -255,7 +256,11 @@ export function balanceDisrupted(role) {
 
 async function announceColorChange(oldRole, newRole) {
   const guild = oldRole.guild,
-    announcementChannelId = await getAnnouncementChannel(guild.id)
+    pauseColorNotifications = await getPauseColorNotifications(guild.id)
+
+  if (pauseColorNotifications) return
+
+  const announcementChannelId = await getAnnouncementChannel(guild.id)
 
   if (!announcementChannelId) return
 
@@ -263,11 +268,11 @@ async function announceColorChange(oldRole, newRole) {
     colorNotificationSquad = guild.roles.cache.find(
       role => role.name === `-color notifications-`
     ),
-    buttonRow = new MessageActionRow().addComponents(
-      new MessageButton()
+    buttonRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
         .setCustomId(`!unsubscribe: ${colorNotificationSquad.id}`)
         .setLabel(`Unsubscribe from color notifications`)
-        .setStyle('SECONDARY')
+        .setStyle(ButtonStyle.Secondary)
     ),
     isRoleDeleted = guild.roles.cache.find(role => role.id === oldRole.id),
     oldRoleName = oldRole.name.replaceAll(`~`, ``),
@@ -281,7 +286,7 @@ async function announceColorChange(oldRole, newRole) {
   } else if (newRole == null || oldRoleName === `new role`) {
     message += `A new color role has been created - **${newRoleName}**.`
 
-    embed = new MessageEmbed()
+    embed = new EmbedBuilder()
       .setTitle(`Color Update`)
       .addFields({
         name: `──────────────────────────────`,
@@ -294,7 +299,7 @@ async function announceColorChange(oldRole, newRole) {
   ) {
     message += `The **${oldRoleName} (${oldRole.hexColor})** color role's name & hue has been changed to **${newRoleName} (${newRole.hexColor})**.`
 
-    embed = new MessageEmbed()
+    embed = new EmbedBuilder()
       .setTitle(`Color Update`)
       .addFields({
         name: `──────────────────────────────`,
@@ -304,7 +309,7 @@ async function announceColorChange(oldRole, newRole) {
   } else if (oldRoleName !== newRoleName) {
     message += `The **${oldRoleName}** color role's name has been changed to **${newRoleName}**.`
 
-    embed = new MessageEmbed()
+    embed = new EmbedBuilder()
       .setTitle(`Color Update`)
       .addFields({
         name: `──────────────────────────────`,
@@ -314,7 +319,7 @@ async function announceColorChange(oldRole, newRole) {
   } else {
     message += `The **${oldRoleName}** color role's hue has been changed from **${oldRole.hexColor}** to **${newRole.hexColor}**.`
 
-    embed = new MessageEmbed()
+    embed = new EmbedBuilder()
       .setTitle(`Color Update`)
       .addFields({
         name: `──────────────────────────────`,
@@ -344,7 +349,7 @@ export async function createRole(role) {
     botRole = roles.find(role => role.tags?.botId === getBot().user.id)
 
   roles.forEach(async _role => {
-    if (_role.name === `new role` && _role.id !== role.id && !_role.deleted)
+    if (_role.name === `new role` && _role.id !== role.id)
       await _role.delete().catch(error => console.log(`it don't exist bruh`))
   })
 

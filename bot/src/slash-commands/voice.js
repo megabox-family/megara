@@ -1,3 +1,4 @@
+import { ChannelType } from 'discord.js'
 import { checkType } from '../utils/channels.js'
 import {
   checkIfRoomOrTextChannel,
@@ -57,7 +58,8 @@ export default async function (interaction) {
   if (!voiceChannel) {
     let voiceChannel = guild.channels.cache.find(
       channel =>
-        channel.name === voiceChannelName && channel.type === `GUILD_VOICE`
+        channel.name === voiceChannelName &&
+        channel.type === ChannelType.GuildVoice
     )
 
     await interaction.editReply({

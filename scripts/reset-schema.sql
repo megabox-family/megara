@@ -89,6 +89,14 @@ create table lists (
   filters text
 );
 
+-- pins
+drop table if exists pinned_messages;
+
+create table pinned_messages (
+  id text not null primary key,
+  pinned_by text not null
+);
+
 -- users
 drop table if exists users;
 

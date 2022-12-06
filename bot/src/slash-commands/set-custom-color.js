@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 import { roleSortPauseDuration } from '../utils/roles.js'
 
 export const description = `Allows you to change your name's display color using a hexcode.`
@@ -6,7 +7,7 @@ export const dmPermission = false,
     {
       name: `color-hex-code`,
       description: `The hex code that represents the color you'd like your name to display as (input 'null' to clear).`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
   ]

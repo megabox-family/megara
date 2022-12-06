@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 import { getAllVoiceChannelIds } from '../repositories/channels.js'
 import { CheckIfVerificationLevelIsMismatched } from '../utils/members.js'
 import { handleVoiceChannel } from '../utils/slash-commands.js'
@@ -8,7 +9,7 @@ export const dmPermission = false,
     {
       name: `username-and-tag-or-id`,
       description: `The username & tag or id of the member. Examples: Zedd#4752, 360140791936712704`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
   ]

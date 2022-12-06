@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 import { getAllVoiceChannelIds } from '../repositories/channels.js'
 
 export const description = `Creates a sepcificed number of randomized teams composed of people in the voice channel you're in.`
@@ -6,7 +7,7 @@ export const dmPermission = false,
     {
       name: `number-of-teams`,
       description: `The number of teams you'd like to divy people into.`,
-      type: `INTEGER`,
+      type: ApplicationCommandOptionType.Integer,
       required: true,
       minValue: 2,
       maxValue: 1000,

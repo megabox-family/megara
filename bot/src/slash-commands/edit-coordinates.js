@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 import { dimensions } from '../utils/slash-commands.js'
 import {
   getWorldId,
@@ -11,25 +12,25 @@ export const dmPermission = false,
     {
       name: `world-name`,
       description: `The name of the world you'd like to edit the coordinates in.`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
       name: `coordinates-name`,
       description: `The name for the coordinates you'd like to edit.`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
       name: `new-world-name`,
       description: `The name of the world you'd like to change these coordinates to.`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: false,
     },
     {
       name: `dimension`,
       description: `The dimension you'd like to change these coordinates to.`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: false,
       choices: dimensions.map(dimension => {
         return { name: dimension, value: dimension }
@@ -38,25 +39,25 @@ export const dmPermission = false,
     {
       name: `new-coordinates-name`,
       description: `The new name for the coordinates (example: skeleton spawner).`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: false,
     },
     {
       name: `x`,
       description: `The new x coordinate.`,
-      type: `INTEGER`,
+      type: ApplicationCommandOptionType.Integer,
       required: false,
     },
     {
       name: `y`,
       description: `The new y coordinate.`,
-      type: `INTEGER`,
+      type: ApplicationCommandOptionType.Integer,
       required: false,
     },
     {
       name: `z`,
       description: `The new z coordinate.`,
-      type: `INTEGER`,
+      type: ApplicationCommandOptionType.Integer,
       required: false,
     },
   ]

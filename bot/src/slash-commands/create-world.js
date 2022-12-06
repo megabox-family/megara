@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 import { getWorldId, createWorld } from '../repositories/coordinates.js'
 
 export const description = `Allows you to create a world record in the worlds table for Minecraft.`
@@ -6,7 +7,7 @@ export const dmPermission = false,
     {
       name: `world-name`,
       description: `The name of the world you'd like to create 😈`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
   ]

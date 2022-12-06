@@ -25,14 +25,19 @@ export async function createGuild(guild, syncBool = false) {
     })
 }
 
-export async function modifyGuild(guild) {
+export async function modifyGuild(oldGuild, newGuild) {
+  let guild
+
+  if (newGuild) guild = newGuild
+  else guild = oldGuild
+
   return await pgPool
     .query(
       SQL`
-        update guilds 
-        set 
+        update guilds
+        set
           guild_name = ${guild.name}
-        where id = ${guild.id} 
+        where id = ${guild.id}
         returning *;
       `
     )
@@ -68,7 +73,7 @@ export async function syncGuilds(guilds) {
   const liveGuildIds = []
 
   guilds.forEach(guild => {
-    if (!guild.deleted) liveGuildIds.push(guild.id)
+    liveGuildIds.push(guild.id)
   })
 
   pgPool
@@ -442,4 +447,124 @@ export async function getVipRoleId(guildId) {
     .catch(error => {
       console.log(error)
     })
+}
+
+export async function getPauseChannelNotifications(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          pause_channel_notifications
+        from guilds
+        where id = ${guildId} 
+      `
+    )
+    .then(res =>
+      res.rows[0] ? res.rows[0].pause_channel_notifications : undefined
+    )
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function getPauseColorNotifications(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          pause_color_notifications
+        from guilds
+        where id = ${guildId} 
+      `
+    )
+    .then(res =>
+      res.rows[0] ? res.rows[0].pause_color_notifications : undefined
+    )
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function setPauseChannelNotifications(boolean, guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        update guilds
+        set
+          pause_channel_notifications = ${boolean}
+        where id = ${guildId}
+        returning *;
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function setPauseColorNotifications(boolean, guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        update guilds
+        set
+          pause_color_notifications = ${boolean}
+        where id = ${guildId}
+        returning *;
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function setVipAssignMessage(guildId, vipAssignMessage) {
+  return await pgPool.query(
+    SQL`
+        update guilds
+        set
+          vip_assign_message = ${vipAssignMessage}
+        where id = ${guildId}
+        returning *;
+      `
+  )
+}
+
+export async function getVipAssignMessage(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          vip_assign_message
+        from guilds 
+        where id = ${guildId};
+      `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].vip_assign_message : undefined))
+}
+
+export async function setVipRemoveMessage(guildId, vipRemoveMessage) {
+  return await pgPool.query(
+    SQL`
+        update guilds
+        set
+          vip_remove_message = ${vipRemoveMessage}
+        where id = ${guildId}
+        returning *;
+      `
+  )
+}
+
+export async function getVipRemoveMessage(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          vip_remove_message
+        from guilds 
+        where id = ${guildId};
+      `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].vip_remove_message : undefined))
 }

@@ -1,9 +1,6 @@
 import { getPages, generateListMessage } from '../utils/slash-commands.js'
-import { getColorButtons, getNotificationButtons } from '../utils/buttons.js'
+import { getNotificationButtons } from '../utils/buttons.js'
 import { createList } from '../repositories/lists.js'
-
-export const description = `Allows you to subscribe and unsubscribe from notification roles in this server.`,
-  dmPermission = false
 
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })

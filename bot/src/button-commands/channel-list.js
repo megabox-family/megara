@@ -1,31 +1,14 @@
-import { ApplicationCommandOptionType } from 'discord.js'
 import { getPages, generateListMessage } from '../utils/slash-commands.js'
 import { getChannelButtons } from '../utils/buttons.js'
 import { createList } from '../repositories/lists.js'
 
-export const description = `Displays a list of a specific type of channels within the server (joinable, public, archived).`
-export const dmPermission = false,
-  options = [
-    {
-      name: `channel-type`,
-      description: `The type of channels you want to be listed.`,
-      type: ApplicationCommandOptionType.String,
-      required: true,
-      choices: [
-        { name: `joinable`, value: `Joinable` },
-        { name: `public`, value: `Public` },
-        { name: `archived`, value: `Archived` },
-      ],
-    },
-  ]
-
 export default async function (interaction) {
+  const channelType = interaction.customId.match(`(?<=: )([A-Z]|[a-z])+`)[0]
+
   await interaction.deferReply({ ephemeral: true })
 
   const guild = interaction.guild,
     member = interaction.member,
-    options = interaction.options,
-    channelType = options.getString(`channel-type`),
     groupBy = `channels-${channelType}`.toLowerCase(),
     recordLimit = 21,
     pages = await getPages(recordLimit, groupBy, guild),

@@ -1,10 +1,12 @@
+import { ApplicationCommandOptionType } from 'discord.js'
+
 export const description = `Lets you roll dice and returns the result.`
 export const dmPermission = false,
   options = [
     {
       name: `number-of-dice`,
       description: `The number of dice you would like to roll.`,
-      type: `INTEGER`,
+      type: ApplicationCommandOptionType.Integer,
       required: true,
       minValue: 1,
       maxValue: 1000,
@@ -12,7 +14,7 @@ export const dmPermission = false,
     {
       name: `number-of-sides`,
       description: `The count of sides you want the dice to have.`,
-      type: `INTEGER`,
+      type: ApplicationCommandOptionType.Integer,
       required: true,
       minValue: 1,
       maxValue: 1000,
@@ -20,7 +22,7 @@ export const dmPermission = false,
     {
       name: `make-private`,
       description: `If true, only you will see the result. If false or left blank, others can see the result.`,
-      type: `BOOLEAN`,
+      type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
   ]

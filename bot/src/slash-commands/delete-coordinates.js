@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 import {
   getWorldId,
   getCoordinatesId,
@@ -10,13 +11,13 @@ export const dmPermission = false,
     {
       name: `coordinates-name`,
       description: `The name for the coordinates (example: skeleton spawner).`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
       name: `world-name`,
       description: `The name of the world you'd like to create the coordinates in.`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
   ]

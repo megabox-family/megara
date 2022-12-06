@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 import { getWorldId } from '../repositories/coordinates.js'
 import { setActiveWorld } from '../repositories/guilds.js'
 
@@ -7,7 +8,7 @@ export const dmPermission = false,
     {
       name: `world-name`,
       description: `The name of the world you'd like to set as active (insert 'null' to remove).`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
   ]

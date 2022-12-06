@@ -1,24 +1,29 @@
-import { MessageActionRow, Modal, TextInputComponent } from 'discord.js'
+import {
+  ActionRowBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+} from 'discord.js'
 
 export const description = `Generates a modal that allows you to request a new channel, note that anyone can join this channel.`
 export const dmPermission = false
 
 export default async function (interaction) {
-  const channelRequestModal = new Modal()
+  const channelRequestModal = new ModalBuilder()
       .setCustomId(`channel-request`)
       .setTitle(`Request a joinable channel`),
-    channelName = new TextInputComponent()
+    channelName = new TextInputBuilder()
       .setCustomId(`channel-name`)
       .setLabel(`What is the requested channel's name?`)
-      .setStyle('SHORT')
+      .setStyle(TextInputStyle.Short)
       .setRequired(),
-    additionalInformation = new TextInputComponent()
+    additionalInformation = new TextInputBuilder()
       .setCustomId('additional-information')
       .setLabel('What is the topic / why should we create it?')
-      .setStyle('PARAGRAPH')
+      .setStyle(TextInputStyle.Paragraph)
       .setRequired(),
-    firstActionRow = new MessageActionRow().addComponents(channelName),
-    secondActionRow = new MessageActionRow().addComponents(
+    firstActionRow = new ActionRowBuilder().addComponents(channelName),
+    secondActionRow = new ActionRowBuilder().addComponents(
       additionalInformation
     )
 

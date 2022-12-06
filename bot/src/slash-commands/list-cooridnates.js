@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 import {
   dimensions,
   defaultRecordsPerPage,
@@ -16,7 +17,7 @@ export const dmPermission = false,
     {
       name: `group-by`,
       description: `What you'd like to group the cooridinates by.`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
       choices: [
         { name: `world`, value: `world` },
@@ -28,13 +29,13 @@ export const dmPermission = false,
     {
       name: `world-filter`,
       description: `Only show cooridinates for the specified world (enter world name here).`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: false,
     },
     {
       name: `dimension-filter`,
       description: `Only show cooridinates for the specified dimension within the world.`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: false,
       choices: dimensions.map(dimension => {
         return { name: dimension, value: dimension }
@@ -43,13 +44,13 @@ export const dmPermission = false,
     {
       name: `only-my-coordinates`,
       description: `If true only coordinates you've entered will be listed, if false all user's cooridinates will list.`,
-      type: `BOOLEAN`,
+      type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
     {
       name: `records-per-page`,
       description: `The total number of values you'd like to show per page (default is ${defaultRecordsPerPage}).`,
-      type: `INTEGER`,
+      type: ApplicationCommandOptionType.Integer,
       required: false,
       minValue: 1,
       maxValue: 25,

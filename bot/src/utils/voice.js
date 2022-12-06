@@ -1,4 +1,10 @@
-import { MessageActionRow, MessageButton } from 'discord.js'
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ChannelType,
+  OverwriteType,
+} from 'discord.js'
 import { directMessageError } from '../utils/error-logging.js'
 import { addMemberToChannel, removeMemberFromChannel } from './channels.js'
 import {
@@ -40,9 +46,12 @@ export async function checkIfRoomOrTextChannel(voiceChannel, guild) {
     relevantTextChannels = category
       ? guild.channels.cache.filter(
           channel =>
-            channel.parentId === category.id && channel.type === `GUILD_TEXT`
+            channel.parentId === category.id &&
+            channel.type === ChannelType.GuildText
         )
-      : guild.channels.cache.filter(channel => channel.type === `GUILD_TEXT`)
+      : guild.channels.cache.filter(
+          channel => channel.type === ChannelType.GuildText
+        )
 
   let voiceChannelType
 
@@ -87,7 +96,7 @@ async function getOrCreateVoiceThread(textChannel, voiceChannelName) {
     voiceThread = await textChannel.threads.create({
       name: voiceChannelName,
       autoArchiveDuration: 10080,
-      type: 'GUILD_PUBLIC_THREAD',
+      type: ChannelType.PublicThread,
       reason: 'Needed thread to match voicechannel',
     })
 
@@ -117,9 +126,12 @@ async function getVoiceThread(voiceChannel, voiceChannelType, guild) {
       relevantTextChannels = category
         ? guild.channels.cache.filter(
             channel =>
-              channel.parentId === category.id && channel.type === `GUILD_TEXT`
+              channel.parentId === category.id &&
+              channel.type === ChannelType.GuildText
           )
-        : guild.channels.cache.filter(channel => channel.type === `GUILD_TEXT`)
+        : guild.channels.cache.filter(
+            channel => channel.type === ChannelType.GuildText
+          )
 
     let thread
 
@@ -153,7 +165,7 @@ async function removeMemberFromChannelTemporarily(member, channelId) {
   if (
     individualPermissions &&
     (channelType === `joinable` || channelType === `public`) &&
-    individualPermissions.SEND_MESSAGES
+    individualPermissions.SendMessages
   )
     removeMemberFromChannel(member, channelId)
 }
@@ -167,15 +179,15 @@ async function addMemberToChannelTemporarily(member, channelId) {
 
   const guild = member.guild,
     channel = guild.channels.cache.get(channelId),
-    buttons = new MessageActionRow().addComponents(
-      new MessageButton()
+    buttons = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
         .setCustomId(`!join-channel: ${channel.id}`)
         .setLabel(`Join ${channel.name}`)
-        .setStyle('PRIMARY'),
-      new MessageButton()
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
         .setCustomId(`!leave-channel: ${channel.id}`)
         .setLabel(`Leave ${channel.name}`)
-        .setStyle('SECONDARY')
+        .setStyle(ButtonStyle.Secondary)
     )
 
   if (result === `added`)
@@ -239,7 +251,7 @@ export async function deleteDynamicVoiceChannel(
               getChannelBasename(channel.name) ===
                 getChannelBasename(voiceChannel.name) &&
               channel.parentId === voiceChannel.parentId &&
-              channel.type === `GUILD_VOICE`
+              channel.type === ChannelType.GuildVoice
           )
         : channels.filter(channel => channel.id === voiceChannel.id),
     emptyChannels = []
@@ -292,14 +304,14 @@ export async function createVoiceChannel(channel, voiceChannelname) {
   const guild = channel.guild,
     channels = guild.channels.cache,
     textChannel =
-      channel.type === `GUILD_PUBLIC_THREAD`
+      channel.type === ChannelType.PublicThread
         ? channels.get(channel.parentId)
         : channel,
     channelAlreadyExists = channels.find(
       channel =>
         channel.name === voiceChannelname &&
         channel.parentId === textChannel.parentId &&
-        channel.type === `GUILD_VOICE`
+        channel.type === ChannelType.GuildVoice
     )
 
   if (channelAlreadyExists) return
@@ -318,11 +330,11 @@ export async function createVoiceChannel(channel, voiceChannelname) {
     textChannelPermissionArray.push(
       {
         id: verifiedRoleId,
-        allow: [`VIEW_CHANNEL`],
+        allow: [`ViewChannel`],
       },
       {
         id: everyoneRoleId,
-        deny: [`VIEW_CHANNEL`],
+        deny: [`ViewChannel`],
       }
     )
   else
@@ -333,15 +345,15 @@ export async function createVoiceChannel(channel, voiceChannelname) {
             id: overwrite.id,
           }
 
-        if (individualAllowPermissions.VIEW_CHANNEL)
-          permissionObject.allow = [`VIEW_CHANNEL`]
-        else permissionObject.deny = [`VIEW_CHANNEL`]
+        if (individualAllowPermissions.ViewChannel)
+          permissionObject.allow = [`ViewChannel`]
+        else permissionObject.deny = [`ViewChannel`]
 
         textChannelPermissionArray.push(permissionObject)
       } else
         textChannelPermissionArray.push({
           id: overwrite.id,
-          allow: [`VIEW_CHANNEL`],
+          allow: [`ViewChannel`],
         })
     })
 
@@ -360,12 +372,14 @@ export async function createVoiceChannel(channel, voiceChannelname) {
       maxBitrate = 96000
   }
 
-  if (category)
-    newVoiceChannel = await category.createChannel(voiceChannelname, {
-      type: `GUILD_VOICE`,
+  if (category) {
+    newVoiceChannel = await category.children.create({
+      name: voiceChannelname,
+      type: ChannelType.GuildVoice,
       permissionOverwrites: textChannelPermissionArray,
       bitrate: maxBitrate,
     })
+  }
 
   return newVoiceChannel
 }
@@ -379,7 +393,7 @@ async function createDynamicVoiceChannel(voiceChannel, textChannelId) {
         getChannelBasename(channel.name) ===
           getChannelBasename(voiceChannel.name) &&
         channel.parentId === voiceChannel.parentId &&
-        channel.type === `GUILD_VOICE`
+        channel.type === ChannelType.GuildVoice
     ),
     emptyChannels = []
 
@@ -393,7 +407,7 @@ async function createDynamicVoiceChannel(voiceChannel, textChannelId) {
   const textChannel = guild.channels.cache.get(textChannelId),
     relevantVoiceChannels = guild.channels.cache.filter(
       channel =>
-        channel.type === `GUILD_VOICE` &&
+        channel.type === ChannelType.GuildVoice &&
         getChannelBasename(channel.name) ===
           getChannelBasename(voiceChannel.name)
     ),
@@ -520,7 +534,7 @@ export function checkIfMemberIsPermissible(channel, member) {
   relevantOverwrites.sort((a, b) => collator.compare(b.position, a.position))
 
   const memberOverwrite =
-    relevantOverwrites[0]?.overwrite.type === `member`
+    relevantOverwrites[0]?.overwrite.type === OverwriteType.Member
       ? relevantOverwrites[0].overwrite
       : null
 
@@ -529,9 +543,9 @@ export function checkIfMemberIsPermissible(channel, member) {
   if (memberOverwrite) {
     const allowPermissions = memberOverwrite.allow.serialize()
 
-    if (allowPermissions.VIEW_CHANNEL) viewChannel = true
+    if (allowPermissions.ViewChannel) viewChannel = true
 
-    if (allowPermissions.CONNECT) connect = true
+    if (allowPermissions.Connect) connect = true
 
     relevantOverwrites.shift()
   }
@@ -543,16 +557,16 @@ export function checkIfMemberIsPermissible(channel, member) {
 
     let _viewChannel, _connect
 
-    if (!allowPermissions.VIEW_CHANNEL && !denyPermissions.VIEW_CHANNEL) {
-      if (rolePermissions.VIEW_CHANNEL) _viewChannel = true
+    if (!allowPermissions.ViewChannel && !denyPermissions.ViewChannel) {
+      if (rolePermissions.ViewChannel) _viewChannel = true
     } else {
-      _viewChannel = allowPermissions.VIEW_CHANNEL
+      _viewChannel = allowPermissions.ViewChannel
     }
 
-    if (!allowPermissions.CONNECT && !denyPermissions.CONNECT) {
-      if (rolePermissions.CONNECT) _connect = true
+    if (!allowPermissions.Connect && !denyPermissions.Connect) {
+      if (rolePermissions.Connect) _connect = true
     } else {
-      _connect = allowPermissions.CONNECT
+      _connect = allowPermissions.Connect
     }
 
     if (viewChannel === undefined) {

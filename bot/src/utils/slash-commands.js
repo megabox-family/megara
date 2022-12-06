@@ -1,7 +1,13 @@
-import { MessageEmbed, MessageActionRow, MessageButton } from 'discord.js'
+import {
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ApplicationCommandType,
+} from 'discord.js'
 import { isEqual } from 'lodash-es'
 import { directMessageError } from './error-logging.js'
-import { slashCommands } from './general.js'
+import { slashCommands, contextCommands } from './general.js'
 import { getListRoles } from './roles.js'
 import { getActiveWorld } from '../repositories/guilds.js'
 import {
@@ -18,6 +24,7 @@ import {
   getCoordinatesByAll,
 } from '../repositories/coordinates.js'
 import { checkIfMemberIsPermissible } from './voice.js'
+import { getBot } from '../cache-bot.js'
 
 export const defaultRecordsPerPage = 20,
   dimensions = [`overworld`, `nether`, `end`]
@@ -27,7 +34,9 @@ async function registerDevCommands(guild) {
 
   await commands.fetch()
 
-  const commandCache = commands.cache,
+  const commandCache = commands.cache.filter(
+      command => command.type === ApplicationCommandType.ChatInput
+    ),
     slashCommandNameArray = slashCommands.map(
       slashCommand => slashCommand.baseName
     )
@@ -35,8 +44,9 @@ async function registerDevCommands(guild) {
   for (const [commandId, command] of commandCache) {
     if (!slashCommandNameArray.includes(command.name)) {
       console.log(
-        `The ${command.name} command no longer exists, queued for deletion`
+        `The ${command.name} command no longer exists, queued for deletion.`
       )
+
       await command.delete()
     }
   }
@@ -47,6 +57,7 @@ async function registerDevCommands(guild) {
       ),
       commandObject = {
         name: slashCommand.baseName,
+        type: ApplicationCommandType.ChatInput,
         description: commandModule?.description,
         options: commandModule?.options,
       },
@@ -84,19 +95,22 @@ async function registerDevCommands(guild) {
 
     if (!commandModule?.description) {
       console.log(
-        `'${commandObject.name}' was not registered as a slash command because it's missing core components.`
+        `The '${commandObject.name}' slash command was not registered because it doesn't have a description export.`
       )
     } else if (
       !existingCommand ||
       existingCommand.description !== commandObject.description ||
       !isEqual(existingCommand.options, commandObject.options)
     ) {
-      console.log(existingCommand?.dmPermission !== commandObject?.dmPermission)
+      if (existingCommand) {
+        await existingCommand?.edit(commandObject)
 
-      console.log(`${commandObject.name} was generated.`)
+        console.log(`${commandObject.name} was edited.`)
+      } else {
+        await commands?.create(commandObject)
 
-      if (existingCommand) await existingCommand.edit(commandObject)
-      else await commands?.create(commandObject)
+        console.log(`${commandObject.name} was generated.`)
+      }
     }
   }
 }
@@ -106,7 +120,9 @@ async function registerProdCommands(bot) {
 
   await commands.fetch()
 
-  const commandCache = commands.cache,
+  const commandCache = commands.cache.filter(
+      command => command.type === ApplicationCommandType.ChatInput
+    ),
     commandsArray = []
 
   let updateCommands = false
@@ -164,10 +180,10 @@ async function registerProdCommands(bot) {
       updateCommands = true
   }
 
-  console.log(commandsArray)
+  // console.log(commandsArray)
 
   if (updateCommands) {
-    console.log(`New commands were generated`)
+    console.log(`New slash commands were generated`)
 
     commands.set(commandsArray)
   }
@@ -302,34 +318,34 @@ export async function generateListMessage(pages, title, description) {
 
   const totalPages = pages.length,
     onlyOnePage = totalPages === 1 ? true : false,
-    listButtons = new MessageActionRow().addComponents(
-      new MessageButton()
+    listButtons = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
         .setCustomId(`!change-page: first`)
         .setLabel(`«`)
-        .setStyle('PRIMARY')
+        .setStyle(ButtonStyle.Primary)
         .setDisabled(true),
-      new MessageButton()
+      new ButtonBuilder()
         .setCustomId(`!change-page: -1`)
         .setLabel(`‹`)
-        .setStyle('PRIMARY')
+        .setStyle(ButtonStyle.Primary)
         .setDisabled(true),
-      new MessageButton()
+      new ButtonBuilder()
         .setCustomId(`!refresh-embed:`)
         .setLabel(`⟳`)
-        .setStyle('PRIMARY'),
-      new MessageButton()
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
         .setCustomId(`!change-page: 1`)
         .setLabel(`›`)
-        .setStyle('PRIMARY')
+        .setStyle(ButtonStyle.Primary)
         .setDisabled(onlyOnePage),
-      new MessageButton()
+      new ButtonBuilder()
         .setCustomId(`!change-page: last`)
         .setLabel(`»`)
-        .setStyle('PRIMARY')
+        .setStyle(ButtonStyle.Primary)
         .setDisabled(onlyOnePage)
     )
 
-  const listEmbed = new MessageEmbed()
+  const listEmbed = new EmbedBuilder()
     .setColor('#0099ff')
     .setTitle(title)
     .setDescription(`${description}──────────────────────────────`)
@@ -362,11 +378,11 @@ export async function handleVoiceChannel(channel, invitedMember, interaction) {
       })
       .catch(error => directMessageError(error, invitedMember))
   } else {
-    const joinChannelButton = new MessageActionRow().addComponents(
-      new MessageButton()
+    const joinChannelButton = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
         .setCustomId(`!join-voice-channel: ${channel.id}`)
         .setLabel(`Join ${channel.name}`)
-        .setStyle('PRIMARY')
+        .setStyle(ButtonStyle.Primary)
     )
 
     messageContent += `\n\nHowever, you currently don't have access to this voice channel, click the button below to gain access.`
@@ -382,4 +398,15 @@ export async function handleVoiceChannel(channel, invitedMember, interaction) {
   await interaction.editReply({
     content: `I sent a message to ${invitedMember} inviting them to ${channel} 👍`,
   })
+}
+
+export function getCommandByName($commandName, guildId) {
+  const bot = getBot(),
+    guild = bot.guilds.cache.get(guildId),
+    botName = bot.user.username,
+    commands =
+      botName === `Omegara` ? guild.commands.cache : bot.commands.cache,
+    command = commands.find(command => command.name === $commandName)
+
+  return command
 }

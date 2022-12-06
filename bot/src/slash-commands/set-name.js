@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 import { getBot } from '../cache-bot.js'
 import { logErrorMessageToChannel } from '../utils/general.js'
 import { getWelcomeChannel } from '../repositories/guilds.js'
@@ -9,7 +10,7 @@ export const dmPermission = false,
     {
       name: `name`,
       description: `The nickname you want in this server (use real life nickname pls).`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
   ]

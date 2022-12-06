@@ -1,4 +1,4 @@
-import { MessageActionRow, MessageButton } from 'discord.js'
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
 import { getButtonNumber, getRoleIdFromTag } from './validation.js'
 
 export async function toggleListButtons(
@@ -7,25 +7,57 @@ export async function toggleListButtons(
   paginationButtons
 ) {
   if (totalPages === 1) {
-    paginationButtons.components[0].setDisabled(true)
-    paginationButtons.components[1].setDisabled(true)
-    paginationButtons.components[3].setDisabled(true)
-    paginationButtons.components[4].setDisabled(true)
+    paginationButtons.components[0] = ButtonBuilder.from(
+      paginationButtons.components[0]
+    ).setDisabled(true)
+    paginationButtons.components[1] = ButtonBuilder.from(
+      paginationButtons.components[1]
+    ).setDisabled(true)
+    paginationButtons.components[3] = ButtonBuilder.from(
+      paginationButtons.components[3]
+    ).setDisabled(true)
+    paginationButtons.components[4] = ButtonBuilder.from(
+      paginationButtons.components[4]
+    ).setDisabled(true)
   } else if (newPage === totalPages) {
-    paginationButtons.components[0].setDisabled(false)
-    paginationButtons.components[1].setDisabled(false)
-    paginationButtons.components[3].setDisabled(true)
-    paginationButtons.components[4].setDisabled(true)
+    paginationButtons.components[0] = ButtonBuilder.from(
+      paginationButtons.components[0]
+    ).setDisabled(false)
+    paginationButtons.components[1] = ButtonBuilder.from(
+      paginationButtons.components[1]
+    ).setDisabled(false)
+    paginationButtons.components[3] = ButtonBuilder.from(
+      paginationButtons.components[3]
+    ).setDisabled(true)
+    paginationButtons.components[4] = ButtonBuilder.from(
+      paginationButtons.components[4]
+    ).setDisabled(true)
   } else if (newPage === 1) {
-    paginationButtons.components[0].setDisabled(true)
-    paginationButtons.components[1].setDisabled(true)
-    paginationButtons.components[3].setDisabled(false)
-    paginationButtons.components[4].setDisabled(false)
+    paginationButtons.components[0] = ButtonBuilder.from(
+      paginationButtons.components[0]
+    ).setDisabled(true)
+    paginationButtons.components[1] = ButtonBuilder.from(
+      paginationButtons.components[1]
+    ).setDisabled(true)
+    paginationButtons.components[3] = ButtonBuilder.from(
+      paginationButtons.components[3]
+    ).setDisabled(false)
+    paginationButtons.components[4] = ButtonBuilder.from(
+      paginationButtons.components[4]
+    ).setDisabled(false)
   } else {
-    paginationButtons.components[0].setDisabled(false)
-    paginationButtons.components[1].setDisabled(false)
-    paginationButtons.components[3].setDisabled(false)
-    paginationButtons.components[4].setDisabled(false)
+    paginationButtons.components[0] = ButtonBuilder.from(
+      paginationButtons.components[0]
+    ).setDisabled(false)
+    paginationButtons.components[1] = ButtonBuilder.from(
+      paginationButtons.components[1]
+    ).setDisabled(false)
+    paginationButtons.components[3] = ButtonBuilder.from(
+      paginationButtons.components[3]
+    ).setDisabled(false)
+    paginationButtons.components[4] = ButtonBuilder.from(
+      paginationButtons.components[4]
+    ).setDisabled(false)
   }
 
   return paginationButtons
@@ -47,10 +79,10 @@ export function getColorButtons(fields, memberRoles, override) {
 
       if (!value) {
         buttonArrays[lastArray].push(
-          new MessageButton()
+          new ButtonBuilder()
             .setCustomId(`!color-role: ${counter}`)
             .setLabel(` `)
-            .setStyle('SECONDARY')
+            .setStyle(ButtonStyle.Secondary)
             .setDisabled(true)
         )
 
@@ -65,17 +97,17 @@ export function getColorButtons(fields, memberRoles, override) {
       if (override?.roleId === colorRoleId) {
         if (!override.remove)
           buttonArrays[lastArray].push(
-            new MessageButton()
+            new ButtonBuilder()
               .setCustomId(`!color-role: ${buttonNumber}`)
               .setLabel(`${buttonNumber}`)
-              .setStyle('SUCCESS')
+              .setStyle(ButtonStyle.Success)
           )
         else
           buttonArrays[lastArray].push(
-            new MessageButton()
+            new ButtonBuilder()
               .setCustomId(`!color-role: ${buttonNumber}`)
               .setLabel(`${buttonNumber}`)
-              .setStyle('SECONDARY')
+              .setStyle(ButtonStyle.Secondary)
           )
 
         continue
@@ -83,17 +115,17 @@ export function getColorButtons(fields, memberRoles, override) {
 
       if (memberRoles.includes(colorRoleId))
         buttonArrays[lastArray].push(
-          new MessageButton()
+          new ButtonBuilder()
             .setCustomId(`!color-role: ${buttonNumber}`)
             .setLabel(`${buttonNumber}`)
-            .setStyle('SUCCESS')
+            .setStyle(ButtonStyle.Success)
         )
       else
         buttonArrays[lastArray].push(
-          new MessageButton()
+          new ButtonBuilder()
             .setCustomId(`!color-role: ${buttonNumber}`)
             .setLabel(`${buttonNumber}`)
-            .setStyle('SECONDARY')
+            .setStyle(ButtonStyle.Secondary)
         )
     }
   }
@@ -102,7 +134,7 @@ export function getColorButtons(fields, memberRoles, override) {
 
   buttonArrays.forEach(buttonArray =>
     colorButtonComponents.push(
-      new MessageActionRow().addComponents(buttonArray)
+      new ActionRowBuilder().addComponents(buttonArray)
     )
   )
 
@@ -125,10 +157,10 @@ export function getNotificationButtons(fields, memberRoles, override) {
 
       if (!value) {
         buttonArrays[lastArray].push(
-          new MessageButton()
+          new ButtonBuilder()
             .setCustomId(`!notification-role: ${counter}`)
             .setLabel(` `)
-            .setStyle('SECONDARY')
+            .setStyle(ButtonStyle.Secondary)
             .setDisabled(true)
         )
 
@@ -143,17 +175,17 @@ export function getNotificationButtons(fields, memberRoles, override) {
       if (override?.roleId === roleId) {
         if (!override.removed)
           buttonArrays[lastArray].push(
-            new MessageButton()
+            new ButtonBuilder()
               .setCustomId(`!notification-role: ${buttonNumber}`)
               .setLabel(`${buttonNumber}`)
-              .setStyle('SUCCESS')
+              .setStyle(ButtonStyle.Success)
           )
         else
           buttonArrays[lastArray].push(
-            new MessageButton()
+            new ButtonBuilder()
               .setCustomId(`!notification-role: ${buttonNumber}`)
               .setLabel(`${buttonNumber}`)
-              .setStyle('SECONDARY')
+              .setStyle(ButtonStyle.Secondary)
           )
 
         continue
@@ -161,17 +193,17 @@ export function getNotificationButtons(fields, memberRoles, override) {
 
       if (memberRoles.includes(roleId))
         buttonArrays[lastArray].push(
-          new MessageButton()
+          new ButtonBuilder()
             .setCustomId(`!notification-role: ${buttonNumber}`)
             .setLabel(`${buttonNumber}`)
-            .setStyle('SUCCESS')
+            .setStyle(ButtonStyle.Success)
         )
       else
         buttonArrays[lastArray].push(
-          new MessageButton()
+          new ButtonBuilder()
             .setCustomId(`!notification-role: ${buttonNumber}`)
             .setLabel(`${buttonNumber}`)
-            .setStyle('SECONDARY')
+            .setStyle(ButtonStyle.Secondary)
         )
     }
   }
@@ -180,7 +212,7 @@ export function getNotificationButtons(fields, memberRoles, override) {
 
   buttonArrays.forEach(buttonArray =>
     colorButtonComponents.push(
-      new MessageActionRow().addComponents(buttonArray)
+      new ActionRowBuilder().addComponents(buttonArray)
     )
   )
 
@@ -214,10 +246,10 @@ export function getChannelButtons(
 
       if (!value) {
         buttonArrays[lastArray].push(
-          new MessageButton()
+          new ButtonBuilder()
             .setCustomId(`!channel: ${counter}`)
             .setLabel(` `)
-            .setStyle('SECONDARY')
+            .setStyle(ButtonStyle.Secondary)
             .setDisabled(true)
         )
 
@@ -233,17 +265,17 @@ export function getChannelButtons(
       if (channelId === override?.channelId) {
         if (override.result === `added`)
           buttonArrays[lastArray].push(
-            new MessageButton()
+            new ButtonBuilder()
               .setCustomId(`!channel: ${buttonNumber}`)
               .setLabel(`${buttonNumber}`)
-              .setStyle('SUCCESS')
+              .setStyle(ButtonStyle.Success)
           )
         else
           buttonArrays[lastArray].push(
-            new MessageButton()
+            new ButtonBuilder()
               .setCustomId(`!channel: ${buttonNumber}`)
               .setLabel(`${buttonNumber}`)
-              .setStyle('SECONDARY')
+              .setStyle(ButtonStyle.Secondary)
           )
 
         continue
@@ -264,17 +296,17 @@ export function getChannelButtons(
 
       if (isJoined)
         buttonArrays[lastArray].push(
-          new MessageButton()
+          new ButtonBuilder()
             .setCustomId(`!channel: ${buttonNumber}`)
             .setLabel(`${buttonNumber}`)
-            .setStyle('SUCCESS')
+            .setStyle(ButtonStyle.Success)
         )
       else
         buttonArrays[lastArray].push(
-          new MessageButton()
+          new ButtonBuilder()
             .setCustomId(`!channel: ${buttonNumber}`)
             .setLabel(`${buttonNumber}`)
-            .setStyle('SECONDARY')
+            .setStyle(ButtonStyle.Secondary)
         )
     }
   }
@@ -283,7 +315,7 @@ export function getChannelButtons(
 
   buttonArrays.forEach(buttonArray =>
     colorButtonComponents.push(
-      new MessageActionRow().addComponents(buttonArray)
+      new ActionRowBuilder().addComponents(buttonArray)
     )
   )
 

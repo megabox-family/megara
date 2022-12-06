@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 import { getWorldId, deleteWorld } from '../repositories/coordinates.js'
 
 export const description = `Allows you to delete a world record in the worlds table for Minecraft.`
@@ -6,7 +7,7 @@ export const dmPermission = false,
     {
       name: `world-name`,
       description: `The name of the world you'd like to delete 👹`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
   ]

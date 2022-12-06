@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 import { dimensions } from '../utils/slash-commands.js'
 import {
   getWorldId,
@@ -11,13 +12,13 @@ export const dmPermission = false,
     {
       name: `world-name`,
       description: `The name of the world you'd like to create the coordinates in (use \`/list-worlds\` to get a list).`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
       name: `dimension`,
       description: `Specify if the coordinates you're creating are in the Overworld, Nether, or End.`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
       choices: dimensions.map(dimension => {
         return { name: dimension, value: dimension }
@@ -26,25 +27,25 @@ export const dmPermission = false,
     {
       name: `coordinates-name`,
       description: `The name for the coordinates (example: skeleton spawner).`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
     {
       name: `x`,
       description: `The x coordinate.`,
-      type: `INTEGER`,
+      type: ApplicationCommandOptionType.Integer,
       required: true,
     },
     {
       name: `y`,
       description: `The y coordinate.`,
-      type: `INTEGER`,
+      type: ApplicationCommandOptionType.Integer,
       required: true,
     },
     {
       name: `z`,
       description: `The z coordinate.`,
-      type: `INTEGER`,
+      type: ApplicationCommandOptionType.Integer,
       required: true,
     },
   ]

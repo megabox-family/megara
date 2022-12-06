@@ -1,3 +1,4 @@
+import { ChannelType } from 'discord.js'
 import { getBot } from '../cache-bot.js'
 import { directMessageError } from '../utils/error-logging.js'
 import { getButtonContext } from '../utils/validation.js'
@@ -48,16 +49,16 @@ export default async function (interaction) {
         _channel =>
           getChannelBasename(_channel.name) === parentChannel?.name &&
           _channel.id !== voiceChannel.id &&
-          _channel.type === `GUILD_VOICE`
+          _channel.type === ChannelType.GuildVoice
       ),
       voicePermissons = {}
 
-    if (!isMemberPermissible.viewChannel) voicePermissons.VIEW_CHANNEL = true
+    if (!isMemberPermissible.viewChannel) voicePermissons.ViewChannel = true
 
-    if (!isMemberPermissible.connect) voicePermissons.CONNECT = true
+    if (!isMemberPermissible.connect) voicePermissons.Connect = true
 
     await parentChannel?.permissionOverwrites.create(member, {
-      VIEW_CHANNEL: true,
+      ViewChannel: true,
     })
     await voiceChannel.permissionOverwrites.create(member, voicePermissons)
 

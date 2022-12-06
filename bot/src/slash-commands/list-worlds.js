@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 import {
   defaultRecordsPerPage,
   getPages,
@@ -11,7 +12,7 @@ export const dmPermission = false,
     {
       name: `records-per-page`,
       description: `The total number of values you'd like to show per page (default is 20).`,
-      type: `INTEGER`,
+      type: ApplicationCommandOptionType.Integer,
       required: false,
       minValue: 1,
       maxValue: 25,

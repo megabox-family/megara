@@ -1,4 +1,10 @@
-import { MessageActionRow, MessageButton } from 'discord.js'
+import { ButtonStyle } from 'discord.js'
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ChannelType,
+  ApplicationCommandOptionType,
+} from 'discord.js'
 import { getThreadByName } from '../utils/threads.js'
 
 export const description = `Generates a joinable private thread in relation to an episode in a series to hide spoilers.`
@@ -7,14 +13,14 @@ export const dmPermission = false,
     {
       name: `season-number`,
       description: `The seseaon number that the episode belongs to.`,
-      type: `INTEGER`,
+      type: ApplicationCommandOptionType.Integer,
       required: true,
       minValue: 1,
     },
     {
       name: `episode-number`,
       description: `The episode number.`,
-      type: `INTEGER`,
+      type: ApplicationCommandOptionType.Integer,
       required: true,
       minValue: 1,
     },
@@ -31,11 +37,11 @@ export default async function (interaction) {
     existingThread = await getThreadByName(channel, threadName)
 
   if (existingThread) {
-    const episodeButton = new MessageActionRow().addComponents(
-      new MessageButton()
+    const episodeButton = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
         .setCustomId(`!join-thread: ${existingThread.id}`)
         .setLabel(`Join Thread`)
-        .setStyle('SUCCESS')
+        .setStyle(ButtonStyle.Success)
     )
 
     await interaction.reply({
@@ -52,8 +58,8 @@ export default async function (interaction) {
   let thread, threadType
 
   if (![`TIER_2`, `TIER_3`].includes(premiumTier))
-    threadType = `GUILD_PUBLIC_THREAD`
-  else threadType = `GUILD_PRIVATE_THREAD`
+    threadType = ChannelType.PublicThread
+  else threadType = ChannelType.PrivateThread
 
   thread = await channel.threads
     .create({
@@ -68,11 +74,11 @@ export default async function (interaction) {
       )
     )
 
-  const episodeButton = new MessageActionRow().addComponents(
-    new MessageButton()
+  const episodeButton = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
       .setCustomId(`!join-thread: ${thread.id}`)
       .setLabel(`Join Thread`)
-      .setStyle('SUCCESS')
+      .setStyle(ButtonStyle.Success)
   )
 
   // interaction.deferReply()

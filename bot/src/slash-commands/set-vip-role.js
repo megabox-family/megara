@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 import { getVipRoleId, setVipRoleId } from '../repositories/guilds.js'
 import { getVipMemberArray, getExpectedRunTime } from '../utils/members.js'
 import {
@@ -12,7 +13,7 @@ export const dmPermission = false,
     {
       name: `vip-role-id`,
       description: `The id of the role you'd like to represent this guilds VIP role (input 'null' to clear).`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
   ]

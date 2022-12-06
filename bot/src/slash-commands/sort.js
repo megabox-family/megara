@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 import { pushToChannelSortingQueue } from '../utils/channels.js'
 import { pushToRoleSortingQueue } from '../utils/roles.js'
 import { setChannelSorting, setRoleSorting } from '../repositories/guilds.js'
@@ -8,7 +9,7 @@ export const dmPermission = false,
     {
       name: `what-to-sort`,
       description: `What you'd like to turn sorting on for.`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
       choices: [
         { name: 'channels', value: 'channels' },
@@ -18,7 +19,7 @@ export const dmPermission = false,
     {
       name: `enable-sorting`,
       description: `True enables sorting, false disables sorting.`,
-      type: `BOOLEAN`,
+      type: ApplicationCommandOptionType.Boolean,
       required: true,
     },
   ]

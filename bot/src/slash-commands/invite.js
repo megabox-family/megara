@@ -1,4 +1,10 @@
-import { MessageActionRow, MessageButton } from 'discord.js'
+import {
+  ApplicationCommandOptionType,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ChannelType,
+} from 'discord.js'
 import { directMessageError } from '../utils/error-logging.js'
 import { CheckIfVerificationLevelIsMismatched } from '../utils/members.js'
 import { CheckIfMemberNeedsToBeAdded } from '../utils/channels.js'
@@ -11,7 +17,7 @@ export const dmPermission = false,
     {
       name: `username-and-tag-or-id`,
       description: `The username & tag or id of the member. Examples: Zedd#4752, 360140791936712704`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
   ]
@@ -61,10 +67,10 @@ export default async function (interaction) {
     return
   }
 
-  if (channel.type === `GUILD_VOICE`) {
+  if (channel.type === ChannelType.GuildVoice) {
     await handleVoiceChannel(channel, invitedMember, interaction)
   } else if (
-    [`GUILD_PUBLIC_THREAD`, `GUILD_PRIVATE_THREAD`].includes(channel.type)
+    [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type)
   ) {
     const thread = channel
 
@@ -91,8 +97,8 @@ export default async function (interaction) {
       return
     }
 
-    const joinThreadButton = new MessageActionRow().addComponents(
-        new MessageButton()
+    const joinThreadButton = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
           .setCustomId(
             `!join-invite-thread: ${JSON.stringify({
               channel: parentChannel.id,
@@ -100,7 +106,7 @@ export default async function (interaction) {
             })}`
           )
           .setLabel(`Join ${thread.name}`)
-          .setStyle('PRIMARY')
+          .setStyle(ButtonStyle.Primary)
       ),
       category = guild.channels.cache.get(parentChannel.parentId),
       categoryContext = category ? ` in the **${category.name}** category` : ``
@@ -118,7 +124,7 @@ export default async function (interaction) {
     await interaction.editReply({
       content: `I sent a message to ${invitedMember} inviting them to ${channel} 👍`,
     })
-  } else if (channel.type === `GUILD_TEXT`) {
+  } else if (channel.type === ChannelType.GuildText) {
     const context = await CheckIfMemberNeedsToBeAdded(invitedMember, channel.id)
 
     if (!context) {
@@ -135,11 +141,11 @@ export default async function (interaction) {
       return
     }
 
-    const joinButton = new MessageActionRow().addComponents(
-        new MessageButton()
+    const joinButton = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
           .setCustomId(`!join-channel: ${channel.id}`)
           .setLabel(`Join ${channel.name}`)
-          .setStyle('PRIMARY')
+          .setStyle(ButtonStyle.Primary)
       ),
       category = guild.channels.cache.get(channel.parentId),
       categoryContext = category ? ` in the **${category.name}** category` : ``

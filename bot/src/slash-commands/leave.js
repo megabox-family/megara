@@ -1,3 +1,4 @@
+import { ChannelType } from 'discord.js'
 import {
   removeMemberFromChannel,
   checkIfmemberneedsToBeRemoved,
@@ -14,7 +15,7 @@ export default async function (interaction) {
     member = interaction.member,
     channel = interaction.channel
 
-  if (channel.type !== `GUILD_TEXT`) {
+  if (channel.type !== ChannelType.GuildText) {
     await interaction.editReply({
       content: `The \`/leave\` command only works in text channels, not voice channels or threads 🤔`,
       ephemeral: true,

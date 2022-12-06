@@ -1,10 +1,11 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 export const description = `Frick around and find out 😏`
 export const dmPermission = false,
   options = [
     {
       name: `emoji`,
       description: `An emoji to send to Megara.`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
   ]

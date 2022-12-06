@@ -1,4 +1,5 @@
-import { MessageActionRow, MessageButton } from 'discord.js'
+import { ApplicationCommandOptionType, ButtonStyle } from 'discord.js'
+import { ActionRowBuilder, ButtonBuilder, ChannelType } from 'discord.js'
 
 export const description = `Generates a joinable private thread in relation to a specified topic to hide spoilers.`
 export const dmPermission = false,
@@ -6,7 +7,7 @@ export const dmPermission = false,
     {
       name: `thread-name`,
       description: `The name you want to give to the thread.`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
   ]
@@ -23,8 +24,8 @@ export default async function (interaction) {
   let thread, threadType
 
   if (![`TIER_2`, `TIER_3`].includes(premiumTier))
-    threadType = `GUILD_PUBLIC_THREAD`
-  else threadType = `GUILD_PRIVATE_THREAD`
+    threadType = ChannelType.PublicThread
+  else threadType = ChannelType.PrivateThread
 
   thread = await channel.threads
     .create({
@@ -39,11 +40,11 @@ export default async function (interaction) {
       )
     )
 
-  const threadButton = new MessageActionRow().addComponents(
-    new MessageButton()
+  const threadButton = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
       .setCustomId(`!join-thread: ${thread.id}`)
       .setLabel(`Join Thread`)
-      .setStyle('SUCCESS')
+      .setStyle(ButtonStyle.Success)
   )
 
   await interaction.editReply({

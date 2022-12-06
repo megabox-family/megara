@@ -1,9 +1,8 @@
-import { MessageActionRow, MessageButton, Constants } from 'discord.js'
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
 import { cacheBot, getBot } from '../cache-bot.js'
 import { readdirSync, existsSync } from 'fs'
 import { basename, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { directMessageError } from '../utils/error-logging.js'
 import { syncChannels } from './channels.js'
 import { syncVipMembers } from './members.js'
 import { syncRoles } from './roles.js'
@@ -13,37 +12,23 @@ import { registerSlashCommands } from './slash-commands.js'
 import {
   syncGuilds,
   getCommandSymbol,
-  getAnnouncementChannel,
   getVerificationChannel,
   getLogChannel,
-  getRules,
   getNameGuidelines,
-  getWelcomeChannel,
 } from '../repositories/guilds.js'
-import {
-  removeActiveVoiceChannelId,
-  getCategoryName,
-  getFormatedCommandChannels,
-  getChannelType,
-} from '../repositories/channels.js'
+import { removeActiveVoiceChannelId } from '../repositories/channels.js'
 import {
   isNotificationRole,
-  getRoleIdsFromMessage,
   getNotificationRoleBasename,
 } from './validation.js'
+import { registerContextCommands } from './context-commands.js'
 
 const relativePath = dirname(fileURLToPath(import.meta.url)),
   srcPath = dirname(relativePath),
-  textCommandFolderName = `text-commands`,
-  textCommandFiles = readdirSync(`${srcPath}/${textCommandFolderName}`),
-  textCommands = textCommandFiles.map(textCommandFile => {
-    return {
-      baseName: basename(textCommandFile, '.js').replace(/-/g, ``),
-      fullPath: `${srcPath}/${textCommandFolderName}/${textCommandFile}`,
-    }
-  }),
   slashCommandFolderName = `slash-commands`,
   slashCommandFiles = readdirSync(`${srcPath}/${slashCommandFolderName}`),
+  contextCommandFolderName = `context-commands`,
+  contextCommandFiles = readdirSync(`${srcPath}/${contextCommandFolderName}`),
   modalFolderName = `modal-commands`,
   modalCommandFiles = readdirSync(`${srcPath}/${modalFolderName}`),
   modalCommands = modalCommandFiles.map(modalCommandFile => {
@@ -70,6 +55,12 @@ export const validCommandSymbols = [
       baseName: basename(slashCommandFile, '.js'),
       fullPath: `${srcPath}/${slashCommandFolderName}/${slashCommandFile}`,
     }
+  }),
+  contextCommands = contextCommandFiles.map(contextCommandFile => {
+    return {
+      baseName: basename(contextCommandFile, '.js'),
+      fullPath: `${srcPath}/${contextCommandFolderName}/${contextCommandFile}`,
+    }
   })
 
 export async function deleteNewRoles(guild) {
@@ -95,12 +86,19 @@ export async function startup(bot) {
     await syncVipMembers(guild)
   })
 
-  registerSlashCommands(bot)
+  await registerSlashCommands(bot)
+  await registerContextCommands(bot)
 
   // const guild = bot.guilds.cache.get(`711043006253367426`),
-  //   botUser = guild.members.cache.get(bot.user.id)
+  //   megabot = guild.members.cache.get(`981547110807777290`),
+  //   memberArr = [],
+  //   premiumRole = guild.roles.cache.find(
+  //     role => role.name === `Premium Members` && role.tags?.integrationId
+  //   )
 
-  // console.log(botUser.roles.cache)
+  // premiumRole?.members.forEach(member => memberArr.push(member))
+
+  // console.log(megabot)
 }
 
 export async function logMessageToChannel(message) {
@@ -148,75 +146,6 @@ export function removeVoiceChannelIfEmpty(voiceChannel) {
     })
 }
 
-export async function announceNewChannel(newChannel) {
-  const guild = newChannel.guild,
-    announcementChannelId = await getAnnouncementChannel(guild.id)
-
-  if (!announcementChannelId) return
-
-  const welcomeChannelId = await getWelcomeChannel(guild.id)
-
-  if (
-    welcomeChannelId === newChannel.id ||
-    [`rooms`, `unverified-rooms`].includes(newChannel.name)
-  )
-    return
-
-  const channelType = await getChannelType(newChannel.id)
-
-  if ([`category`, `hidden`, `private`, `voice`].includes(channelType)) return
-
-  const channelNotificationSquad = guild.roles.cache.find(
-      role => role.name === `-channel notifications-`
-    ),
-    commandChannels = await getFormatedCommandChannels(
-      guild.id,
-      `unrestricted`
-    ),
-    categoryName = await getCategoryName(newChannel.parentId),
-    announcementChannel = guild.channels.cache.get(announcementChannelId),
-    commandSymbol = await getCommandSymbol(guild.id),
-    buttonRow = new MessageActionRow().addComponents(
-      new MessageButton()
-        .setCustomId(`!join-channel: ${newChannel.id}`)
-        .setLabel(`Join ${newChannel.name}`)
-        .setStyle('SUCCESS'),
-      new MessageButton()
-        .setCustomId(`!unsubscribe: ${channelNotificationSquad.id}`)
-        .setLabel(`Unsubscribe from channel notifications`)
-        .setStyle('SECONDARY')
-    )
-
-  let channelTypeMessage, channelTypeDetails, command
-
-  switch (channelType) {
-    case `public`:
-      channelTypeMessage = `We've added a new ${channelType} channel`
-      channelTypeDetails = `By default, all members are added to public channels.`
-      break
-    case `joinable`:
-      channelTypeMessage = `We've added a new ${channelType} channel`
-      channelTypeDetails = `By default, members are not added to joinable channels.`
-      break
-    default:
-      channelTypeMessage = `A channel has been archived`
-      channelTypeDetails =
-        `Messages cannot be sent in archived channels, but you can still access them to view message history. ` +
-        `By default, members are not removed from archived channels unless the channel was previously public.`
-  }
-
-  if (announcementChannel)
-    announcementChannel.send({
-      content: `
-        ${channelNotificationSquad} Hey guys! 😁\
-        \n${channelTypeMessage}, **<#${newChannel.id}>**, in the **${categoryName}** category. ${channelTypeDetails} \
-
-        \nUse the buttons below this message to join **<#${newChannel.id}>** and or to manage these notifications. You can also join and leave channels using the \`/channel-list\` command.
-      `,
-      components: [buttonRow],
-    })
-}
-
 function generateNotificationButtons(notificationRoles) {
   const collator = new Intl.Collator(undefined, {
       numeric: true,
@@ -233,10 +162,10 @@ function generateNotificationButtons(notificationRoles) {
     if (counter === 25) break
 
     buttons.push(
-      new MessageButton()
+      new ButtonBuilder()
         .setCustomId(`!unsubscribe: ${role.id}`)
         .setLabel(`Unsubscribe from ${getNotificationRoleBasename(role.name)}`)
-        .setStyle('SECONDARY')
+        .setStyle(ButtonStyle.Secondary)
     )
     counter++
   }
@@ -244,7 +173,7 @@ function generateNotificationButtons(notificationRoles) {
   const chunkSize = 5
   for (let i = 0; i < buttons.length; i += chunkSize) {
     rows.push(
-      new MessageActionRow().addComponents(buttons.slice(i, i + chunkSize))
+      new ActionRowBuilder().addComponents(buttons.slice(i, i + chunkSize))
     )
   }
 
@@ -252,15 +181,13 @@ function generateNotificationButtons(notificationRoles) {
 }
 
 function checkIfMessageHasNotificationRole(message) {
-  if (!message?.content) return
+  const mentionedRoles = message.mentions.roles
 
-  const roleTags = getRoleIdsFromMessage(message.content)
-
-  if (!roleTags) return
+  if (mentionedRoles.size === 0) return
 
   const guild = message.guild,
     notificationRoles = guild.roles.cache.filter(
-      role => isNotificationRole(role.name) && roleTags.includes(role.id)
+      role => isNotificationRole(role.name) && mentionedRoles.has(role.id)
     )
 
   if (notificationRoles.size > 0) return notificationRoles
@@ -270,9 +197,7 @@ export async function handleMessage(message) {
   if (message.author.id === message.client.user.id) return
   if (!message?.guild) return
 
-  const guild = message.guild,
-    messageText = message.content,
-    notificationRoles = checkIfMessageHasNotificationRole(message)
+  const notificationRoles = checkIfMessageHasNotificationRole(message)
 
   if (notificationRoles) {
     const components = generateNotificationButtons(notificationRoles)
@@ -284,44 +209,6 @@ export async function handleMessage(message) {
       components: components,
     })
   }
-
-  if (!validCommandSymbols.includes(messageText.substring(0, 1))) return
-
-  const commandSymbol = await getCommandSymbol(message.guild.id)
-
-  if (
-    messageText.substring(0, 1) !== commandSymbol ||
-    !messageText.substring(1, 2).match(`[0-9]|[a-zA-z]`)
-  )
-    return
-
-  const delimiter = messageText.split('').find(char => {
-      if ([` `, `\n`].includes(char)) return char
-      else return null
-    }),
-    command = delimiter
-      ? messageText.substring(1, messageText.indexOf(delimiter)).toLowerCase()
-      : messageText.substring(1).toLowerCase(),
-    args = delimiter
-      ? messageText.substring(messageText.indexOf(delimiter) + 1)
-      : null,
-    textCommand = textCommands.find(
-      textCommand => textCommand.baseName === command
-    )
-
-  if (textCommand)
-    import(textCommand.fullPath).then(module =>
-      module.default(message, commandSymbol, args)
-    )
-  else
-    message.reply(
-      `
-        Sorry, \`${commandSymbol}${command}\` is not a valid command 😔\
-        \nUse the \`${commandSymbol}help\` command to get a valid list of commands 🥰\
-        
-        \n*Keep in mind that most commands are now slash commands, type \`/\` to get a list of available slash commands in this channel.*
-      `
-    )
 }
 
 export async function sendVerificationInstructions(guildMember) {
@@ -364,43 +251,6 @@ export async function sendVerificationInstructions(guildMember) {
     )
 }
 
-export async function handleNewMember(guildMember) {
-  const guild = guildMember.guild,
-    rules = await getRules(guild.id),
-    tosButtonRow = new MessageActionRow().addComponents(
-      new MessageButton()
-        .setCustomId(`!accept-rules: ${guildMember.guild.id}`)
-        .setLabel(`Accept`)
-        .setStyle('SUCCESS'),
-      new MessageButton()
-        .setCustomId(`!deny-rules: ${guildMember.guild.id}`)
-        .setLabel(`Deny`)
-        .setStyle('DANGER')
-    )
-
-  if (rules) {
-    guildMember
-      .send({
-        content: `\
-        \n👋 **You've been invited to join the ${guild.name} server!** 😄\
-
-        \nBefore I can give you full access to the server's full functionality you'll need to accept their rules:\
-        \n${rules}\
-
-        \nDo you accept or deny their rules? Note that if you deny their rules you will be removed from their server.\
-
-        \n*Hint: click one of the buttons below to accept or deny ${guild.name}'s rules.*
-      `,
-        components: [tosButtonRow],
-      })
-      .catch(error => directMessageError(error, guildMember))
-
-    return
-  }
-
-  sendVerificationInstructions(guildMember)
-}
-
 export async function handleInteraction(interaction) {
   if (interaction.isButton()) {
     const buttonFunctionPath = `${srcPath}/button-commands/${
@@ -421,7 +271,7 @@ export async function handleInteraction(interaction) {
       )
         console.log(error.message)
     })
-  } else if (interaction.isCommand()) {
+  } else if (interaction.isChatInputCommand()) {
     const slashCommand = slashCommands.find(
       slashCommand => slashCommand.baseName === interaction.commandName
     )
@@ -433,6 +283,12 @@ export async function handleInteraction(interaction) {
     )
 
     import(modalCommand.fullPath).then(module => module.default(interaction))
+  } else if (interaction.isMessageContextMenuCommand()) {
+    const contextCommand = contextCommands.find(
+      contextCommand => contextCommand.baseName === interaction.commandName
+    )
+
+    import(contextCommand.fullPath).then(module => module.default(interaction))
   }
 }
 

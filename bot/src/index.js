@@ -1,15 +1,14 @@
-import { Client, Intents } from 'discord.js'
+import { Client, GatewayIntentBits, Partials } from 'discord.js'
 import config from '../config.js'
 import {
   startup,
   handleVoiceUpdate,
   handleMessage,
-  handleNewMember,
   handleInteraction,
   handleReactionAdd,
   handleReactionRemove,
 } from './utils/general.js'
-import { handleMemberUpdate } from './utils/members.js'
+import { handleNewMember, handleMemberUpdate } from './utils/members.js'
 import {
   createChannel,
   modifyChannel,
@@ -19,16 +18,16 @@ import { createRole, modifyRole, deleteRole } from './utils/roles.js'
 import { createGuild, modifyGuild, deleteGuild } from './repositories/guilds.js'
 
 const bot = new Client({
-  partials: ['MESSAGE', 'CHANNEL', 'REACTION'],
+  partials: [Partials.Channel, Partials.Message, Partials.Reaction],
   intents: [
-    Intents.FLAGS.GUILDS,
-    Intents.FLAGS.GUILD_MEMBERS,
-    Intents.FLAGS.GUILD_VOICE_STATES,
-    Intents.FLAGS.GUILD_PRESENCES,
-    Intents.FLAGS.GUILD_MESSAGES,
-    Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
-    Intents.FLAGS.DIRECT_MESSAGES,
-    Intents.FLAGS.DIRECT_MESSAGE_REACTIONS,
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.DirectMessageReactions,
   ],
 })
 
@@ -49,8 +48,8 @@ bot.on('roleDelete', deleteRole)
 bot.on('messageCreate', handleMessage)
 bot.on('interactionCreate', handleInteraction)
 bot.on('voiceStateUpdate', handleVoiceUpdate)
-bot.on('messageReactionAdd', handleReactionAdd)
-bot.on('messageReactionRemove', handleReactionRemove)
+// bot.on('messageReactionAdd', handleReactionAdd)
+// bot.on('messageReactionRemove', handleReactionRemove)
 
 bot.on('rateLimit', rateLimitData => {
   console.log(rateLimitData)

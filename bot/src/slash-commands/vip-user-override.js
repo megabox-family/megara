@@ -1,3 +1,4 @@
+import { ApplicationCommandOptionType } from 'discord.js'
 import {
   getVipOverriedId,
   addUserToVipOverrides,
@@ -11,7 +12,7 @@ export const dmPermission = false,
     {
       name: `add-or-remove`,
       description: `Select add to add a user to the overrides, select remove to remove a user from the overrides.`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
       choices: [
         { name: `add`, value: `add` },
@@ -21,7 +22,7 @@ export const dmPermission = false,
     {
       name: `user-id`,
       description: `The id of the user you'd like to add or remove from the override list.`,
-      type: `STRING`,
+      type: ApplicationCommandOptionType.String,
       required: true,
     },
   ]
