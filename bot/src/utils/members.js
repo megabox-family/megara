@@ -309,9 +309,12 @@ async function handlePremiumSub(oldMember, newMember) {
     oldRoles = oldMember._roles,
     newRoles = newMember._roles
 
-  if (!oldRoles.includes(premiumRole.id) && !newRoles.includes(premiumRole.id))
+  if (
+    !oldRoles.includes(premiumRole?.id) &&
+    !newRoles.includes(premiumRole?.id)
+  )
     return
-  if (oldRoles.includes(premiumRole.id) && newRoles.includes(premiumRole.id))
+  if (oldRoles.includes(premiumRole?.id) && newRoles.includes(premiumRole?.id))
     return
 
   const vipRoleId = await getVipRoleId(guild.id)
