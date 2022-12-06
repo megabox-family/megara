@@ -72,6 +72,9 @@ async function registerProdContextCommands(bot) {
       contextCommandObject = {
         name: contextCommand.baseName,
         type: contextCommandModule.type,
+        dmPermission: contextCommandModule?.dmPermission,
+        defaultMemberPermissions:
+          contextCommandModule?.defaultMemberPermissions,
       },
       existingContextCommand = contextCommandCache.find(
         existingContextCommand =>

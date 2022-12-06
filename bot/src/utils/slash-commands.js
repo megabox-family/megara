@@ -138,6 +138,7 @@ async function registerProdCommands(bot) {
         description: commandModule?.description,
         options: commandModule?.options,
         dmPermission: commandModule?.dmPermission,
+        defaultMemberPermissions: commandModule?.defaultMemberPermissions,
       },
       existingCommand = commandCache.find(
         command => command.name === slashCommand.baseName

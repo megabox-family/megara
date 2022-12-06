@@ -6,7 +6,8 @@ import {
 } from 'discord.js'
 
 export const description = `Generates a modal that allows you to request a private channel, an admin will follow up.`
-export const dmPermission = false
+export const dmPermission = false,
+  defaultMemberPermissions = false
 
 export default async function (interaction) {
   const channelRequestModal = new ModalBuilder()

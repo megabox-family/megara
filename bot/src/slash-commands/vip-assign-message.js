@@ -1,7 +1,8 @@
 import { getVipAssignMessage } from '../repositories/guilds.js'
 
 export const description = `Shows you the vip assign message for this server.`,
-  dmPermission = false
+  dmPermission = false,
+  defaultMemberPermissions = false
 
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })

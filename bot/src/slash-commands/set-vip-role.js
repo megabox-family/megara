@@ -9,6 +9,7 @@ import {
 
 export const description = `Allows you to choose which role in your server represents VIP status.`
 export const dmPermission = false,
+  defaultMemberPermissions = false,
   options = [
     {
       name: `vip-role-id`,

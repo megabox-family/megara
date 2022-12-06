@@ -6,7 +6,8 @@ import {
 } from 'discord.js'
 
 export const description = `Generates a modal that allows admins to set the vip remove message for this server.`
-export const dmPermission = false
+export const dmPermission = false,
+  defaultMemberPermissions = false
 
 export default async function (interaction) {
   const modal = new ModalBuilder()

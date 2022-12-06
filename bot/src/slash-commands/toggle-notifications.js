@@ -8,6 +8,7 @@ import {
 
 export const description = `Allows you to pause or resume a variety of automated notification messages.`
 export const dmPermission = false,
+  defaultMemberPermissions = false,
   options = [
     {
       name: `notification-type`,

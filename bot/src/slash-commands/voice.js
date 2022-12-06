@@ -10,7 +10,8 @@ import {
 import { getChannelType } from '../repositories/channels.js'
 
 export const description = `Opens a voice channel in relation to the current text channel.`
-export const dmPermission = false
+export const dmPermission = false,
+  defaultMemberPermissions = false
 
 export default async function (interaction) {
   const guild = interaction.guild,

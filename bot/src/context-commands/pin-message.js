@@ -1,7 +1,9 @@
 import { ApplicationCommandType } from 'discord.js'
 import { addPinnedMessage } from '../repositories/pinned-messages.js'
 
-export const type = ApplicationCommandType.Message
+export const type = ApplicationCommandType.Message,
+  dmPermission = false,
+  defaultMemberPermissions = false
 
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })

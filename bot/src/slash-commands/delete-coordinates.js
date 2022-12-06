@@ -7,6 +7,7 @@ import {
 
 export const description = `Allows you to delete the coordinates of a location in Minecraft if you created them.`
 export const dmPermission = false,
+  defaultMemberPermissions = false,
   options = [
     {
       name: `coordinates-name`,

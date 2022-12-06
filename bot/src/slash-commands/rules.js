@@ -1,7 +1,8 @@
 import { getRules } from '../repositories/guilds.js'
 
 export const description = `Shows you the rules for this server.`,
-  dmPermission = false
+  dmPermission = false,
+  defaultMemberPermissions = false
 
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })

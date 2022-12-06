@@ -7,6 +7,7 @@ import {
 
 export const description = `Generate buttons for the channel list, color list, and the notification manager in a given channel.`
 export const dmPermission = false,
+  defaultMemberPermissions = false,
   options = [
     {
       name: `channel-id`,

@@ -3,7 +3,8 @@ import { getColorButtons } from '../utils/buttons.js'
 import { createList } from '../repositories/lists.js'
 
 export const description = `Displays a list of colors that you can choose from to change your name color.`,
-  dmPermission = false
+  dmPermission = false,
+  defaultMemberPermissions = false
 
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })

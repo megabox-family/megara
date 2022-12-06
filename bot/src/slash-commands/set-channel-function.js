@@ -17,6 +17,7 @@ const setCommands = {
 
 export const description = `Sets or removes a specific channels special function (admin, announcements, verification, welcome).`
 export const dmPermission = false,
+  defaultMemberPermissions = false,
   options = [
     {
       name: `channel-function`,

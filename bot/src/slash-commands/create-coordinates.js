@@ -8,6 +8,7 @@ import {
 
 export const description = `Allows you to record the coordinates of a location in Minecraft.`
 export const dmPermission = false,
+  defaultMemberPermissions = false,
   options = [
     {
       name: `world-name`,
