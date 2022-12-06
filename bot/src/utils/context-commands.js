@@ -85,11 +85,11 @@ async function registerProdContextCommands(bot) {
     }
   }
 
-  if (updateContextCommands) {
-    console.log(`New context commands were generated`)
+  // if (updateContextCommands) {
+  console.log(`New context commands were generated`)
 
-    cacheCommands(contextCommandArray)
-  }
+  cacheCommands(contextCommandArray)
+  // }
 }
 
 export async function registerContextCommands(bot) {

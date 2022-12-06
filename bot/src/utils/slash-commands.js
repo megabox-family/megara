@@ -184,11 +184,11 @@ async function registerProdCommands(bot) {
 
   // console.log(commandsArray)
 
-  if (updateCommands) {
-    console.log(`New slash commands were generated`)
+  // if (updateCommands) {
+  console.log(`New slash commands were generated`)
 
-    cacheCommands(commandsArray)
-  }
+  cacheCommands(commandsArray)
+  // }
 }
 
 export async function registerSlashCommands(bot) {
