@@ -386,9 +386,9 @@ export async function setChannelVisibility(channelId) {
     if (permissionsHaveChanged)
       await channel.edit({ permissionOverwrites: overwrites })
   } else if (channelType === `private`) {
-    if (undergoingVerificationOverwrite)
-      await undergoingVerificationOverwrite.delete()
-    if (verifiedOverwrite) await verifiedOverwrite.delete()
+    // if (undergoingVerificationOverwrite)
+    //   await undergoingVerificationOverwrite.delete()
+    // if (verifiedOverwrite) await verifiedOverwrite.delete()
 
     let permissionsHaveChanged = unarchiveUserOverwrites(overwrites)
 
