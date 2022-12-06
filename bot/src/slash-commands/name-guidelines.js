@@ -2,7 +2,7 @@ import { getNameGuidelines } from '../repositories/guilds.js'
 
 export const description = `Shows you the name guidelines for this sever.`,
   dmPermission = false,
-  defaultMemberPermissions = false
+  defaultMemberPermissions = 0
 
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })

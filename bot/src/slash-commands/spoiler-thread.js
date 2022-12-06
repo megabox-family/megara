@@ -3,7 +3,7 @@ import { ActionRowBuilder, ButtonBuilder, ChannelType } from 'discord.js'
 
 export const description = `Generates a joinable private thread in relation to a specified topic to hide spoilers.`
 export const dmPermission = false,
-  defaultMemberPermissions = false,
+  defaultMemberPermissions = 0,
   options = [
     {
       name: `thread-name`,

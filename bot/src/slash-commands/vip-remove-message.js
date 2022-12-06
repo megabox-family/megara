@@ -2,7 +2,7 @@ import { getVipRemoveMessage } from '../repositories/guilds.js'
 
 export const description = `Shows you the vip remove message for this server.`,
   dmPermission = false,
-  defaultMemberPermissions = false
+  defaultMemberPermissions = 0
 
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })

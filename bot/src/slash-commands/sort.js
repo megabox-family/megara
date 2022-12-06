@@ -5,7 +5,7 @@ import { setChannelSorting, setRoleSorting } from '../repositories/guilds.js'
 
 export const description = `Enables or disables automatic sorting for channels and roles.`
 export const dmPermission = false,
-  defaultMemberPermissions = false,
+  defaultMemberPermissions = 0,
   options = [
     {
       name: `what-to-sort`,

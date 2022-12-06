@@ -3,7 +3,7 @@ import { roleSortPauseDuration } from '../utils/roles.js'
 
 export const description = `Allows you to change your name's display color using a hexcode.`
 export const dmPermission = false,
-  defaultMemberPermissions = false,
+  defaultMemberPermissions = 0,
   options = [
     {
       name: `color-hex-code`,

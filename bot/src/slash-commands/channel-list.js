@@ -5,7 +5,7 @@ import { createList } from '../repositories/lists.js'
 
 export const description = `Displays a list of a specific type of channels within the server (joinable, public, archived).`
 export const dmPermission = false,
-  defaultMemberPermissions = false,
+  defaultMemberPermissions = 0,
   options = [
     {
       name: `channel-type`,

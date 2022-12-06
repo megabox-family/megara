@@ -8,7 +8,7 @@ import { createList } from '../repositories/lists.js'
 
 export const description = `Shows you all the Minecraft worlds within this Discord server.`
 export const dmPermission = false,
-  defaultMemberPermissions = false,
+  defaultMemberPermissions = 0,
   options = [
     {
       name: `records-per-page`,

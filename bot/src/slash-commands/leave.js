@@ -7,7 +7,7 @@ import { getChannelType } from '../repositories/channels.js'
 
 export const description = `Removes you from the channel you use this command in.`
 export const dmPermission = false,
-  defaultMemberPermissions = false
+  defaultMemberPermissions = 0
 
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })

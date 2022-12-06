@@ -6,7 +6,7 @@ import {
 
 export const type = ApplicationCommandType.Message,
   dmPermission = false,
-  defaultMemberPermissions = false
+  defaultMemberPermissions = 0
 
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })

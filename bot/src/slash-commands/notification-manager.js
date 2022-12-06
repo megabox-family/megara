@@ -4,7 +4,7 @@ import { createList } from '../repositories/lists.js'
 
 export const description = `Allows you to subscribe and unsubscribe from notification roles in this server.`,
   dmPermission = false,
-  defaultMemberPermissions = false
+  defaultMemberPermissions = 0
 
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })
