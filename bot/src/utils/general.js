@@ -95,7 +95,7 @@ export async function startup(bot) {
   console.log(commands)
 
   if (commands) {
-    bot.application?.commands.set([])
+    bot.application?.commands.set(commands)
   }
 
   // const guild = bot.guilds.cache.get(`711043006253367426`),
