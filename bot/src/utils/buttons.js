@@ -1,5 +1,10 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
-import { getButtonNumber, getRoleIdFromTag } from './validation.js'
+import { getChannelType } from '../repositories/channels.js'
+import {
+  getButtonNumber,
+  getNotificationRoleBasename,
+  getRoleIdFromTag,
+} from './validation.js'
 
 export async function toggleListButtons(
   newPage,
@@ -320,4 +325,92 @@ export function getChannelButtons(
   )
 
   return colorButtonComponents
+}
+
+export function generateNotificationButtons(notificationRoles) {
+  const collator = new Intl.Collator(undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    }),
+    buttons = [],
+    rows = []
+
+  notificationRoles.sort((a, b) => collator.compare(a.name, b.name))
+
+  let counter = 0
+
+  for (const [roleId, role] of notificationRoles) {
+    if (counter === 25) break
+
+    buttons.push(
+      new ButtonBuilder()
+        .setCustomId(`!unsubscribe: ${role.id}`)
+        .setLabel(`Unsubscribe from ${getNotificationRoleBasename(role.name)}`)
+        .setStyle(ButtonStyle.Secondary)
+    )
+    counter++
+  }
+
+  const chunkSize = 5
+  for (let i = 0; i < buttons.length; i += chunkSize) {
+    rows.push(
+      new ActionRowBuilder().addComponents(buttons.slice(i, i + chunkSize))
+    )
+  }
+
+  return rows
+}
+
+export async function generateChannelButtons(mentionedChannels) {
+  const collator = new Intl.Collator(undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    }),
+    buttonDetails = [],
+    buttons = [],
+    rows = []
+
+  for (const [channelId, channel] of mentionedChannels) {
+    const channelType = await getChannelType(channel.id),
+      customId =
+        channelType === `joinable`
+          ? `!join-channel: ${channel.id}`
+          : `!leave-channel: ${channel.id}`,
+      label =
+        channelType === `joinable`
+          ? `Join ${channel.name}`
+          : `Leave ${channel.name}`,
+      style =
+        channelType === `joinable` ? ButtonStyle.Success : ButtonStyle.Danger
+
+    buttonDetails.push({
+      customId: customId,
+      label: label,
+      style: style,
+    })
+  }
+
+  let counter = 0
+
+  for (const buttonDetail of buttonDetails) {
+    if (counter === 25) break
+
+    buttons.push(
+      new ButtonBuilder()
+        .setCustomId(buttonDetail.customId)
+        .setLabel(buttonDetail.label)
+        .setStyle(buttonDetail.style)
+    )
+
+    counter++
+  }
+
+  const chunkSize = 5
+  for (let i = 0; i < buttons.length; i += chunkSize) {
+    rows.push(
+      new ActionRowBuilder().addComponents(buttons.slice(i, i + chunkSize))
+    )
+  }
+
+  return rows
 }

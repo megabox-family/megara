@@ -1,4 +1,3 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
 import { cacheBot, getBot } from '../cache-bot.js'
 import { readdirSync, existsSync } from 'fs'
 import { basename, dirname } from 'path'
@@ -23,6 +22,10 @@ import {
 } from './validation.js'
 import { registerContextCommands } from './context-commands.js'
 import { getCommands } from '../cache-commands.js'
+import {
+  generateChannelButtons,
+  generateNotificationButtons,
+} from './buttons.js'
 
 const relativePath = dirname(fileURLToPath(import.meta.url)),
   srcPath = dirname(relativePath),
@@ -155,38 +158,12 @@ export function removeVoiceChannelIfEmpty(voiceChannel) {
     })
 }
 
-function generateNotificationButtons(notificationRoles) {
-  const collator = new Intl.Collator(undefined, {
-      numeric: true,
-      sensitivity: 'base',
-    }),
-    buttons = [],
-    rows = []
+function checkIfMessageHasChannelMentions(message) {
+  const mentionedChannels = message.mentions.channels
 
-  notificationRoles.sort((a, b) => collator.compare(a.name, b.name))
+  if (mentionedChannels.size === 0) return
 
-  let counter = 0
-
-  for (const [roleId, role] of notificationRoles) {
-    if (counter === 25) break
-
-    buttons.push(
-      new ButtonBuilder()
-        .setCustomId(`!unsubscribe: ${role.id}`)
-        .setLabel(`Unsubscribe from ${getNotificationRoleBasename(role.name)}`)
-        .setStyle(ButtonStyle.Secondary)
-    )
-    counter++
-  }
-
-  const chunkSize = 5
-  for (let i = 0; i < buttons.length; i += chunkSize) {
-    rows.push(
-      new ActionRowBuilder().addComponents(buttons.slice(i, i + chunkSize))
-    )
-  }
-
-  return rows
+  if (mentionedChannels.size > 0) return mentionedChannels
 }
 
 function checkIfMessageHasNotificationRole(message) {
@@ -206,12 +183,28 @@ export async function handleMessage(message) {
   if (message.author.id === message.client.user.id) return
   if (!message?.guild) return
 
-  const notificationRoles = checkIfMessageHasNotificationRole(message)
+  const notificationRoles = checkIfMessageHasNotificationRole(message),
+    mentionedChannels = checkIfMessageHasChannelMentions(message),
+    channelNotification = notificationRoles.find(
+      notificationRole => notificationRole?.name === `-channel notifications-`
+    )
+
+  if (channelNotification && mentionedChannels) {
+    const components = await generateChannelButtons(mentionedChannels)
+
+    await message.reply({
+      content: `
+        Use the button(s) below to join/leave the channels mentioned in this message.\
+        \nPS: You can also use the \`/channel-list\` command to join / leave channels at your leisure.
+      `,
+      components: components,
+    })
+  }
 
   if (notificationRoles) {
     const components = generateNotificationButtons(notificationRoles)
 
-    message.reply({
+    await message.reply({
       content: `
         Use the button(s) below to unsubscribe from notification roles mentioned in this message.\
       `,
