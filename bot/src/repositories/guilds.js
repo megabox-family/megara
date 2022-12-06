@@ -568,3 +568,30 @@ export async function getVipRemoveMessage(guildId) {
     )
     .then(res => (res.rows[0] ? res.rows[0].vip_remove_message : undefined))
 }
+
+export async function setServerSubscriptionButtonText(guildId, buttonText) {
+  return await pgPool.query(
+    SQL`
+        update guilds
+        set
+          server_subscription_button_text = ${buttonText}
+        where id = ${guildId}
+        returning *;
+      `
+  )
+}
+
+export async function getServerSubscriptionButtonText(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          server_subscription_button_text
+        from guilds 
+        where id = ${guildId};
+      `
+    )
+    .then(res =>
+      res.rows[0] ? res.rows[0].server_subscription_button_text : undefined
+    )
+}

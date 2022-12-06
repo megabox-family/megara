@@ -4,6 +4,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
 } from 'discord.js'
+import { getServerSubscriptionButtonText } from '../repositories/guilds.js'
 
 export const description = `Generate buttons for the channel list, color list, and the notification manager in a given channel.`
 export const dmPermission = false,
@@ -49,17 +50,43 @@ export default async function (interaction) {
         .setLabel(`Archived Channel List`)
         .setStyle(ButtonStyle.Primary)
     ),
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`!notification-manager:`)
-        .setLabel(`Notification Manager`)
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`!color-list:`)
-        .setLabel(`Color List`)
-        .setStyle(ButtonStyle.Primary)
-    ),
   ]
+
+  const serverSubscriptionButtonText = await getServerSubscriptionButtonText(
+    guild.id
+  )
+
+  if (serverSubscriptionButtonText) {
+    buttons.push(
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`!notification-manager:`)
+          .setLabel(`Notification Manager`)
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`!color-list:`)
+          .setLabel(`Color List`)
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setLabel(serverSubscriptionButtonText)
+          .setStyle(ButtonStyle.Link)
+          .setURL(`https://discord.com/channels/${guild.id}/role-subscriptions`)
+      )
+    )
+  } else {
+    buttons.push(
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`!notification-manager:`)
+          .setLabel(`Notification Manager`)
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`!color-list:`)
+          .setLabel(`Color List`)
+          .setStyle(ButtonStyle.Primary)
+      )
+    )
+  }
 
   await optionChannel.send({
     components: buttons,
