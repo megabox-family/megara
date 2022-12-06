@@ -92,6 +92,8 @@ export async function startup(bot) {
 
   const commands = getCommands()
 
+  console.log(commands)
+
   if (commands) {
     bot.application?.commands.set(commands)
   }
