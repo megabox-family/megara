@@ -1,5 +1,6 @@
 import { ApplicationCommandType } from 'discord.js'
 import { contextCommands } from './general.js'
+import { cacheCommands } from '../cache-commands.js'
 
 async function registerDevContextCommands(guild) {
   const commands = guild.commands
@@ -60,7 +61,7 @@ async function registerProdContextCommands(bot) {
     contextCommandCache = commands.cache.filter(command =>
       contextTypeArray.includes(command.type)
     ),
-    contextCommandArry = []
+    contextCommandArray = []
 
   let updateContextCommands = false
 
@@ -77,7 +78,7 @@ async function registerProdContextCommands(bot) {
           existingContextCommand.name === contextCommand.baseName
       )
 
-    contextCommandArry.push(contextCommandObject)
+    contextCommandArray.push(contextCommandObject)
 
     if (contextCommandObject?.type !== existingContextCommand?.type) {
       updateContextCommands = true
@@ -87,7 +88,7 @@ async function registerProdContextCommands(bot) {
   if (updateContextCommands) {
     console.log(`New context commands were generated`)
 
-    commands.set(contextCommandArry)
+    cacheCommands(contextCommandArray)
   }
 }
 

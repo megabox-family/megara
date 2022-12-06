@@ -25,6 +25,7 @@ import {
 } from '../repositories/coordinates.js'
 import { checkIfMemberIsPermissible } from './voice.js'
 import { getBot } from '../cache-bot.js'
+import { cacheCommands } from '../cache-commands.js'
 
 export const defaultRecordsPerPage = 20,
   dimensions = [`overworld`, `nether`, `end`]
@@ -186,7 +187,7 @@ async function registerProdCommands(bot) {
   if (updateCommands) {
     console.log(`New slash commands were generated`)
 
-    commands.set(commandsArray)
+    cacheCommands(commandsArray)
   }
 }
 

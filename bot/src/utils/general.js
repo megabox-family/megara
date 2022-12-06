@@ -22,6 +22,7 @@ import {
   getNotificationRoleBasename,
 } from './validation.js'
 import { registerContextCommands } from './context-commands.js'
+import { getCommands } from '../cache-commands.js'
 
 const relativePath = dirname(fileURLToPath(import.meta.url)),
   srcPath = dirname(relativePath),
@@ -88,6 +89,12 @@ export async function startup(bot) {
 
   await registerSlashCommands(bot)
   await registerContextCommands(bot)
+
+  const commands = getCommands()
+
+  if (commands) {
+    bot.application?.commands.set(commands)
+  }
 
   // const guild = bot.guilds.cache.get(`711043006253367426`),
   //   megabot = guild.members.cache.get(`981547110807777290`),
