@@ -408,7 +408,9 @@ export function getCommandByName($commandName, guildId) {
     guild = bot.guilds.cache.get(guildId),
     botName = bot.user.username,
     commands =
-      botName === `Omegara` ? guild.commands.cache : bot.commands.cache,
+      botName === `Omegara`
+        ? guild.commands?.cache
+        : bot.application?.commands?.cache,
     command = commands.find(command => command.name === $commandName)
 
   return command
