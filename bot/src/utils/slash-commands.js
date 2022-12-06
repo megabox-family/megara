@@ -133,6 +133,7 @@ async function registerProdCommands(bot) {
       ),
       commandObject = {
         name: slashCommand.baseName,
+        type: ApplicationCommandType.ChatInput,
         description: commandModule?.description,
         options: commandModule?.options,
         dmPermission: commandModule?.dmPermission,
