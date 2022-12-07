@@ -288,7 +288,7 @@ export async function verifyNewMember(oldMember, newMember) {
       await verificationChannel?.send(`
         Thanks for accepting our rules ${newMember}!\
       
-        \nYou're good to go now, but I'd reccomend checking out our ${welcomeChannel} for more details 👍
+        \nYou're good to go now, but I'd recommend checking out our ${welcomeChannel} for more details 👍
       `)
     else
       await verificationChannel?.send(`
