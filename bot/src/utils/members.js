@@ -270,7 +270,7 @@ export async function verifyNewMember(oldMember, newMember) {
     welcomeChannel = guild.channels.cache.get(welcomeChannelId),
     nameGuidelines = await getNameGuidelines(guild.id)
 
-  if (!nameGuidelines) {
+  if (nameGuidelines) {
     const setNameCommand = getCommandByName(`set-name`, guild.id)
 
     await verificationChannel?.send(`
