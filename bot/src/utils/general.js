@@ -163,7 +163,7 @@ function checkIfMessageHasChannelMentions(message) {
 
   if (mentionedChannels.size === 0) return
 
-  if (mentionedChannels.size > 0) return mentionedChannels
+  return mentionedChannels
 }
 
 function checkIfMessageHasNotificationRole(message) {
@@ -185,7 +185,7 @@ export async function handleMessage(message) {
 
   const notificationRoles = checkIfMessageHasNotificationRole(message),
     mentionedChannels = checkIfMessageHasChannelMentions(message),
-    channelNotification = notificationRoles.find(
+    channelNotification = notificationRoles?.find(
       notificationRole => notificationRole?.name === `-channel notifications-`
     )
 
