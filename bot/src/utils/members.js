@@ -267,11 +267,11 @@ export async function verifyNewMember(oldMember, newMember) {
     ),
     verifiedRole = guild.roles.cache.find(role => role.name === `verified`),
     welcomeChannelId = await getWelcomeChannel(guild.id),
-    welcomeChannel = guild.channels.cache.get(welcomeChannelId)
+    welcomeChannel = guild.channels.cache.get(welcomeChannelId),
+    nameGuidelines = await getNameGuidelines(guild.id)
 
-  if (verificationChannelId && undergoingVerificationRole) {
-    const nameGuidelines = await getNameGuidelines(guild.id),
-      setNameCommand = getCommandByName(`set-name`, guild.id)
+  if (nameGuidelines) {
+    const setNameCommand = getCommandByName(`set-name`, guild.id)
 
     await verificationChannel?.send(`
       Thanks for accepting our rules ${newMember}! One last step ☝️\
@@ -288,7 +288,7 @@ export async function verifyNewMember(oldMember, newMember) {
       await verificationChannel?.send(`
         Thanks for accepting our rules ${newMember}!\
       
-        \nYou're good to go now, but I'd reccomend checking out our ${welcomeChannel} for more details 👍
+        \nYou're good to go now, but I'd recommend checking out our ${welcomeChannel} for more details 👍
       `)
     else
       await verificationChannel?.send(`
