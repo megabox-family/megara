@@ -24,8 +24,7 @@ export default async function (interaction) {
 
   let thread, threadType
 
-  if (![`TIER_2`, `TIER_3`].includes(premiumTier))
-    threadType = ChannelType.PublicThread
+  if (premiumTier < 2) threadType = ChannelType.PublicThread
   else threadType = ChannelType.PrivateThread
 
   thread = await channel.threads
