@@ -93,7 +93,7 @@ async function startPollTimers() {
   const currentTime = moment().unix(),
     runningPolls = await getRunningPolls(currentTime)
 
-  runningPolls.forEach(poll => {
+  runningPolls?.forEach(poll => {
     const { id, channelId, endTime } = poll
 
     const millisecondDifference = (endTime - currentTime) * 1000,
