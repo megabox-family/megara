@@ -98,6 +98,13 @@ export default async function (interaction) {
     })
 
     return
+  } else if (valueArray.length > 25) {
+    await interaction.reply({
+      content: `You can only provide up to 25 options for a poll and you provided ${valueArray.length} 😤`,
+      ephemeral: true,
+    })
+
+    return
   }
 
   let question = options.getString(`question`),
