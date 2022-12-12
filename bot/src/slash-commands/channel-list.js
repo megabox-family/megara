@@ -29,8 +29,17 @@ export default async function (interaction) {
     channelType = options.getString(`channel-type`),
     groupBy = `channels-${channelType}`.toLowerCase(),
     recordLimit = 21,
-    pages = await getPages(recordLimit, groupBy, guild),
-    title = `${channelType} Channels`,
+    pages = await getPages(recordLimit, groupBy, guild)
+
+  if (!pages) {
+    await interaction.editReply(
+      `There are currently no ${channelType} channels in ${guild} 😔`
+    )
+
+    return
+  }
+
+  const title = `${channelType} Channels`,
     description = `Press the cooresponding button to join and leave \nlisted channels.`,
     listMessage = await generateListMessage(pages, title, description),
     channelButtonComponents = getChannelButtons(

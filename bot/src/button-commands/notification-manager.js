@@ -9,8 +9,17 @@ export default async function (interaction) {
     member = interaction.member,
     groupBy = `roles-notifications`,
     recordLimit = 21,
-    pages = await getPages(recordLimit, groupBy, guild),
-    title = `Notification Manager`,
+    pages = await getPages(recordLimit, groupBy, guild)
+
+  if (!pages) {
+    await interaction.editReply(
+      `There are currently no notification roles in ${guild} 😔`
+    )
+
+    return
+  }
+
+  const title = `Notification Manager`,
     description = `Press the cooresponding button to suscribe or\n unsubscribe from certain notifications.`,
     listMessage = await generateListMessage(pages, title, description),
     notificationButtonComponents = getNotificationButtons(

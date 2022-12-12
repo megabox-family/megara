@@ -1,3 +1,4 @@
+import { ActionRowBuilder, StringSelectMenuBuilder } from '@discordjs/builders'
 import { cacheBot, getBot } from '../cache-bot.js'
 import { readdirSync, existsSync } from 'fs'
 import { basename, dirname } from 'path'
@@ -26,6 +27,9 @@ import {
   generateChannelButtons,
   generateNotificationButtons,
 } from './buttons.js'
+import { pollTimeoutMap, printPollResults } from './general-commands.js'
+import { getPollStartTime, getRunningPolls } from '../repositories/polls.js'
+import moment from 'moment/moment.js'
 
 const relativePath = dirname(fileURLToPath(import.meta.url)),
   srcPath = dirname(relativePath),
@@ -39,6 +43,14 @@ const relativePath = dirname(fileURLToPath(import.meta.url)),
     return {
       baseName: basename(modalCommandFile, '.js'),
       fullPath: `${srcPath}/${modalFolderName}/${modalCommandFile}`,
+    }
+  }),
+  selectFolderName = `select-commands`,
+  selectCommandFiles = readdirSync(`${srcPath}/${selectFolderName}`),
+  selectCommands = selectCommandFiles.map(selectCommandFile => {
+    return {
+      baseName: basename(selectCommandFile, '.js'),
+      fullPath: `${srcPath}/${selectFolderName}/${selectCommandFile}`,
     }
   })
 
@@ -77,6 +89,23 @@ export async function deleteNewRoles(guild) {
   await deleteNewRoles(guild)
 }
 
+async function startPollTimers() {
+  const currentTime = moment().unix(),
+    runningPolls = await getRunningPolls(currentTime)
+
+  runningPolls.forEach(poll => {
+    const { id, channelId, endTime } = poll
+
+    const millisecondDifference = (endTime - currentTime) * 1000,
+      timeoutId = setTimeout(
+        printPollResults.bind(null, channelId, id),
+        millisecondDifference
+      )
+
+    pollTimeoutMap.set(id, timeoutId)
+  })
+}
+
 export async function startup(bot) {
   console.log(`Logged in as ${bot.user.tag}!`)
 
@@ -101,16 +130,14 @@ export async function startup(bot) {
     bot.application?.commands.set(commands)
   }
 
+  await startPollTimers()
+
   // const guild = bot.guilds.cache.get(`711043006253367426`),
-  //   megabot = guild.members.cache.get(`981547110807777290`),
-  //   memberArr = [],
-  //   premiumRole = guild.roles.cache.find(
-  //     role => role.name === `Premium Members` && role.tags?.integrationId
-  //   )
+  //   channel = guild.channels.cache.get(`711043006781849689`),
+  //   message = await channel.messages.fetch(`1051673306085990410`),
+  //   megabot = guild.members.cache.get(`981547110807777290`)
 
-  // premiumRole?.members.forEach(member => memberArr.push(member))
-
-  // console.log(megabot)
+  // console.log(message)
 }
 
 export async function logMessageToChannel(message) {
@@ -180,7 +207,21 @@ function checkIfMessageHasNotificationRole(message) {
 }
 
 export async function handleMessage(message) {
-  if (message.author.id === message.client.user.id) return
+  let pollResults = false
+
+  if (message.author.id === message.client.user.id) {
+    const isPollReply = await getPollStartTime(message.reference?.messageId)
+
+    if (isPollReply) pollResults = true
+  }
+
+  if (
+    message.author.id === message.client.user.id &&
+    message?.interaction?.commandName !== `poll` &&
+    !pollResults
+  )
+    return
+
   if (!message?.guild) return
 
   const notificationRoles = checkIfMessageHasNotificationRole(message),
@@ -291,6 +332,12 @@ export async function handleInteraction(interaction) {
     )
 
     import(contextCommand.fullPath).then(module => module.default(interaction))
+  } else if (interaction.isStringSelectMenu()) {
+    const selectCommand = selectCommands.find(
+      selectCommand => selectCommand.baseName === interaction.customId
+    )
+
+    import(selectCommand.fullPath).then(module => module.default(interaction))
   }
 }
 

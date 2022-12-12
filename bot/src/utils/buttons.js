@@ -414,3 +414,10 @@ export async function generateChannelButtons(mentionedChannels) {
 
   return rows
 }
+
+export function getRetractVoteButton(pollId) {
+  return new ButtonBuilder()
+    .setCustomId(`!retract-vote: ${pollId}`)
+    .setLabel(`Retract my vote`)
+    .setStyle(ButtonStyle.Danger)
+}

@@ -13,8 +13,17 @@ export default async function (interaction) {
     member = interaction.member,
     groupBy = `roles-color`,
     recordLimit = 21,
-    pages = await getPages(recordLimit, groupBy, guild),
-    title = `Colors`,
+    pages = await getPages(recordLimit, groupBy, guild)
+
+  if (!pages) {
+    await interaction.editReply(
+      `There are currently no color roles in ${guild} 😔`
+    )
+
+    return
+  }
+
+  const title = `Colors`,
     description = `Press the cooresponding button to set or remove \nyour name color.`,
     listMessage = await generateListMessage(pages, title, description),
     colorButtonComponents = getColorButtons(pages[0], member._roles)

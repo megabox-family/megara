@@ -399,3 +399,15 @@ export async function handleNewMember(guildMember) {
       \nBefore we can continue, I'm gonna need you to press the "Complete" button below.
     `)
 }
+
+export function getNicknameOrUsername(member, user) {
+  let name
+
+  if (member) {
+    name = member.nickName ? member.nickName : member.user.username
+  } else {
+    name = user.username
+  }
+
+  return name
+}

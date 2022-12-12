@@ -240,6 +240,8 @@ export async function getPages(recordsPerPage, groupBy, guild, filters) {
       break
   }
 
+  if (query.length === 0) return
+
   if (activeWorldName)
     query.forEach(record => {
       if (record.values === activeWorldName)
@@ -316,22 +318,29 @@ export async function getPages(recordsPerPage, groupBy, guild, filters) {
   return formattedBuckets
 }
 
-export async function generateListMessage(pages, title, description) {
+export async function generateListMessage(
+  pages,
+  title,
+  description,
+  color = `#0099ff`,
+  defaultPage = 1
+) {
   description = description ? `${description} \n` : ``
 
   const totalPages = pages.length,
-    onlyOnePage = totalPages === 1 ? true : false,
+    disableBack = defaultPage === 1 ? true : false,
+    disableForward = defaultPage === totalPages ? true : false,
     listButtons = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`!change-page: first`)
         .setLabel(`«`)
         .setStyle(ButtonStyle.Primary)
-        .setDisabled(true),
+        .setDisabled(disableBack),
       new ButtonBuilder()
         .setCustomId(`!change-page: -1`)
         .setLabel(`‹`)
         .setStyle(ButtonStyle.Primary)
-        .setDisabled(true),
+        .setDisabled(disableBack),
       new ButtonBuilder()
         .setCustomId(`!refresh-embed:`)
         .setLabel(`⟳`)
@@ -340,20 +349,20 @@ export async function generateListMessage(pages, title, description) {
         .setCustomId(`!change-page: 1`)
         .setLabel(`›`)
         .setStyle(ButtonStyle.Primary)
-        .setDisabled(onlyOnePage),
+        .setDisabled(disableForward),
       new ButtonBuilder()
         .setCustomId(`!change-page: last`)
         .setLabel(`»`)
         .setStyle(ButtonStyle.Primary)
-        .setDisabled(onlyOnePage)
+        .setDisabled(disableForward)
     )
 
   const listEmbed = new EmbedBuilder()
-    .setColor('#0099ff')
+    .setColor(color)
     .setTitle(title)
-    .setDescription(`${description}──────────────────────────────`)
-    .addFields(pages[0])
-    .setFooter({ text: `Page 1 of ${totalPages}` })
+    .setDescription(description)
+    .addFields(pages[defaultPage - 1])
+    .setFooter({ text: `Page ${defaultPage} of ${totalPages}` })
     .setTimestamp()
 
   return {

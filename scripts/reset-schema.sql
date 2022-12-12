@@ -119,4 +119,26 @@ create table users (
 --   role_type role_type default 'other'
 -- );
 
+-- polls
+drop table if exists polls;
 
+create table polls (
+  id text not null primary key,
+  channel_id text not null,
+  started_by text not null,
+  start_time bigint not null,
+  end_time bigint not null,
+  candidates text not null,
+  total_choices integer not null,
+  required_choices integer not null,
+  ranked_choice_voting boolean not null
+);
+
+drop table if exists poll_data;
+
+create table poll_data (
+  id uuid not null primary key,
+  voter_id text not null,
+  poll_id text not null,
+  choices text not null
+);

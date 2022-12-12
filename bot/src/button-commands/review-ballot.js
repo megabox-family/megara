@@ -1,0 +1,36 @@
+import { ActionRowBuilder } from 'discord.js'
+import moment from 'moment/moment.js'
+import { getVoterChoices } from '../repositories/poll-data.js'
+import { getPollEndTime } from '../repositories/polls.js'
+import { getRetractVoteButton } from '../utils/buttons.js'
+import { buildVoterEmbed } from '../utils/embeds.js'
+import { getNicknameOrUsername } from '../utils/members.js'
+
+export default async function (interaction) {
+  await interaction.deferReply({ ephemeral: true })
+
+  const user = interaction.user,
+    message = interaction.message,
+    choices = await getVoterChoices(user.id, message.id)
+
+  if (!choices) {
+    interaction.editReply(`You haven't voted in this poll 🤔`)
+
+    return
+  }
+
+  const member = interaction.member,
+    name = getNicknameOrUsername(member, user),
+    voterEmbed = buildVoterEmbed(name, choices),
+    endTime = getPollEndTime(message.id),
+    currentTime = moment().unix(),
+    retractButton = getRetractVoteButton(message.id),
+    firstRow = new ActionRowBuilder().addComponents(retractButton),
+    components = endTime > currentTime ? [firstRow] : []
+
+  await interaction.editReply({
+    content: `Here's your ballot 📄`,
+    embeds: [voterEmbed],
+    components: components,
+  })
+}

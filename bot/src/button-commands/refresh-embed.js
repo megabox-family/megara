@@ -6,6 +6,7 @@ import {
   getNotificationButtons,
 } from '../utils/buttons.js'
 import { getListInfo, updateListPageData } from '../repositories/lists.js'
+import { getPollDetails, getPollPages } from '../utils/general-commands.js'
 
 export default async function (interaction) {
   await interaction.deferUpdate()
@@ -16,37 +17,42 @@ export default async function (interaction) {
     listInfo = await getListInfo(message.id)
 
   if (!listInfo) {
-    member
-      .send({
-        content: `Something went wrong retreiving a page in the list, please dismiss the list message and run the slash command again.`,
-        ephemeral: true,
-      })
-      .catch(error => directMessageError(error, member))
-
+    interaction.editReply(
+      `Something went wrong retreiving a page in the list, please dismiss this message and create a new list message 😬`
+    )
     return
   }
 
   const recordsPerPage = listInfo.recordsPerPage,
     group = listInfo.groupBy,
-    filters = listInfo.filters,
-    pages = await getPages(recordsPerPage, group, guild, filters)
+    filters = listInfo.filters
 
-  if (pages.length === 0) {
-    member
-      .send({
-        content: `There was an error refreshing the list, please dismiss the list message and create a new one 😬`,
-        ephemeral: true,
-      })
-      .catch(error => directMessageError(error, member))
+  let pages
+
+  if (group === `poll`) {
+    const channel = interaction.channel,
+      pollMessage = await channel.messages.fetch(message.reference?.messageId),
+      pollId = pollMessage?.id,
+      pollDetails = await getPollDetails(pollId)
+
+    pages = await getPollPages(pollDetails)
+  } else pages = await getPages(recordsPerPage, group, guild, filters)
+
+  if (pages?.length === 0) {
+    interaction.editReply(
+      `There was an error refreshing the list, please dismiss this message and create a new list message 😬`
+    )
 
     return
   }
 
-  const messageContent = await generateListMessage(
-    pages,
-    listInfo.title,
-    listInfo.description
-  )
+  const existingEmbed = message.embeds[0],
+    messageContent = await generateListMessage(
+      pages,
+      listInfo.title,
+      listInfo.description,
+      existingEmbed?.color
+    )
 
   const groupBy = listInfo.groupBy
 

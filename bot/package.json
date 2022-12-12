@@ -20,6 +20,7 @@
     "fluent-ffmpeg": "^2.1.2",
     "lodash-es": "^4.17.21",
     "mocha": "^7.1.2",
+    "moment": "^2.29.4",
     "pg": "^8.2.1",
     "sql-template-strings": "^2.2.2",
     "uuid": "^8.3.0",
