@@ -22,7 +22,7 @@ export default async function (interaction) {
   const member = interaction.member,
     name = getNicknameOrUsername(member, user),
     voterEmbed = buildVoterEmbed(name, choices),
-    endTime = getPollEndTime(message.id),
+    endTime = await getPollEndTime(message.id),
     currentTime = moment().unix(),
     retractButton = getRetractVoteButton(message.id),
     firstRow = new ActionRowBuilder().addComponents(retractButton),
