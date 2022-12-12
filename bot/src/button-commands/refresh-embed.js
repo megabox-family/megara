@@ -1,4 +1,3 @@
-import { directMessageError } from '../utils/error-logging.js'
 import { getPages, generateListMessage } from '../utils/slash-commands.js'
 import {
   getColorButtons,
@@ -27,7 +26,8 @@ export default async function (interaction) {
     group = listInfo.groupBy,
     filters = listInfo.filters
 
-  let pages
+  let pages,
+    startingPage = 1
 
   if (group === `poll`) {
     const channel = interaction.channel,
@@ -36,6 +36,7 @@ export default async function (interaction) {
       pollDetails = await getPollDetails(pollId)
 
     pages = await getPollPages(pollDetails)
+    startingPage = pages.length
   } else pages = await getPages(recordsPerPage, group, guild, filters)
 
   if (pages?.length === 0) {
@@ -51,7 +52,8 @@ export default async function (interaction) {
       pages,
       listInfo.title,
       listInfo.description,
-      existingEmbed?.color
+      existingEmbed?.color,
+      startingPage
     )
 
   const groupBy = listInfo.groupBy
