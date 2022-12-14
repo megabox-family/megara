@@ -1,4 +1,8 @@
-import { ActionRowBuilder, StringSelectMenuBuilder } from '@discordjs/builders'
+import {
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+  EmbedBuilder,
+} from '@discordjs/builders'
 import { cacheBot, getBot } from '../cache-bot.js'
 import { readdirSync, existsSync } from 'fs'
 import { basename, dirname } from 'path'
@@ -135,13 +139,15 @@ export async function startup(bot) {
   const guild = bot.guilds.cache.get(`146109488745807873`),
     channel = guild.channels.cache.get(`639903044636639252`),
     message = await channel.messages.fetch(`1052409065764044850`),
-    embed = message.embeds[0]
+    embed = message.embeds[0],
+    newEmbed = EmbedBuilder.setTitle(
+      `Should we create a single channel for all of Final Fantasy and use threads to differentiate games, or should we make independent channels for each major installment?`
+    )
+      .setDescription(embed?.data?.description)
+      .setColor(embed?.data?.color)
+      .setFields(embed?.data?.fields)
 
-  embed.setTitle(
-    `Should we create a single channel for all of Final Fantasy and use threads to differentiate games, or should we make independent channels for each major installment?`
-  )
-
-  console.log(embed)
+  console.log(newEmbed)
 
   // embed?.data?.title = `Should we create a single channel for all of Final Fantasy and use threads to differentiate games, or should we make independent channels for each major installment?`
 
