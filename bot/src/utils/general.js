@@ -137,11 +137,11 @@ export async function startup(bot) {
     message = await channel.messages.fetch(`1052409065764044850`),
     embed = message.embeds[0]
 
-    console.log(embed)
-    
-    embed?.title = `Should we create a single channel for all of Final Fantasy and use threads to differentiate games, or should we make independent channels for each major installment?`
+  console.log(embed)
 
-    message.edit({embeds: [embed]})
+  // embed?.title = `Should we create a single channel for all of Final Fantasy and use threads to differentiate games, or should we make independent channels for each major installment?`
+
+  // message.edit({embeds: [embed]})
 
   // console.log(message)
 }
