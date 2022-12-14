@@ -132,10 +132,14 @@ export async function startup(bot) {
 
   await startPollTimers()
 
-  // const guild = bot.guilds.cache.get(`711043006253367426`),
-  //   channel = guild.channels.cache.get(`711043006781849689`),
-  //   message = await channel.messages.fetch(`1051673306085990410`),
-  //   megabot = guild.members.cache.get(`981547110807777290`)
+  const guild = bot.guilds.cache.get(`146109488745807873`),
+    channel = guild.channels.cache.get(`639903044636639252`),
+    message = await channel.messages.fetch(`1052409065764044850`),
+    embed = message.embeds[0]
+    
+    embed?.title = `Should we create a single channel for all of Final Fantasy and use threads to differentiate games, or should we make independent channels for each major installment?`
+
+    message.edit({embeds: [embed]})
 
   // console.log(message)
 }
