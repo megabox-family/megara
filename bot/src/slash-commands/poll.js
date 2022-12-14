@@ -166,7 +166,7 @@ export default async function (interaction) {
 
   let sortValues = options.getBoolean(`sort-values`)
 
-  sortValues = sortValues !== null ? sortValues : false
+  sortValues = sortValues !== null ? sortValues : true
 
   if (sortValues) {
     const collator = new Intl.Collator(undefined, {
