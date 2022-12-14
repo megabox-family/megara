@@ -67,6 +67,12 @@ export const dmPermission = false,
       type: ApplicationCommandOptionType.String,
       required: false,
     },
+    {
+      name: `sort-values`,
+      description: `Sort the values when listed in the poll.`,
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
   ]
 
 export default async function (interaction) {
@@ -158,12 +164,18 @@ export default async function (interaction) {
     return
   }
 
-  const collator = new Intl.Collator(undefined, {
-    numeric: true,
-    sensitivity: 'base',
-  })
+  let sortValues = options.getBoolean(`sort-values`)
 
-  valueArray.sort((a, b) => collator.compare(a, b))
+  sortValues = sortValues !== null ? sortValues : false
+
+  if (sortValues) {
+    const collator = new Intl.Collator(undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    })
+
+    valueArray.sort((a, b) => collator.compare(a, b))
+  }
 
   const { pollMessage, endingUnix } = await generatePollMessage(
       interaction,
