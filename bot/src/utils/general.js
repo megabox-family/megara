@@ -152,7 +152,7 @@ export async function startup(bot) {
 
   // embed?.data?.title = `Should we create a single channel for all of Final Fantasy and use threads to differentiate games, or should we make independent channels for each major installment?`
 
-  // message.edit({ embeds: [embed] })
+  message.edit({ embeds: [newEmbed] })
 
   // console.log(message)
 }
