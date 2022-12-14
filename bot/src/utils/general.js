@@ -124,7 +124,7 @@ export async function startup(bot) {
 
   const commands = getCommands()
 
-  console.log(commands)
+  // console.log(commands)
 
   if (commands) {
     bot.application?.commands.set(commands)
@@ -136,6 +136,8 @@ export async function startup(bot) {
     channel = guild.channels.cache.get(`639903044636639252`),
     message = await channel.messages.fetch(`1052409065764044850`),
     embed = message.embeds[0]
+
+    console.log(embed)
     
     embed?.title = `Should we create a single channel for all of Final Fantasy and use threads to differentiate games, or should we make independent channels for each major installment?`
 
