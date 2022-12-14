@@ -140,9 +140,10 @@ export async function startup(bot) {
     channel = guild.channels.cache.get(`639903044636639252`),
     message = await channel.messages.fetch(`1052409065764044850`),
     embed = message.embeds[0],
-    newEmbed = EmbedBuilder.setTitle(
-      `Should we create a single channel for all of Final Fantasy and use threads to differentiate games, or should we make independent channels for each major installment?`
-    )
+    newEmbed = new EmbedBuilder()
+      .setTitle(
+        `Should we create a single channel for all of Final Fantasy and use threads to differentiate games, or should we make independent channels for each major installment?`
+      )
       .setDescription(embed?.data?.description)
       .setColor(embed?.data?.color)
       .setFields(embed?.data?.fields)
