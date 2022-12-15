@@ -431,9 +431,15 @@ export function getTimeDifference(startTime, endTime) {
 }
 
 export async function printPollResults(channelId, messageId) {
-  const channel = getBot().channels.cache.get(channelId),
-    message = await channel.messages.fetch(messageId),
-    guild = channel.guild,
+  const channel = getBot().channels.cache.get(channelId)
+
+  if (!channel) return
+
+  const message = await channel.messages.fetch(messageId)
+
+  if (!message) return
+
+  const guild = channel.guild,
     pollDetails = await getPollDetails(message.id)
 
   if (!pollDetails) {
