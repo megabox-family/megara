@@ -55,3 +55,7 @@ bot.on('voiceStateUpdate', handleVoiceUpdate)
 bot.on('rateLimit', rateLimitData => {
   console.log(rateLimitData)
 })
+
+process.on('uncaughtException', function (exception) {
+  console.log(exception)
+})
