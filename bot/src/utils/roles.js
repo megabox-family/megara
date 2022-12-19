@@ -75,6 +75,8 @@ async function emptyBatchRoleQueue() {
 
   batchRoleQueue.delete(roleId)
 
+  console.log(`batch role loop`)
+
   emptyBatchRoleQueue()
 }
 
@@ -100,6 +102,8 @@ async function emptyRoleSortingQueue() {
   await sortRoles(roleSortingQueue[0])
 
   roleSortingQueue.shift()
+
+  console.log(`role sort loop`)
 
   emptyRoleSortingQueue()
 }

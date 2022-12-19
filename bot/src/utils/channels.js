@@ -58,6 +58,8 @@ async function emptyChannelVisibilityQueue() {
 
   channelVisibilityQueue.shift()
 
+  console.log(`channel visibility loop`)
+
   emptyChannelVisibilityQueue()
 }
 
@@ -75,6 +77,8 @@ async function emptyChannelSortingQueue() {
   await sortChannels(channelSortingQueue[0])
 
   channelSortingQueue.shift()
+
+  console.log(`channel sorting loop`)
 
   emptyChannelSortingQueue()
 }
