@@ -253,7 +253,7 @@ export function getChannelButtons(
         buttonArrays[lastArray].push(
           new ButtonBuilder()
             .setCustomId(`!channel: ${counter}`)
-            .setLabel(` `)
+            .setLabel(`⠀`)
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(true)
         )
