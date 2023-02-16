@@ -86,7 +86,7 @@ export function getColorButtons(fields, memberRoles, override) {
         buttonArrays[lastArray].push(
           new ButtonBuilder()
             .setCustomId(`!color-role: ${counter}`)
-            .setLabel(` `)
+            .setLabel(`⠀`)
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(true)
         )
@@ -164,7 +164,7 @@ export function getNotificationButtons(fields, memberRoles, override) {
         buttonArrays[lastArray].push(
           new ButtonBuilder()
             .setCustomId(`!notification-role: ${counter}`)
-            .setLabel(` `)
+            .setLabel(`⠀`)
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(true)
         )
