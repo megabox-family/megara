@@ -263,7 +263,7 @@ export function getChannelButtons(
         continue
       }
 
-      const channelId = value.match(`(?<=#)[0-9]+`)[0],
+      const channelId = value.match(`(?<=\\()[0-9]+(?=\\))`)[0],
         buttonNumber = value.match(`[0-9]+(?=\\.)`)[0],
         channel = channels.get(channelId)
 
@@ -271,14 +271,14 @@ export function getChannelButtons(
         if (override.result === `added`)
           buttonArrays[lastArray].push(
             new ButtonBuilder()
-              .setCustomId(`!channel: ${buttonNumber}`)
+              .setCustomId(`!channel: ${channelId}`)
               .setLabel(`${buttonNumber}`)
               .setStyle(ButtonStyle.Success)
           )
         else
           buttonArrays[lastArray].push(
             new ButtonBuilder()
-              .setCustomId(`!channel: ${buttonNumber}`)
+              .setCustomId(`!channel: ${channelId}`)
               .setLabel(`${buttonNumber}`)
               .setStyle(ButtonStyle.Secondary)
           )
@@ -302,14 +302,14 @@ export function getChannelButtons(
       if (isJoined)
         buttonArrays[lastArray].push(
           new ButtonBuilder()
-            .setCustomId(`!channel: ${buttonNumber}`)
+            .setCustomId(`!channel: ${channelId}`)
             .setLabel(`${buttonNumber}`)
             .setStyle(ButtonStyle.Success)
         )
       else
         buttonArrays[lastArray].push(
           new ButtonBuilder()
-            .setCustomId(`!channel: ${buttonNumber}`)
+            .setCustomId(`!channel: ${channelId}`)
             .setLabel(`${buttonNumber}`)
             .setStyle(ButtonStyle.Secondary)
         )

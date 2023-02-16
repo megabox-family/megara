@@ -5,7 +5,7 @@ import {
   getNotificationButtons,
 } from '../utils/buttons.js'
 import { getListInfo, updateListPageData } from '../repositories/lists.js'
-import { getPollDetails, getPollPages } from '../utils/general-commands.js'
+import { getformattedChannelPages, getPollDetails, getPollPages } from '../utils/general-commands.js'
 
 export default async function (interaction) {
   await interaction.deferUpdate()
@@ -47,9 +47,19 @@ export default async function (interaction) {
     return
   }
 
+  let displayPages = pages
+
+  if (
+    [`channels-joinable`, `channels-public`, `channels-archived`].includes(
+      group
+    )
+  ){
+    displayPages = getformattedChannelPages(pages)
+  }
+
   const existingEmbed = message.embeds[0],
     messageContent = await generateListMessage(
-      pages,
+      displayPages,
       listInfo.title,
       listInfo.description,
       existingEmbed?.color,

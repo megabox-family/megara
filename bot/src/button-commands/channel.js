@@ -5,24 +5,34 @@ import {
 } from '../utils/channels.js'
 import { getChannelButtons } from '../utils/buttons.js'
 import { getChannelType } from '../repositories/channels.js'
+import { getButtonContext } from '../utils/validation.js'
+import { getPages } from '../utils/slash-commands.js'
+import { getListInfo } from '../repositories/lists.js'
 
 export default async function (interaction) {
   await interaction.deferUpdate()
 
   const guild = interaction.guild,
     member = interaction.member,
-    channelNumber = interaction.customId.match(`(?<=:\\s)-?[0-9A-Za-z]+`)[0],
+    channelId = getButtonContext(interaction.customId),
+    channel = guild.channels.cache.get(channelId),
     message = interaction.message,
-    embed = message.embeds[0],
-    fields = embed.fields,
-    listChannelArray = []
+    listInfo = await getListInfo(message.id)
 
-  fields.forEach(field => listChannelArray.push(...field.value.split(`\n`)))
-
-  const channelId = listChannelArray
-      .find(value => value.match(`[0-9]+(?=\\.)`)[0] === channelNumber)
-      .match(`(?<=#)[0-9]+`)[0],
-    channel = guild.channels.cache.get(channelId)
+    if (!listInfo) {
+      interaction.editReply(
+        `Something went wrong retreiving a page in the list, please dismiss this message and create a new list message 😬`
+      )
+      return
+    }
+  
+    const recordsPerPage = listInfo.recordsPerPage,
+      group = listInfo.groupBy,
+      filters = listInfo.filters,
+      pages = await getPages(recordsPerPage, group, guild, filters),
+      existingEmbed = message.embeds[0],
+      existingFooter = existingEmbed.footer,
+      currentPage = existingFooter.text.match(`[0-9]+(?=\\sof)`) - 1
 
   if (!channel) {
     member
@@ -73,7 +83,7 @@ export default async function (interaction) {
   }
 
   const channelButtonComponents = getChannelButtons(
-    fields,
+    pages[currentPage],
     member.id,
     guild.channels.cache,
     `channels-${channelType}`,

@@ -298,7 +298,7 @@ export async function getJoinableChannelList(guildId) {
       SQL`
       select
         categories.name as group,
-        concat('<#', channels.id, '>') as values
+        concat('#', channels.name, ' (', channels.id, ')') as values
       from channels as categories, channels as channels
       where categories.id = channels.category_id and
         channels.channel_type = 'joinable' and
@@ -321,7 +321,7 @@ export async function getArchivedChannelList(guildId) {
       SQL`
         select
           categories.name as group,
-          concat('<#', channels.id, '>') as values
+          concat('#', channels.name, ' (', channels.id, ')') as values
         from channels as categories, channels as channels
         where categories.id = channels.category_id and
           channels.channel_type = 'archived' and
@@ -346,7 +346,7 @@ export async function getPublicChannelList(guildId) {
         SQL`
         select
           categories.name as group,
-          concat('<#', channels.id, '>') as values
+          concat('#', channels.name, ' (', channels.id, ')') as values
         from channels as categories, channels as channels
         where categories.id = channels.category_id and
           channels.channel_type = 'public' and

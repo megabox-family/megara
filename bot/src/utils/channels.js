@@ -58,7 +58,7 @@ async function emptyChannelVisibilityQueue() {
 
   channelVisibilityQueue.shift()
 
-  console.log(`channel visibility loop`)
+  // console.log(`channel visibility loop`)
 
   emptyChannelVisibilityQueue()
 }

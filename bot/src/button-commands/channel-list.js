@@ -1,6 +1,7 @@
 import { getPages, generateListMessage } from '../utils/slash-commands.js'
 import { getChannelButtons } from '../utils/buttons.js'
 import { createList } from '../repositories/lists.js'
+import { getformattedChannelPages } from '../utils/general-commands.js'
 
 export default async function (interaction) {
   const channelType = interaction.customId.match(`(?<=: )([A-Z]|[a-z])+`)[0]
@@ -23,13 +24,14 @@ export default async function (interaction) {
 
   const title = `${channelType} Channels`,
     description = `Press the cooresponding button to join and leave \nlisted channels.`,
-    listMessage = await generateListMessage(pages, title, description),
     channelButtonComponents = getChannelButtons(
       pages[0],
       member.id,
       guild.channels.cache,
       groupBy
-    )
+    ),
+    formattedPages = getformattedChannelPages(pages),
+    listMessage = await generateListMessage(formattedPages, title, description)
 
   listMessage.components = [
     ...listMessage.components,

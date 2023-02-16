@@ -601,3 +601,15 @@ export async function printPollResults(channelId, messageId) {
 
   pollTimeoutMap.delete(message.id)
 }
+
+export function getformattedChannelPages(pages){
+  const pagesCopy = JSON.parse(JSON.stringify(pages))
+
+  for(const [index, page] of pagesCopy.entries()){
+    for(let [jndex, list] of page.entries()){
+      pagesCopy[index][jndex].value = list?.value?.replaceAll(/ \([0-9]+\)/ig, '')
+    }
+  }
+
+  return pagesCopy
+}
