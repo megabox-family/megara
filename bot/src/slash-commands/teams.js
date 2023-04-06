@@ -41,6 +41,8 @@ const teamsNames = [
   `foxy lady attack team`,
   `titan shifters`,
   `paco's last stand`,
+  `hillary clinton and the gang`,
+  `yo-yo tokyo`,
 ]
 
 export default async function (interaction) {
