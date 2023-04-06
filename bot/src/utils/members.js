@@ -399,7 +399,7 @@ export async function handleNewMember(guildMember) {
 }
 
 export function getNicknameOrUsername(member, user) {
-  const { nickName, user: memberUser } = member,
+  const { nickName, user: memberUser } = member || {},
     _user = memberUser ? memberUser : user,
     name = nickName ? nickName : _user?.username
 
