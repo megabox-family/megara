@@ -82,8 +82,6 @@ export default async function (interaction) {
 
     diminishingCandidates = array
 
-    console.log(winner)
-
     winners.push(winner)
   }
 
