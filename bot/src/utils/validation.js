@@ -17,7 +17,7 @@ export function getNotificationRoleBasename(roleName) {
 }
 
 export function getRoleIdFromTag(tag) {
-  return tag.match(`(?!<@&)[0-9]+(?<!>)`)?.[0]
+  return tag.match(`(?<=<@&)[0-9]+(?=>$)`)?.[0]
 }
 
 export function getButtonNumber(listItem) {
