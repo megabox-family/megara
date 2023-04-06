@@ -55,7 +55,7 @@ export default async function (interaction) {
     if (channelType === `private`)
       messageContent += `\n\n*Note: when joining a private channel if paired voice channels exist they won't immediatly show, in most cases it takes less than 10 seconds for them to populate.*`
   } else {
-    messageContent = `You already have access to **#${joinChannel}** 🤔`
+    messageContent = `You already have access to **${joinChannel}** 🤔`
   }
 
   await interaction.editReply({
