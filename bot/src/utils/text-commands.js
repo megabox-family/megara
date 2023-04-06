@@ -13,10 +13,8 @@ export function getCommandName(fileUrl) {
 export async function adminCheck(message, commandSymbol, command) {
   if ((await getCommandLevelForChannel(message.channel.id)) !== `admin`) {
     message.reply(
-      `
-        Sorry, \`${commandSymbol}${command}\` is not a valid command 😔\
-        \nUse the \`${commandSymbol}help\` command to get a valid list of commands 🥰
-      `
+      `Sorry, \`${commandSymbol}${command}\` is not a valid command 😔` +
+        `\nUse the \`${commandSymbol}help\` command to get a valid list of commands 🥰`
     )
 
     return false
@@ -35,10 +33,8 @@ export async function cinemaCheck(message, commandSymbol, command) {
     )
 
     message.reply(
-      `
-        Sorry the \`${commandSymbol}${command}\` command is prohibited in this channel 😔\
-        \nBut here's a list of channels you can use it in: ${commandChannels}
-      `
+      `Sorry the \`${commandSymbol}${command}\` command is prohibited in this channel 😔` +
+        `\nBut here's a list of channels you can use it in: ${commandChannels}`
     )
 
     return false
@@ -57,10 +53,8 @@ export async function commandLevelCheck(message, commandSymbol, command) {
     )
 
     message.reply(
-      `
-        Sorry the \`${commandSymbol}${command}\` command is prohibited in this channel 😔\
-        \nBut here's a list of channels you can use it in: ${commandChannels}
-      `
+      `Sorry the \`${commandSymbol}${command}\` command is prohibited in this channel 😔` +
+        `\nBut here's a list of channels you can use it in: ${commandChannels}`
     )
 
     return false

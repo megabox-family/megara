@@ -12,10 +12,9 @@ export default async function (interaction) {
 
   if (vipAssignMessage)
     await interaction.editReply({
-      content: `
-        This is **${interaction.guild}'s** vip assign message:\
-        \n>>> ${vipAssignMessage}
-      `,
+      content:
+        `This is **${interaction.guild}'s** vip assign message:` +
+        `\n>>> ${vipAssignMessage}`,
       ephemeral: true,
     })
   else {

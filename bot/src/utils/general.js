@@ -247,10 +247,9 @@ export async function handleMessage(message) {
     const components = await generateChannelButtons(mentionedChannels)
 
     await message.reply({
-      content: `
-        Use the button(s) below to join/leave the channels mentioned in this message.\
-        \nPS: You can also use the \`/channel-list\` command to join / leave channels at your leisure.
-      `,
+      content:
+        `Use the button(s) below to join/leave the channels mentioned in this message.` +
+        `\nPS: You can also use the \`/channel-list\` command to join / leave channels at your leisure.`,
       components: components,
     })
   }
@@ -265,46 +264,6 @@ export async function handleMessage(message) {
       components: components,
     })
   }
-}
-
-export async function sendVerificationInstructions(guildMember) {
-  const guild = guildMember.guild,
-    verificationChannelId = await getVerificationChannel(guild.id),
-    verificationChannel = guild.channels.cache.get(verificationChannelId),
-    undergoingVerificationRoleId = guild.roles.cache.find(
-      role => role.name === `undergoing verification`
-    )?.id,
-    commandSymbol = await getCommandSymbol(guild.id),
-    nameGuidelines = await getNameGuidelines(guild.id)
-
-  if (!verificationChannel || !undergoingVerificationRoleId) return
-
-  await guildMember.roles.add(undergoingVerificationRoleId)
-
-  if (nameGuidelines)
-    verificationChannel.send(
-      `\
-          \n<@${guildMember.id}>\
-          \nBefore I can give you full access to the server you'll need to set your nickname, don't worry it's a piece of cake! 🍰\
-  
-          \nFirstly, please read over ${guild.name}'s name guidelines:\
-          \n${nameGuidelines}\
-  
-          \nLastly, set your name by using the \`/set-name\` command like this \`/set-name [your name]\`, ex: \`/set-name John\`\
-
-          \n*Hint: if you're confused as to how this works, scroll up to see how others have been verified in this channel.*
-        `
-    )
-  else
-    verificationChannel.send(
-      `\
-          \n<@${guildMember.id}>\
-          \nBefore I can give you full access to the server you'll need to set your nickname, don't worry it's a piece of cake! 🍰\
-          \nTo set your name simply use the \`/set-name\` command like this \`/set-name [your name]\`, ex: \`/set-name John\`\
-
-          \n*Hint: Type \`/\` to see available commands, one you start to type 'set-nick' it should come up, then entire your name in the \`name\` field.*
-        `
-    )
 }
 
 export async function handleInteraction(interaction) {

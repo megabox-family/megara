@@ -35,9 +35,9 @@ export default async function (interaction) {
       `The server subscription button text has been cleared 🧼`
     )
   } else {
-    await interaction.editReply(`
-      The server subscription button text has been set to:\
-      \n> ${buttonText}
-    `)
+    await interaction.editReply(
+      `The server subscription button text has been set to:` +
+        `\n> ${buttonText}`
+    )
   }
 }

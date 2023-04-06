@@ -12,8 +12,8 @@ export default async function (interaction) {
   const leaveChannel = getBot().channels.cache.get(
       interaction.customId.match(`(?!:)[0-9]+`)[0]
     ),
-    guild = leaveChannel.guild,
-    guildMember = guild.members.cache.get(interaction.user.id)
+    { name: leaveChannelName, guild } = leaveChannel
+  guildMember = guild.members.cache.get(interaction.user.id)
 
   if (!leaveChannel) {
     await interaction.editReply(
@@ -26,14 +26,9 @@ export default async function (interaction) {
   const result = await removeMemberFromChannel(guildMember, leaveChannel.id)
 
   if (!result) {
-    if (!interaction?.guild)
-      await interaction.editReply({
-        content: `${leaveChannel} is not a leavable channel in **${guild.name}** 🤔`,
-      })
-    else
-      await interaction.editReply({
-        content: `${leaveChannel} is not a leavable channel 🤔`,
-      })
+    await interaction.editReply({
+      content: `${leaveChannelName} is not a leavable channel 🤔`,
+    })
 
     return
   }
@@ -49,25 +44,14 @@ export default async function (interaction) {
       messageContent = `You tried leaving a channel that no longer exists, sorry for the trouble 🥺`
   else if (result === `removed`) {
     if (!interaction?.guild) {
-      const category = guild.channels.cache.get(leaveChannel.parentId),
-        categoryContext = category
-          ? ` in the **${category.name}** category`
-          : ``
-
-      messageContent = `
-        You've been removed from the **${leaveChannel}** channel${categoryContext} within the **${guild.name}** server 👋\
-        \nYou can jump to this channel from this message by clicking here → **${leaveChannel}**\
-      `
-    } else messageContent = `You've been removed from **${leaveChannel}** 👋`
+      messageContent = `You've been removed from the **${leaveChannelName}** 👋`
+    } else
+      messageContent = `You've been removed from **${leaveChannelName}** 👋`
 
     if (channelType === `private`)
-      messageContent += `
-        \n*Note: when leaving a private channel if paired voice channels exist they won't immediatly hide, in most cases it takes less than 10 seconds.*
-      `
+      messageContent += `\n\n*Note: when leaving a private channel if paired voice channels exist they won't immediatly hide, in most cases it takes less than 10 seconds.*`
   } else {
-    if (!interaction?.guild)
-      messageContent = `You aren't in **${leaveChannel}** within the **${guild.name}** 🤔`
-    else messageContent = `You aren't in **${leaveChannel}** 🤔`
+    messageContent = `You aren't in **${leaveChannelName}** 🤔`
   }
 
   await interaction.editReply({

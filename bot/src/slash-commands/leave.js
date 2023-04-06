@@ -12,9 +12,8 @@ export const dmPermission = false,
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })
 
-  const guild = interaction.guild,
-    member = interaction.member,
-    channel = interaction.channel
+  const { guild, member, channel } = interaction,
+    { name: channelName } = channel
 
   if (channel.type !== ChannelType.GuildText) {
     await interaction.editReply({
@@ -47,17 +46,12 @@ export default async function (interaction) {
   if (context === `not removed`)
     messageContent = `You tried leaving a channel that no longer exists, sorry for the trouble 🥺`
   else if (context?.action) {
-    messageContent = `
-        You've been removed from the **${channel}** channel 👋\
-        \nIt may appear that you're still part of **${channel}** until you navigate to another channel within **${guild.name}**.\
-      `
+    messageContent = `You've been removed from the **#${channelName}** channel 👋`
 
     if (channelType === `private`)
-      messageContent += `
-        \n*Note: when leaving a private channel if paired voice channels exist they won't immediatly hide, in most cases it takes less than 10 seconds.*
-      `
+      messageContent += `\n*Note: when leaving a private channel if paired voice channels exist they won't immediatly hide, in most cases it takes less than 10 seconds.*`
   } else {
-    messageContent = `You aren't in the **${channel}** channel 🤔`
+    messageContent = `You aren't in the **#${channelName}** channel 🤔`
   }
 
   await interaction.editReply(messageContent)

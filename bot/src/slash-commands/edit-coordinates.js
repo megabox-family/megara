@@ -148,24 +148,24 @@ export default async function (interaction) {
   await editCoordinates(newCoordinates)
 
   await interaction.editReply({
-    content: `
-      The **${existingCoordinates.name}** coordinates in **${newWorldName}** have been edited for your user 📝
-      \nOld:\
-      \n\`\`\`world-name: ${worldName},\
-      \ndimension: ${existingCoordinates.dimension},\
-      \ncoordinates-name: ${coordinatesName},\
-      \nx: ${existingCoordinates.x},\
-      \ny: ${existingCoordinates.y},\
-      \nz: ${existingCoordinates.z},\
-      \n\`\`\`\
-      \nNew:\
-      \n\`\`\`world-name: ${newWorldName},\
-      \ndimension: ${newCoordinates.dimension},\
-      \ncoordinates-name: ${newCoordinates.name},\
-      \nx: ${newCoordinates.x},\
-      \ny: ${newCoordinates.y},\
-      \nz: ${newCoordinates.z},\
-      \n\`\`\`\
-    `,
+    content:
+      `The **${existingCoordinates.name}** coordinates in **${newWorldName}** have been edited for your user 📝` +
+      `\nOld:` +
+      `\n\`\`\`` +
+      `world-name: ${worldName},` +
+      `\ndimension: ${existingCoordinates.dimension},` +
+      `\ncoordinates-name: ${coordinatesName},` +
+      `\nx: ${existingCoordinates.x},` +
+      `\ny: ${existingCoordinates.y},` +
+      `\nz: ${existingCoordinates.z},` +
+      `\n\`\`\`` +
+      `\nNew:` +
+      `\n\`\`\`world-name: ${newWorldName},` +
+      `\ndimension: ${newCoordinates.dimension},` +
+      `\ncoordinates-name: ${newCoordinates.name},` +
+      `\nx: ${newCoordinates.x},` +
+      `\ny: ${newCoordinates.y},` +
+      `\nz: ${newCoordinates.z},` +
+      `\n\`\`\``,
   })
 }

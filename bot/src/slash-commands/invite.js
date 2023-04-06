@@ -62,7 +62,7 @@ export default async function (interaction) {
 
   if (mismatchedVerificationLevel) {
     await interaction.editReply({
-      content: `You tried inviting an unverified member to a verified channel, this member must first finish the verification process before gaining access to this channel 🤔`,
+      content: `You tried inviting an unverified member to a verified channel 🤔`,
     })
 
     return
@@ -73,18 +73,18 @@ export default async function (interaction) {
   } else if (
     [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type)
   ) {
-    const thread = channel
+    const thread = channel,
+      { name: threadName } = thread
 
     const parentChannel = guild.channels.cache.get(thread.parentId),
+      { name: parentChannelName } = parentChannel,
       isJoinable = await getIdForJoinableChannel(parentChannel)
 
     if (!isJoinable) {
       await interaction.editReply({
-        content: `
-          This thread exists within a channel (${channel}) that no one can join or leave 🤔\
-
-          \n**Note: If this thread exists within a public channel, just @ the member to add them to the thread.**
-        `,
+        content:
+          `This thread exists within a channel that no one can join or leave 🤔` +
+          `\n\n**Note: If this thread exists within a public channel, just @ the member to add them to the thread.**`,
       })
 
       return
@@ -114,10 +114,9 @@ export default async function (interaction) {
 
     invitedMember
       .send({
-        content: `
-          ${member} from the **${guild}** server has invited you to the **${thread}** thread within the ${parentChannel} channel${categoryContext} 🙌\
-          \nIf you're interested in joining, click the button below:
-        `,
+        content:
+          `${member} from the **${guild}** server has invited you to the **${threadName}** thread within the ${parentChannelName} channel${categoryContext} 🙌` +
+          `\nIf you're interested in joining, click the button below:`,
         components: [joinThreadButton],
       })
       .catch(error => directMessageError(error, invitedMember))
@@ -153,10 +152,9 @@ export default async function (interaction) {
 
     invitedMember
       .send({
-        content: `
-        ${member} from the **${guild}** server has invited you to the **${channel}** channel${categoryContext} 🙌\
-        \nIf you're interested in joining, click the button below:
-      `,
+        content:
+          `${member} from the **${guild}** server has invited you to the **${channel}** channel${categoryContext} 🙌` +
+          `\nIf you're interested in joining, click the button below:`,
         components: [joinButton],
       })
       .catch(error => directMessageError(error, invitedMember))

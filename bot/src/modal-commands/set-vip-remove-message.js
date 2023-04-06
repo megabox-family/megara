@@ -15,9 +15,6 @@ export default async function (interaction) {
   const vipRemoveMessage = await getVipRemoveMessage(guild.id)
 
   await interaction.editReply({
-    content: `
-      You've set **${guild}'s** vip remove message to the below:\
-      \n>>> ${vipRemoveMessage}
-    `,
+    content: `You've set **${guild}'s** vip remove message to the below: \n>>> ${vipRemoveMessage}`,
   })
 }

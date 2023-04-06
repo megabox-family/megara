@@ -16,18 +16,16 @@ export default async function (interaction) {
     await member.roles.remove(roleId)
 
     await interaction.editReply({
-      content: `
-        You are now unsubscribed from ${roleBasename} in the ${guild.name} server 🔕\
-        \n*Note: use the \`/notification-manager\` command to resubscribe if desired.*
-      `,
+      content:
+        `You are now unsubscribed from ${roleBasename} in the ${guild.name} server 🔕` +
+        `\n\n*Note: use the \`/notification-manager\` command to resubscribe if desired.*`,
       ephemeral: true,
     })
   } else
     await interaction.editReply({
-      content: `
-        You are already unsubscribed from ${roleBasename} in the ${guild.name} server 🤔
-        \n*Note: use the \`/notification-manager\` command to resubscribe if desired.*
-      `,
+      content:
+        `You are already unsubscribed from ${roleBasename} in the ${guild.name} server 🤔` +
+        `\n\n*Note: use the \`/notification-manager\` command to resubscribe if desired.*`,
       ephemeral: true,
     })
 }

@@ -86,10 +86,10 @@ export async function syncVipMembers(guild) {
     await setVipRoleId(null, guild.id)
 
     if (adminChannel) {
-      adminChannel.send(`
-        You have a VIP role ID set, but the cooresponding role no longer exists 😬\
-        \nPlease set a new VIP role using the \`/set-vip-roll\` function, until then, VIP functionality is no longer automated.
-      `)
+      adminChannel.send(
+        `You have a VIP role ID set, but the cooresponding role no longer exists 😬` +
+          `\nPlease set a new VIP role using the \`/set-vip-roll\` function, until then, VIP functionality is no longer automated.`
+      )
     }
 
     return
@@ -116,10 +116,10 @@ export async function syncVipMembers(guild) {
     const totalQueuedMembers = getTotalBatchRoleQueueMembers(),
       alphaRunTime = getExpectedRunTime(totalQueuedMembers)
 
-    adminChannel?.send(`
-      Some VIP members do not have the VIP role, attributing ${newVipMembers.length} member(s) the VIP role.\
-      \nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑
-    `)
+    adminChannel?.send(
+      `Some VIP members do not have the VIP role, attributing ${newVipMembers.length} member(s) the VIP role.` +
+        `\nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑`
+    )
   }
 
   if (noLongerVipMembers.length > 0) {
@@ -132,10 +132,10 @@ export async function syncVipMembers(guild) {
     const totalQueuedMembers = getTotalBatchRoleQueueMembers(),
       alphaRunTime = getExpectedRunTime(totalQueuedMembers)
 
-    adminChannel?.send(`
-    Some members no longer qualify for VIP status, removing the VIP role from ${noLongerVipMembers.length} member(s).\
-      \nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑
-    `)
+    adminChannel?.send(
+      `Some members no longer qualify for VIP status, removing the VIP role from ${noLongerVipMembers.length} member(s).` +
+        `\nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑`
+    )
   }
 }
 
@@ -161,11 +161,11 @@ async function handlePremiumRole(oldMember, newMember) {
         : null
 
     if (adminChannel)
-      adminChannel.send(`
-        We weren't able to asign the VIP role for this server to ${newMember}.\
-        \nThe VIP role ID was set, but the role itself no longer exists in this server, we have cleared the ID from the VIP role table.
-        \nPlease use the \`/set-vip-role\` command to set a new VIP role, until you do, automated VIP functionality will no longer work in this server.
-      `)
+      adminChannel.send(
+        `We weren't able to asign the VIP role for this server to ${newMember}.` +
+          `\nThe VIP role ID was set, but the role itself no longer exists in this server, we have cleared the ID from the VIP role table.` +
+          `\nPlease use the \`/set-vip-role\` command to set a new VIP role, until you do, automated VIP functionality will no longer work in this server.`
+      )
 
     return
   }
@@ -203,10 +203,9 @@ async function handleVipRole(oldMember, newMember) {
   if (!wasVip && isVip) {
     if (vipMemberArray.includes(newMember)) {
       const vipAssignMessage = await getVipAssignMessage(guild.id),
-        additonalMessage = `
-          \nHere's a message from **${guild}** with additional information:\
-          \n>>> ${vipAssignMessage}
-        `
+        additonalMessage =
+          `Here's a message from **${guild}** with additional information:` +
+          `\n>>> ${vipAssignMessage}`
 
       newMember
         ?.send(
@@ -223,17 +222,16 @@ async function handleVipRole(oldMember, newMember) {
     newMember.roles.remove(vipRoleId)
 
     if (adminChannel)
-      adminChannel.send(`
-        Somone tried giving ${oldMember} the VIP role but they do not qualify for VIP status, it has automatically been removed 🤔\
-        \nIf you'd like to give a member who does not typically qualify for VIP status the VIP role, please use the \`/vip-user-override\` command.
-      `)
+      adminChannel.send(
+        `Somone tried giving ${oldMember} the VIP role but they do not qualify for VIP status, it has automatically been removed 🤔` +
+          `\nIf you'd like to give a member who does not typically qualify for VIP status the VIP role, please use the \`/vip-user-override\` command.`
+      )
   } else {
     if (!vipMemberArray.includes(newMember)) {
       const vipRemoveMessage = await getVipRemoveMessage(guild.id),
-        additonalMessage = `
-          \nHere's a message from **${guild}** with additional information:\
-          \n>>> ${vipRemoveMessage}
-        `
+        additonalMessage =
+          `\nHere's a message from **${guild}** with additional information:` +
+          `\n>>> ${vipRemoveMessage}`
 
       newMember
         ?.send(
@@ -271,31 +269,33 @@ export async function verifyNewMember(oldMember, newMember) {
     nameGuidelines = await getNameGuidelines(guild.id)
 
   if (nameGuidelines) {
-    const setNameCommand = getCommandByName(`set-name`, guild.id)
+    const setNameCommand = getCommandByName(`set-name`, guild.id),
+      { name: commandName, id: commandId } = setNameCommand
 
-    await verificationChannel?.send(`
-      Thanks for accepting our rules ${newMember}! One last step ☝️\
+    console.log(setNameCommand)
 
-      \nYou need to set your nickname in **${guild}** to gain full access, here are **${guild}'s** nickname guidelines:\
-      \n> ${nameGuidelines}\
-  
-      \nTo change your nickname click here → </${setNameCommand.name}:${setNameCommand.id}> and then type your nickname into the "name" text box below. Don't forget to hit enter after typing in your name.
-    `)
+    await verificationChannel?.send(
+      `↓` +
+        `\nOne last step ${newMember} ☝️` +
+        `\n\nYou need to set your nickname, here are **${guild}'s** nickname guidelines:` +
+        `\n> ${nameGuidelines}` +
+        `\n\nTo change your nickname click here → </${commandName}:${commandId}>, then type your nickname into the "name" text box below and hit enter.`
+    )
 
     newMember.roles.add(undergoingVerificationRole.id)
   } else {
     if (welcomeChannel)
-      await verificationChannel?.send(`
-        Thanks for accepting our rules ${newMember}!\
-      
-        \nYou're good to go now, but I'd recommend checking out our ${welcomeChannel} for more details 👍
-      `)
+      await verificationChannel?.send(
+        `↓` +
+          `Thanks for accepting our rules ${newMember}!` +
+          `\n\nYou're good to go now, but I'd recommend checking out our ${welcomeChannel} for more details 👍`
+      )
     else
-      await verificationChannel?.send(`
-        Thanks for accepting our rules ${newMember}!\
-    
-        \nYou're good to go now, **${guild}** doesn't have a welcome channel so I'd just take a look around 👀
-      `)
+      await verificationChannel?.send(
+        `↓` +
+          `Thanks for accepting our rules ${newMember}!` +
+          `\n\nYou're good to go now, **${guild}** doesn't have a welcome channel so I'd just take a look around 👀`
+      )
 
     newMember.roles.add(verifiedRole.id)
   }

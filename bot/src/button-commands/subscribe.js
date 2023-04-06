@@ -16,18 +16,16 @@ export default async function (interaction) {
     await member.roles.add(roleId)
 
     await interaction.editReply({
-      content: `
-        You are now subscribed to ${roleBasename} in the ${guild.name} server 🔔
-        \n*Note: use the \`/notification-manager\` command to unsubscribe if desired.*
-      `,
+      content:
+        `You are now subscribed to ${roleBasename} in the ${guild.name} server 🔔` +
+        `\n\n*Note: use the \`/notification-manager\` command to unsubscribe if desired.*`,
       ephemeral: true,
     })
   } else
     await interaction.editReply({
-      content: `
-        You are already subscribed to ${roleBasename} in the ${guild.name} server 🤔
-        \n*Note: use the \`/notification-manager\` command to unsubscribe if desired.*
-      `,
+      content:
+        `You are already subscribed to ${roleBasename} in the ${guild.name} server 🤔` +
+        `\n\n*Note: use the \`/notification-manager\` command to unsubscribe if desired.*`,
       ephemeral: true,
     })
 }

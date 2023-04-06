@@ -71,11 +71,10 @@ export default async function (interaction) {
         alphaRunTime = getExpectedRunTime(totalQueuedMembers)
 
       await interaction.editReply({
-        content: `
-          The ${oldVipRole} role has been cleared for this server 🧼\
-          \nThis role will automatically be removed from the ${curratedVipMembers.length} boosters / premium subscribers / vip override users in this server.\
-          \nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑
-        `,
+        content:
+          `The ${oldVipRole} role has been cleared for this server 🧼` +
+          `\nThis role will automatically be removed from the ${curratedVipMembers.length} boosters / premium subscribers / vip override users in this server.` +
+          `\nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑`,
       })
     }
   } else {
@@ -110,11 +109,10 @@ export default async function (interaction) {
         alphaRunTime = getExpectedRunTime(totalQueuedMembers)
 
       await interaction.editReply({
-        content: `
-          The ${vipRole} role has been set as the VIP role 🥇\
-          \nThis role will automatically be added to the ${curratedVipMembers.length} boosters / premium subscribers / vip override users in this server.\
-          \nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑
-        `,
+        content:
+          `The ${vipRole} role has been set as the VIP role 🥇` +
+          `\nThis role will automatically be added to the ${curratedVipMembers.length} boosters / premium subscribers / vip override users in this server.` +
+          `\nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑`,
       })
     }
   }

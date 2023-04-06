@@ -33,12 +33,7 @@ export default async function (interaction) {
   }
 
   const isMemberPermissible = checkIfMemberIsPermissible(voiceChannel, member),
-    category = guild.channels.cache.get(voiceChannel.parentId),
-    categoryContext = category ? ` in the **${category.name}** category` : ``,
-    interactionContent = `
-      You've been added to ${voiceChannel}${categoryContext} within the **${guild}** server 👍\
-      \nYou can join said voice channel from this message by clicking here → **${voiceChannel}**
-    `
+    interactionContent = `You've been added to **${voiceChannel}** ← click here to jump to it 😊`
 
   if (isMemberPermissible !== true) {
     const channelBaseName = getChannelBasename(voiceChannel.name),

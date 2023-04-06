@@ -81,9 +81,8 @@ export default async function (interaction) {
   const seconds = roleSortPauseDuration / 1000
 
   await interaction.editReply({
-    content: `
-      Your custom color has been set 😁\
-      \nThough, it may take up to ${seconds} seconds to apply 🕑
-    `,
+    content:
+      `Your custom color has been set 😁` +
+      `\nThough, it may take up to ${seconds} seconds to apply 🕑`,
   })
 }

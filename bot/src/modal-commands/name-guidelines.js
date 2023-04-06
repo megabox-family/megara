@@ -12,9 +12,8 @@ export default async function (interaction) {
   const nameGuidelines = await getNameGuidelines(guild.id)
 
   await interaction.editReply({
-    content: `
-      You've set **${guild}'s** name guidelines to the below:\
-      \n>>> ${nameGuidelines}
-    `,
+    content:
+      `You've set **${guild}'s** name guidelines to the below:` +
+      `\n>>> ${nameGuidelines}`,
   })
 }

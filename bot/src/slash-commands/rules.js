@@ -12,10 +12,7 @@ export default async function (interaction) {
 
   if (rules)
     await interaction.editReply({
-      content: `
-    These are **${interaction.guild}'s** rules:\
-    \n>>> ${rules}
-  `,
+      content: `These are **${interaction.guild}'s** rules: \n>>> ${rules}`,
       ephemeral: true,
     })
   else {

@@ -48,11 +48,10 @@ export default async function (interaction) {
     await setVipRoleId(null, guild.id)
 
     await interaction.editReply({
-      content: `
-        The ID for the VIP role exists for this guild, but the role no longer exists. 🤔\
-        \nBecause of this, the VIP role ID for this server has been removed.\ 
-        \nPlease set a new VIP role using \`/set-vip-role\` before using \`/vip-user-override\`.
-      `,
+      content:
+        `The ID for the VIP role exists for this guild, but the role no longer exists. 🤔` +
+        `\nBecause of this, the VIP role ID for this server has been removed.` +
+        `\nPlease set a new VIP role using \`/set-vip-role\` before using \`/vip-user-override\`.`,
     })
 
     return

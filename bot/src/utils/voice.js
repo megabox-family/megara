@@ -193,12 +193,10 @@ async function addMemberToChannelTemporarily(member, channelId) {
   if (result === `added`)
     member
       .send({
-        content: `\
-        \nYou've been temporarily added to **${channel}** in **${guild}** to provide context to the voice channel you just joined.\
-        \nAs soon as you leave this voice channel you will be automatically removed from **${channel}**.\
-
-        \nIf you would like to permenantly join **${channel}** press the join button below. Likewise, you can leave by pressing the leave button below.
-      `,
+        content:
+          `You've been temporarily added to **${channel}** in **${guild}** to provide context to the voice channel you just joined.` +
+          `\nAs soon as you leave this voice channel you will be automatically removed from **${channel}**.` +
+          `\n\nIf you would like to permenantly join **${channel}** press the join button below. Likewise, you can leave by pressing the leave button below.`,
         components: [buttons],
       })
       .catch(error => directMessageError(error, member))

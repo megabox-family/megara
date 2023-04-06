@@ -63,12 +63,11 @@ export default async function (interaction) {
     const allowedSymbolList = allowedSymbols.join(`\`, \``)
 
     await interaction.reply({
-      content: `
-        \nSorry, names must be below 32 characters and cannot contain numbers or most special characters. 😔\
-        \nHere's a list of acceptable special characters: \`${allowedSymbolList}\` (not including commas)\
-        \nAllowed special characters cannot be repeating, and spaces must follow periods.\
-        \nExample: \`/set-name Jason\`, \`/set-name Chris W.\`, \`/set-name Dr. White\`, \`/set-name Brett-Anne\`, \`/set-name O'Brien\`
-      `,
+      content:
+        `Sorry, names must be below 32 characters and cannot contain numbers or most special characters. 😔` +
+        `\nHere's a list of acceptable special characters: \`${allowedSymbolList}\` (not including commas)` +
+        `\nAllowed special characters cannot be repeating, and spaces must follow periods.` +
+        `\nExample: \`/set-name Jason\`, \`/set-name Chris W.\`, \`/set-name Dr. White\`, \`/set-name Brett-Anne\`, \`/set-name O'Brien`,
       ephemeral: true,
     })
 
@@ -198,19 +197,17 @@ export default async function (interaction) {
   if (userUndergoingVerificationRole) {
     if (welcomeChannelId)
       await interaction.editReply({
-        content: `\
-          \nCongratulations! 🎉\
-          \nYour nickname has been changed to **${newNickname}**, and you've been fully verified!\
-          \nI'd recommend checking out the <#${welcomeChannelId}> channel for more information on what to do next.\
-        `,
+        content:
+          `\nCongratulations! 🎉` +
+          `\nYour nickname has been changed to **${newNickname}**, and you've been fully verified!` +
+          `\nI'd recommend checking out the <#${welcomeChannelId}> channel for more information on what to do next.`,
       })
     else
       await interaction.editReply({
-        content: `\
-        \nCongratulations! 🎉\
-        \nYour nickname has been changed to **${newNickname}**, and you've been fully verified!\
-        \nThis server doesn't have a welcome channel officially set, so if I were you I'd just take a look around 👀\
-      `,
+        content:
+          `\nCongratulations! 🎉` +
+          `\nYour nickname has been changed to **${newNickname}**, and you've been fully verified!` +
+          `\nThis server doesn't have a welcome channel officially set, so if I were you I'd just take a look around 👀`,
       })
 
     member.roles.remove(undergoingVerificationRoleId)

@@ -12,9 +12,6 @@ export default async function (interaction) {
   const rules = await getRules(guild.id)
 
   await interaction.editReply({
-    content: `
-      You've set **${guild}'s** rules to the below:\
-      \n>>> ${rules}
-    `,
+    content: `You've set **${guild}'s** rules to the below: \n>>> ${rules}`,
   })
 }

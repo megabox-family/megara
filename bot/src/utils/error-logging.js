@@ -6,9 +6,6 @@ export function directMessageError(error, guildMember) {
   else guildmemberInfo = `${guildMember.username}${guildMember.discriminator}`
 
   console.log(
-    `
-      It's possible that ${guildmemberInfo} has DMs disabled.
-      \n\n\n${error}
-    `
+    `It's possible that ${guildmemberInfo} has DMs disabled. \n\n\n${error}`
   )
 }

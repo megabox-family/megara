@@ -47,10 +47,11 @@ export default async function (interaction) {
     total += result
     rolls.push(result)
   }
+
+  const _rolls = rolls.join(', ')
+
   await interaction.editReply({
-    content: `${numberOfDice} dice with ${numberOfSides} sides were rolled... \`\`\`md\n# Total: ${total}\nIndividual dice: (${rolls.join(
-      ' '
-    )})\`\`\``,
+    content: `${numberOfDice} dice with ${numberOfSides} sides were rolled... \`\`\`md\n# Total: ${total}\nIndividual dice: (${_rolls})\`\`\``,
     ephemeral: makePrivate,
   })
 }

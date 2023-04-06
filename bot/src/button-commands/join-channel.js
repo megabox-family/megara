@@ -48,26 +48,14 @@ export default async function (interaction) {
     else
       messageContent = `You tried joining a channel that no longer exists, sorry for the trouble 🥺`
   else if (result === `added`) {
-    if (!interaction?.guild) {
-      const category = guild.channels.cache.get(joinChannel.parentId),
-        categoryContext = category
-          ? ` in the **${category.name}** category`
-          : ``
-
-      messageContent = `
-        You've been added to the **${joinChannel}** channel${categoryContext} within the **${guild.name}** server 😁\
-        \nYou can jump to this channel from this message by clicking here → **${joinChannel}**\
-      `
-    } else messageContent = `You've been added to **${joinChannel}** 😁`
+    messageContent =
+      `You've been added to **${joinChannel}** ← click here to jump to it 😊` +
+      `\n\n*Note: You can join and leave channels using the \`/channel-list\` command.*`
 
     if (channelType === `private`)
-      messageContent += `
-        \n*Note: when joining a private channel if paired voice channels exist they won't immediatly show, in most cases it takes less than 10 seconds for them to populate.*
-      `
+      messageContent += `\n\n*Note: when joining a private channel if paired voice channels exist they won't immediatly show, in most cases it takes less than 10 seconds for them to populate.*`
   } else {
-    if (!interaction?.guild)
-      messageContent = `You already have access to **${joinChannel}** in the **${guild.name}** 🤔`
-    else messageContent = `You already have access to **${joinChannel}** 🤔`
+    messageContent = `You already have access to **#${joinChannel}** 🤔`
   }
 
   await interaction.editReply({

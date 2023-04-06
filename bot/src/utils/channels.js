@@ -667,13 +667,13 @@ export async function deleteChannel(channel, skipSort = false) {
       setChannelFunction[key](guild.id, null)
 
       if (key === `adminChannel`)
-        guild.members.cache.get(guild.ownerId).send(
-          `\
-            \n You're receiving this message because you are the owner of the ${guild.name} server.
-            \nThe channel that was set as the admin channel was deleted at some point 🤔\
-            \nTo receive important notifications from me in the server this needs to be set again.
-          `
-        )
+        guild.members.cache
+          .get(guild.ownerId)
+          .send(
+            `You're receiving this message because you are the owner of the ${guild.name} server.` +
+              `\nThe channel that was set as the admin channel was deleted at some point 🤔` +
+              `\nTo receive important notifications from me in the server this needs to be set again.`
+          )
       else {
         const adminChannel = guild.channels.cache.get(
           functionChannels.adminChannel
@@ -681,10 +681,8 @@ export async function deleteChannel(channel, skipSort = false) {
 
         if (adminChannel)
           adminChannel.send(
-            `\
-              \nThe channel that was set as the ${channelName} channel was deleted at some point 🤔\
-              \nYou'll need to set this channel function again to gain its functionality.
-            `
+            `The channel that was set as the ${channelName} channel was deleted at some point 🤔` +
+              `\nYou'll need to set this channel function again to gain its functionality.`
           )
       }
     }
@@ -1047,38 +1045,26 @@ export async function announceNewChannel(newChannel) {
     )
 
   let channelTypeMessage,
-    channelTypeDetails,
-    buttonRow = joinButtonRow,
-    joinOrLeave = `join`
+    buttonRow = joinButtonRow
 
   switch (channelType) {
     case `public`:
       channelTypeMessage = `We've added a new ${channelType} channel`
-      channelTypeDetails = `By default, all members are added to public channels.`
-      joinOrLeave = `leave`
       buttonRow = leaveButtonRow
       break
     case `joinable`:
       channelTypeMessage = `We've added a new ${channelType} channel`
-      channelTypeDetails = `By default, members are not added to joinable channels.`
       break
     default:
       channelTypeMessage = `A channel has been archived`
-      channelTypeDetails =
-        `Messages cannot be sent in archived channels, but you can still access them to view message history. ` +
-        `By default, members are not removed from archived channels unless the channel was previously public.`
-      joinOrLeave = `leave`
       buttonRow = leaveButtonRow
   }
 
   if (announcementChannel)
     announcementChannel.send({
-      content: `
-        ${channelNotificationSquad} Hey guys! 😁\
-        \n${channelTypeMessage}, **<#${newChannel.id}>**, in the **${categoryName}** category. ${channelTypeDetails} \
-
-        \nUse the buttons below this message to ${joinOrLeave} **<#${newChannel.id}>** and or to manage these notifications. You can also join and leave channels using the \`/channel-list\` command.
-      `,
+      content:
+        `${channelNotificationSquad} Hey guys! 😁` +
+        `\n${channelTypeMessage}, **<#${newChannel.id}>**, in the **${categoryName}** category.`,
       components: [buttonRow],
     })
 }

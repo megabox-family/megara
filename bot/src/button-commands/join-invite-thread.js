@@ -41,13 +41,7 @@ export default async function (interaction) {
         console.log(`Unable to add user to thread, see error below:\n${error}`)
       )
 
-  const category = guild.channels.cache.get(channel.parentId),
-    categoryContext = category ? ` in the **${category.name}** category` : ``
-
   await interaction.editReply({
-    content: `
-      You've been added to the **${thread}** thread in the **${channel}** channel${categoryContext} within the **${guild.name}** server 🙌\
-      \nYou can jump to this thread from this message by clicking here → **${thread}**
-    `,
+    content: `You've been added to **${thread}** ← click here to jump to it 😊`,
   })
 }

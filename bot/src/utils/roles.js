@@ -368,12 +368,10 @@ export async function createRole(role) {
 
     if (adminChannel)
       adminChannel.send(
-        `
-          \n@here\
-          \nSomeone tried creating a duplicate of the \`${roleName}\` role, which I need to function 😡\
-          \nIt's okay, I forgive you guys 😇\
-          \nBut I did have to delete that new role...
-        `
+        `@here` +
+          `\nSomeone tried creating a duplicate of the \`${roleName}\` role, which I need to function 😡` +
+          `\n\nIt's okay, I forgive you guys 😇` +
+          `\nBut I did have to delete that new role...`
       )
     return
   } else if (isColorRole(role.name)) {
@@ -400,11 +398,11 @@ export async function createRole(role) {
 
         const alphaRunTime = getExpectedRunTime(totalQueuedMembers)
 
-        await adminChannel?.send(`
-          A new notification role, **${newRole.name}**, has been created 🔔\
-          \nThis role will automatically be added to ${relevantMembers.length} members in the server.\
-          \nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑
-        `)
+        await adminChannel?.send(
+          `A new notification role, **${newRole.name}**, has been created 🔔` +
+            `\nThis role will automatically be added to ${relevantMembers.length} members in the server.` +
+            `\nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑`
+        )
       }
     }
   }
@@ -434,13 +432,10 @@ export async function modifyRole(oldRole, newRole) {
 
     if (adminChannel)
       adminChannel.send(
-        `
-          \n@here\
-          \nSomeone tried modifying or overwritting the \`${roleName}\` role which I need to function 😡\
-
-          \nIt's okay, I forgive you guys 😇\
-          \nBut I had to rename said role back to what it was.
-        `
+        `@here` +
+          `\nSomeone tried modifying or overwritting the \`${roleName}\` role which I need to function 😡` +
+          `\n\nIt's okay, I forgive you guys 😇` +
+          `\nBut I had to rename said role back to what it was.`
       )
   } else if (
     (!oldRole.name.match(`^~.+~$`) && newRole.name.match(`^~.+~$`)) ||
@@ -482,11 +477,11 @@ export async function modifyRole(oldRole, newRole) {
 
         const alphaRunTime = getExpectedRunTime(totalQueuedMembers)
 
-        await adminChannel?.send(`
-          A role's name was changed from **${oldRole.name}** to **${newRole.name}**, and is therefore a notification role 🔔\
-          \nThis role will automatically be added to ${relevantMembers.length} members in the server.\
-          \nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑
-        `)
+        await adminChannel?.send(
+          `A role's name was changed from **${oldRole.name}** to **${newRole.name}**, and is therefore a notification role 🔔` +
+            `\nThis role will automatically be added to ${relevantMembers.length} members in the server.` +
+            `\nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑`
+        )
       }
     }
   } else if (
@@ -517,11 +512,11 @@ export async function modifyRole(oldRole, newRole) {
 
         const alphaRunTime = getExpectedRunTime(totalQueuedMembers)
 
-        await adminChannel?.send(`
-          A notification role's name was changed from **${oldRole.name}** to **${newRole.name}**, and is therefore no longer a notification role 🔕\
-          \nThis role will automatically be removed from ${relevantMembers.length} members in the server.\
-          \nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑
-        `)
+        await adminChannel?.send(
+          `A notification role's name was changed from **${oldRole.name}** to **${newRole.name}**, and is therefore no longer a notification role 🔕` +
+            `\nThis role will automatically be removed from ${relevantMembers.length} members in the server.` +
+            `\nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑`
+        )
       }
     }
   }
@@ -548,11 +543,11 @@ export async function deleteRole(role) {
         : null
 
     if (adminChannel)
-      adminChannel.send(`
-        The VIP role for this server was just deleted 😬\
-        \nIf this was on purpose, great. If not, I can't restore it.\
-        \nVIP functionality in this server will no longer work until you set the VIP role again using the \`/set-vip-role\` command.
-      `)
+      adminChannel.send(
+        `The VIP role for this server was just deleted 😬` +
+          `\nIf this was on purpose, great. If not, I can't restore it.` +
+          `\nVIP functionality in this server will no longer work until you set the VIP role again using the \`/set-vip-role\` command.`
+      )
   }
 
   if (balanceDisrupted(role)) {
@@ -561,13 +556,10 @@ export async function deleteRole(role) {
 
     if (adminChannel)
       adminChannel.send(
-        `
-          \n@here\
-          \nSomeone tried deleting the \`@${newRole.name}\` role, which I need to function 😡\
-          \nIt's okay, I forgive you guys 😇\
-          \nI recreated the role... but you'll have to re-add it to any channel or member\
-          
-        `
+        `@here` +
+          `\nSomeone tried deleting the \`@${newRole.name}\` role, which I need to function 😡` +
+          `\n\nIt's okay, I forgive you guys 😇` +
+          `\nI recreated the role... but you'll have to re-add it to any channel or member`
       )
 
     setTimeout(() => pushToRoleSortingQueue(guild.id), roleSortPauseDuration)
@@ -621,10 +613,10 @@ export async function batchAddOrRemoveRole(members, role, addOrRemove) {
 
           return false
         } else if (counter > 0)
-          adminChannel?.send(`
-              The **${role.name}** role has been removed from the **batch ${addOrRemove}** queue 😬\
-              \nI was able to *${addOrRemove}* **${role.name}** ${toOrFrom} ${counter} members before it was removed from the queue.
-            `)
+          adminChannel?.send(
+            `The **${role.name}** role has been removed from the **batch ${addOrRemove}** queue 😬` +
+              `\nI was able to *${addOrRemove}* **${role.name}** ${toOrFrom} ${counter} members before it was removed from the queue.`
+          )
 
         return
       }

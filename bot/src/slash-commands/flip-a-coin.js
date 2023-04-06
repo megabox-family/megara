@@ -23,11 +23,7 @@ export default async function (interaction) {
 
   const headsOrTails = Math.round(Math.random()) === 1 ? `heads` : `tails`
 
-  await interaction.editReply(`
-    🪙\
-
-    \n👍 🫴 🫳\
-
-    \nThe coin landed on **${headsOrTails}**.
-  `)
+  await interaction.editReply(
+    `🪙 \n\n👍 🫴 🫳 \n\nThe coin landed on **${headsOrTails}**.`
+  )
 }

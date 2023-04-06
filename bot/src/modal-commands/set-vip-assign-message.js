@@ -15,9 +15,6 @@ export default async function (interaction) {
   const vipAssignMessage = await getVipAssignMessage(guild.id)
 
   await interaction.editReply({
-    content: `
-      You've set **${guild}'s** vip assign message to the below:\
-      \n>>> ${vipAssignMessage}
-    `,
+    content: `You've set **${guild}'s** vip assign message to the below: \n>>> ${vipAssignMessage}`,
   })
 }
