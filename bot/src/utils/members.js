@@ -399,13 +399,9 @@ export async function handleNewMember(guildMember) {
 }
 
 export function getNicknameOrUsername(member, user) {
-  let name
-
-  if (member) {
-    name = member.nickName ? member.nickName : member.user.username
-  } else {
-    name = user.username
-  }
+  const { nickName, user: memberUser } = member,
+    _user = memberUser ? memberUser : user,
+    name = nickName ? nickName : _user?.username
 
   return name
 }
