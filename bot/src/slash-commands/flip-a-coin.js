@@ -1,7 +1,7 @@
 import { ApplicationCommandOptionType } from 'discord.js'
 
 export const description = `Flips a coin and displays the result`
-export const dmPermission = false,
+export const dmPermission = true,
   defaultMemberPermissions = `0`,
   options = [
     {
