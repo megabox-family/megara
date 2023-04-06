@@ -1,5 +1,6 @@
-import { ApplicationCommandOptionType } from 'discord.js'
+import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js'
 import { getAllVoiceChannelIds } from '../repositories/channels.js'
+import { extractElement } from '../utils/general.js'
 
 export const description = `Creates a sepcificed number of randomized teams composed of people in the voice channel you're in.`
 export const dmPermission = false,
@@ -11,9 +12,36 @@ export const dmPermission = false,
       type: ApplicationCommandOptionType.Integer,
       required: true,
       minValue: 2,
-      maxValue: 1000,
+      maxValue: 10,
     },
   ]
+
+const teamsNames = [
+  `goofy goobers`,
+  `wild mailman rebellion`,
+  `degenerates`,
+  `major league gamers`,
+  `major league goombas`,
+  `the boys`,
+  `the new york city yankees`,
+  `simps`,
+  `chads`,
+  `women`,
+  `pokémon masters`,
+  `n-word passers`,
+  `30 suckins to mars`,
+  `the plain white cheeks`,
+  `fish & chits`,
+  `sudden debt`,
+  `winnipeg bundies`,
+  `team 1`,
+  `the headless horselessmen`,
+  `mormen`,
+  `west dakota`,
+  `foxy lady attack team`,
+  `titan shifters`,
+  `paco's last stand`,
+]
 
 export default async function (interaction) {
   const guild = interaction.guild,
@@ -74,15 +102,31 @@ export default async function (interaction) {
     })
   }
 
-  let replyMessage = 'Good luck everyone! 🍀\n```'
+  let diminishingTeamNames = JSON.parse(JSON.stringify(teamsNames))
 
-  teams
-    .filter(team => team.length !== 0)
-    .forEach((team, index) => {
-      replyMessage += `**Team ${index + 1}**\n${team.join(`\n`)}\n\n`
+  const _teams = teams.filter(team => team.length !== 0),
+    teamFields = _teams.map(team => {
+      const randomIndex = Math.floor(
+          Math.random() * diminishingTeamNames?.length
+        ),
+        { array, element: teamName } = extractElement(
+          diminishingTeamNames,
+          randomIndex
+        )
+
+      diminishingTeamNames = array
+
+      const teamMembers = team.join(`\n`)
+
+      return { name: teamName, value: teamMembers }
     })
 
-  replyMessage += '```'
+  const embed = new EmbedBuilder()
+    .setColor(`#6725BC`)
+    .setTitle(`avengers asemble 🫡`)
+    .addFields(teamFields)
+    .setFooter({ text: `good luck everyone 🍀` })
+    .setTimestamp()
 
-  await interaction.editReply(replyMessage)
+  await interaction.editReply({ embeds: [embed] })
 }

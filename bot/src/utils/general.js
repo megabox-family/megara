@@ -354,3 +354,27 @@ export async function handleReactionAdd(reaction, user) {
 export async function handleReactionRemove(reaction, user) {
   unpinMessage(reaction, user)
 }
+
+export function formatNumber(
+  number,
+  useGrouping = true,
+  minimumFractionDigits = 0,
+  maximumFractionDigits = 2
+) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'decimal',
+    minimumFractionDigits: minimumFractionDigits,
+    maximumFractionDigits: maximumFractionDigits,
+    useGrouping: useGrouping,
+  }).format(number)
+}
+
+export function extractElement(array, index) {
+  const element = array[index],
+    firstHalf = array.slice(0, index),
+    secondHalf = array.slice(index + 1)
+
+  array = [...firstHalf, ...secondHalf]
+
+  return { array: array, element: element }
+}

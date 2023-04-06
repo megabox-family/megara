@@ -1,4 +1,5 @@
 import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js'
+import { formatNumber } from '../utils/general.js'
 import { getNicknameOrUsername } from '../utils/members.js'
 
 export const description = `Lets you roll dice and returns the result.`
@@ -28,14 +29,6 @@ export const dmPermission = true,
       required: false,
     },
   ]
-
-function formatNumber(number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'decimal',
-    maximumFractionDigits: 2,
-    useGrouping: true,
-  }).format(number)
-}
 
 export default async function (interaction) {
   const { options, member, user } = interaction
