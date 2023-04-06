@@ -17,7 +17,6 @@ const Contribute = () => {
         },
       })
       .then(res => {
-        console.log(res.data)
         setUserData(res.data)
       })
       .catch(() => setShouldRedirect(true))

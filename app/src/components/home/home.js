@@ -39,7 +39,6 @@ const Home = () => {
         },
       })
       .then(res => {
-        console.log('Got here!', res.data)
         if (res.data?.id) setUserData(res.data)
       })
   }, [])

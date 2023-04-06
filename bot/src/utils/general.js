@@ -247,9 +247,6 @@ export async function handleMessage(message) {
     const components = await generateChannelButtons(mentionedChannels)
 
     await message.reply({
-      content:
-        `Use the button(s) below to join/leave the channels mentioned in this message.` +
-        `\nPS: You can also use the \`/channel-list\` command to join / leave channels at your leisure.`,
       components: components,
     })
   }
@@ -258,9 +255,6 @@ export async function handleMessage(message) {
     const components = generateNotificationButtons(notificationRoles)
 
     await message.reply({
-      content: `
-        Use the button(s) below to unsubscribe from notification roles mentioned in this message.\
-      `,
       components: components,
     })
   }

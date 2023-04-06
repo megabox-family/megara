@@ -272,8 +272,6 @@ export async function verifyNewMember(oldMember, newMember) {
     const setNameCommand = getCommandByName(`set-name`, guild.id),
       { name: commandName, id: commandId } = setNameCommand
 
-    console.log(setNameCommand)
-
     await verificationChannel?.send(
       `↓` +
         `\nOne last step ${newMember} ☝️` +
@@ -394,10 +392,10 @@ export async function handleNewMember(guildMember) {
     verificationChannelId = await getVerificationChannel(guild.id),
     verificationChannel = guild.channels.cache.get(verificationChannelId)
 
-  verificationChannel?.send(`
-      Hey ${guildMember}, welcome to **${guild.name}** 👋
-      \nBefore we can continue, I'm gonna need you to press the "Complete" button below.
-    `)
+  verificationChannel?.send(
+    `Hey ${guildMember}, welcome to **${guild.name}** 👋` +
+      `\n\nBefore we can continue, I'm gonna need you to press the "Complete" (→ on mobile) button below.`
+  )
 }
 
 export function getNicknameOrUsername(member, user) {
