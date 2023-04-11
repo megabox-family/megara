@@ -274,7 +274,7 @@ export async function verifyNewMember(oldMember, newMember) {
 
     await verificationChannel?.send(
       `↓` +
-        `\n__[Step 2/2]__ You need to set your nickname, here are **${guild}'s** nickname guidelines:` +
+        `\n__**[Step 2/2]**__ ${newMember} you need to set your nickname, here are **${guild}'s** nickname guidelines:` +
         `\n> ${nameGuidelines}` +
         `\n\nTo change your nickname click here → </${commandName}:${commandId}>, then type your nickname into the "name" text box below and hit enter.`
     )
@@ -391,7 +391,7 @@ export async function handleNewMember(guildMember) {
     verificationChannelId = await getVerificationChannel(guild.id),
     verificationChannel = guild.channels.cache.get(verificationChannelId),
     nameGuidelines = await getNameGuidelines(guild.id),
-    stepText = nameGuidelines ? `__[Step 1/2]__ ` : ``
+    stepText = nameGuidelines ? `__**[Step 1/2]**__ ` : ``
 
   verificationChannel?.send(
     `Hey ${guildMember}, welcome to **${guild.name}** 👋` +
