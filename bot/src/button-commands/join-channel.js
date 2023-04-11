@@ -53,7 +53,7 @@ export default async function (interaction) {
       `\n\n*Note: You can join and leave channels using the \`/channel-list\` command.*`
 
     if (channelType === `private`)
-      messageContent += `\n\n*Note: when joining a private channel if paired voice channels exist they won't immediatly show, in most cases it takes less than 10 seconds for them to populate.*`
+      messageContent += `\n*Note: when joining a private channel if paired voice channels exist they won't immediatly show, in most cases it takes less than 10 seconds for them to populate.*`
   } else {
     messageContent = `You already have access to **${joinChannel}** 🤔`
   }
