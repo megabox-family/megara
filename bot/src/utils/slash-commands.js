@@ -373,13 +373,13 @@ export async function generateListMessage(
 }
 
 export async function handleVoiceChannel(channel, invitedMember, interaction) {
-  const guild = channel.guild,
-    member = interaction.member,
+  const { guild, name: channelName } = channel,
+    { member } = interaction,
     memberIsPermissible = checkIfMemberIsPermissible(channel, invitedMember),
     category = guild.channels.cache.get(channel.parentId),
     categoryContext = category ? ` in the **${category.name}** category` : ``
 
-  let messageContent = `${member} from the **${guild}** server has invited you to the **${channel}** voice channel${categoryContext} 🙌`
+  let messageContent = `${member} from the **${guild}** server has invited you to the **${channelName}** voice channel${categoryContext} 🙌`
 
   if (memberIsPermissible === true) {
     messageContent += `\n\nIf you're interested, you can join this voice channel from this message by clicking here → ${channel}`
@@ -393,7 +393,7 @@ export async function handleVoiceChannel(channel, invitedMember, interaction) {
     const joinChannelButton = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`!join-voice-channel: ${channel.id}`)
-        .setLabel(`Join ${channel.name}`)
+        .setLabel(`Join ${channelName}`)
         .setStyle(ButtonStyle.Primary)
     )
 

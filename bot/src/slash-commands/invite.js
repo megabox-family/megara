@@ -26,9 +26,7 @@ export const dmPermission = false,
 export default async function (interaction) {
   await interaction.deferReply({ ephemeral: true })
 
-  const guild = interaction.guild,
-    member = interaction.member,
-    options = interaction.options,
+  const { guild, member, options, channel } = interaction,
     invitedUsername = options.getString(`username-and-tag-or-id`)
 
   let invitedMember = guild.members.cache.find(member => {
@@ -50,8 +48,6 @@ export default async function (interaction) {
 
     return
   }
-
-  const channel = interaction.channel
 
   if (!channel) return
 
@@ -141,10 +137,11 @@ export default async function (interaction) {
       return
     }
 
-    const joinButton = new ActionRowBuilder().addComponents(
+    const { name: channelName } = channel,
+      joinButton = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`!join-channel: ${channel.id}`)
-          .setLabel(`Join ${channel.name}`)
+          .setLabel(`Join ${channelName}`)
           .setStyle(ButtonStyle.Primary)
       ),
       category = guild.channels.cache.get(channel.parentId),
@@ -153,7 +150,7 @@ export default async function (interaction) {
     invitedMember
       .send({
         content:
-          `${member} from the **${guild}** server has invited you to the **${channel}** channel${categoryContext} 🙌` +
+          `${member} from the **${guild}** server has invited you to the **${channelName}** channel${categoryContext} 🙌` +
           `\nIf you're interested in joining, click the button below:`,
         components: [joinButton],
       })
