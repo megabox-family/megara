@@ -46,7 +46,7 @@ function formatWhere(whereArray) {
   const where = whereArray[0],
     uriWhere = encodeURIComponent(where)
 
-  return `[${where}](https://www.google.c;;om/search?q=${uriWhere})`
+  return `[${where}](https://www.google.com/search?q=${uriWhere})`
 }
 
 export default async function (interaction) {
