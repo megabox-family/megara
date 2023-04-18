@@ -361,6 +361,18 @@ export function generateNotificationButtons(notificationRoles) {
   return rows
 }
 
+export function chunckButtons(buttons, chunkSize = 5, rowLimit = 5) {
+  const rows = []
+
+  for (let i = 0; i < buttons.length; i += chunkSize) {
+    rows.push(
+      new ActionRowBuilder().addComponents(buttons.slice(i, i + chunkSize))
+    )
+  }
+
+  return rows
+}
+
 export async function generateChannelButtons(mentionedChannels) {
   const collator = new Intl.Collator(undefined, {
       numeric: true,

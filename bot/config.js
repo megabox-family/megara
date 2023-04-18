@@ -34,4 +34,5 @@ export default {
   botCommandsChannelID: isDevelopment
     ? '691712074740662403'
     : '711043006781849687',
+  omdbKey: e.OMDB_KEY,
 }

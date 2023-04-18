@@ -71,3 +71,15 @@ export function validateTagArray(tagArray) {
 
   return invalidTag ? false : true
 }
+
+export function getImdbMovieId(imdbUrl) {
+  const movieId = imdbUrl.match(`tt[0-9]+`)?.[0]
+
+  return movieId
+}
+
+export function extractAttendees(attendees) {
+  const attendeeText = attendees.match(`(?<=^\\d\. ).+`)?.[0]
+
+  return attendeeText
+}

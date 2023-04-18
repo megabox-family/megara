@@ -112,6 +112,7 @@ async function startPollTimers() {
 
 export async function startup(bot) {
   console.log(`Logged in as ${bot.user.tag}!`)
+  console.log(process.version)
 
   cacheBot(bot)
   await syncGuilds(bot.guilds.cache)

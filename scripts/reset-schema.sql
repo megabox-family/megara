@@ -142,3 +142,10 @@ create table poll_data (
   poll_id text not null,
   choices text not null
 );
+
+drop table if exists movie_invites;
+
+create table movie_invites (
+  id text not null primary key,
+  last_updated bigint not null
+);
