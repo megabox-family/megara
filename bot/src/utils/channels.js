@@ -997,49 +997,56 @@ export async function removeMemberFromChannel(member, channelId) {
 }
 
 export async function announceNewChannel(newChannel) {
-  const guild = newChannel.guild,
-    pauseChannelNotifications = await getPauseChannelNotifications(guild.id)
+  const {
+      id: newChannelId,
+      name: newChannelName,
+      parentId: newChannelParentId,
+      guild,
+    } = newChannel,
+    { id: guildId, channels, roles } = guild,
+    pauseChannelNotifications = await getPauseChannelNotifications(guildId)
 
   if (pauseChannelNotifications) return
 
-  const announcementChannelId = await getAnnouncementChannel(guild.id)
+  const announcementChannelId = await getAnnouncementChannel(guildId)
 
   if (!announcementChannelId) return
 
-  const welcomeChannelId = await getWelcomeChannel(guild.id)
+  const welcomeChannelId = await getWelcomeChannel(guildId)
 
   if (
-    welcomeChannelId === newChannel.id ||
+    welcomeChannelId === newChannelId ||
     [`rooms`, `unverified-rooms`].includes(newChannel.name)
   )
     return
 
-  const channelType = await getChannelType(newChannel.id)
+  const channelType = await getChannelType(newChannelId)
 
   if ([`category`, `hidden`, `private`, `voice`].includes(channelType)) return
 
-  const channelNotificationSquad = guild.roles.cache.find(
+  const channelNotificationSquad = roles.cache.find(
       role => role.name === `-channel notifications-`
     ),
-    categoryName = await getCategoryName(newChannel.parentId),
-    announcementChannel = guild.channels.cache.get(announcementChannelId),
+    { id: channelNotificationRoleId } = channelNotificationSquad,
+    categoryName = await getCategoryName(newChannelParentId),
+    announcementChannel = channels.cache.get(announcementChannelId),
     joinButtonRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`!join-channel: ${newChannel.id}`)
-        .setLabel(`Join ${newChannel.name}`)
+        .setCustomId(`!join-channel: ${newChannelId}`)
+        .setLabel(`Join ${newChannelName}`)
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
-        .setCustomId(`!unsubscribe: ${channelNotificationSquad.id}`)
+        .setCustomId(`!unsubscribe: ${channelNotificationRoleId}`)
         .setLabel(`Unsubscribe from channel notifications`)
         .setStyle(ButtonStyle.Secondary)
     ),
     leaveButtonRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`!leave-channel: ${newChannel.id}`)
-        .setLabel(`Leave ${newChannel.name}`)
+        .setCustomId(`!leave-channel: ${newChannelName}`)
+        .setLabel(`Leave ${newChannelName}`)
         .setStyle(ButtonStyle.Danger),
       new ButtonBuilder()
-        .setCustomId(`!unsubscribe: ${channelNotificationSquad.id}`)
+        .setCustomId(`!unsubscribe: ${channelNotificationRoleId}`)
         .setLabel(`Unsubscribe from channel notifications`)
         .setStyle(ButtonStyle.Secondary)
     )
@@ -1063,8 +1070,8 @@ export async function announceNewChannel(newChannel) {
   if (announcementChannel)
     announcementChannel.send({
       content:
-        `${channelNotificationSquad} Hey guys! 😁` +
-        `\n${channelTypeMessage}, **<#${newChannel.id}>**, in the **${categoryName}** category.`,
+        `${channelNotificationSquad}` +
+        `\n${channelTypeMessage}, **${newChannelName}**, in the **${categoryName}** category 😁`,
       components: [buttonRow],
     })
 }
