@@ -278,8 +278,6 @@ export async function verifyNewMember(oldMember, newMember) {
         `\n> ${nameGuidelines}` +
         `\n\nTo change your nickname click here → </${commandName}:${commandId}>, then type your nickname into the "name" text box below and hit enter.`
     )
-
-    newMember.roles.add(undergoingVerificationRole.id)
   } else {
     if (welcomeChannel)
       await verificationChannel?.send(
@@ -389,8 +387,19 @@ export function CheckIfVerificationLevelIsMismatched(member, _channel) {
 export async function handleNewMember(guildMember) {
   const guild = guildMember.guild,
     verificationChannelId = await getVerificationChannel(guild.id),
-    verificationChannel = guild.channels.cache.get(verificationChannelId),
-    nameGuidelines = await getNameGuidelines(guild.id),
+    verificationChannel = guild.channels.cache.get(verificationChannelId)
+
+  if (!verificationChannel) return
+
+  const undergoingVerificationRole = guild.roles.cache.find(
+    role => role.name === `undergoing-verification`
+  )
+
+  if (!undergoingVerificationRole) return
+
+  await guildMember.roles.add(undergoingVerificationRole.id)
+
+  const nameGuidelines = await getNameGuidelines(guild.id),
     stepText = nameGuidelines ? `__**[Step 1/2]**__ ` : ``
 
   verificationChannel?.send(

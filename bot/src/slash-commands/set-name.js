@@ -187,7 +187,7 @@ export default async function (interaction) {
   }
 
   const undergoingVerificationRoleId = guild.roles.cache.find(
-      role => role.name === `undergoing verification`
+      role => role.name === `undergoing-verification`
     ).id,
     userUndergoingVerificationRole = member.roles.cache.find(
       role => role.id === undergoingVerificationRoleId

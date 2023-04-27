@@ -22,18 +22,10 @@ export const roleSortPauseDuration = 3000
 
 const requiredRoles = [
     `verified`,
-    `undergoing verification`,
-    `-server notifications-`,
-    `-channel notifications-`,
-    `-color notifications-`,
-    `!channel type: archived`,
-    `!channel type: hidden`,
-    `!channel type: joinable`,
-    `!channel type: public`,
-    `!command level: admin`,
-    `!command level: unrestricted`,
-    `!command level: cinema`,
-    `!command level: restricted`,
+    `undergoing-verification`,
+    `-server-notifications-`,
+    `-channel-notifications-`,
+    `-color-notifications-`,
     `!position override: 1`,
     `!position override: 2`,
     `!position override: 3`,
@@ -226,11 +218,6 @@ export async function syncRoles(guild) {
     if (guild.roles.cache.filter(role => role.name === requiredRole).size === 0)
       await guild.roles.create({
         name: requiredRole,
-        permissions: [
-          Permissions.FLAGS.ViewChannel,
-          Permissions.FLAGS.SendMessages,
-          Permissions.FLAGS.READ_MESSAGE_HISTORY,
-        ],
       })
     else if (
       guild.roles.cache.filter(role => role.name === requiredRole).size > 1
