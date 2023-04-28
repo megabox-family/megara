@@ -1,49 +1,61 @@
 export const commasFollowedBySpace = /,\s+/g
 
+export function removeSpacesAfterCommas(string) {
+  return string?.replaceAll(/,\s+/g, `,`)
+}
+
+export function isFirstCharacterAtSymbol(string) {
+  return string?.match(`^@`) ? true : false
+}
+
 export function getButtonContext(customId) {
-  return customId.match(`(?<=:\\s).+`)?.[0]
+  return customId?.match(`(?<=:\\s).+`)?.[0]
 }
 
 export function isColorRole(roleName) {
-  return roleName.match(`^~.+~$`)
+  return roleName?.match(`^~.+~$`)
 }
 
 export function isNotificationRole(roleName) {
-  return roleName.match(`^-.+-$`)
+  return roleName?.match(`^-.+-$`)
 }
 
 export function getNotificationRoleBasename(roleName) {
-  return roleName.match(`(?<=-).+(?=-)`)?.[0]
+  return roleName?.match(`(?<=-).+(?=-)`)?.[0]
 }
 
 export function getRoleIdFromTag(tag) {
-  return tag.match(`(?<=<@&)[0-9]+(?=>$)`)?.[0]
+  return tag?.match(`(?<=<@&)[0-9]+(?=>$)`)?.[0]
 }
 
 export function getButtonNumber(listItem) {
-  return listItem.match(`[0-9]+(?=\\.)`)?.[0]
+  return listItem?.match(`[0-9]+(?=\\.)`)?.[0]
 }
 
 export function getRoleIdsFromMessage(message) {
-  return message.match(/(?<=<@&)[0-9]{18}(?=>)/g)
+  return message?.match(/(?<=<@&)[0-9]{18}(?=>)/g)
 }
 
 export function isDynamicThread(threadName) {
-  return threadName.match(`(?!.*-)[0-9]+$`)
+  return threadName?.match(`(?!.*-)[0-9]+$`)
 }
 
 export function getUserIdFromTag(userTag) {
-  return userTag.match(`((?<=^<@!)|(?<=^<@))[0-9]+(?=>$)`)?.[0]
+  return userTag?.match(`((?<=^<@!)|(?<=^<@))[0-9]+(?=>$)`)?.[0]
+}
+
+export function getNumberNotDescriminator(userTag) {
+  return userTag?.match(`[0-9]{5,}`)?.[0]
 }
 
 export function formatQuestion(question) {
-  if (!question.match(`\\?$`)) return `${question.trim()}?`
+  if (!question?.match(`\\?$`)) return `${question.trim()}?`
 
   return question.trim()
 }
 
 export function validateTimeStamp(timeStamp) {
-  const correctStructure = timeStamp.match(
+  const correctStructure = timeStamp?.match(
     `^[0-9]$|^[0-9][0-9]$|^[0-9]:[0-9][0-9]$|^[0-9][0-9]:[0-9][0-9]$|^[0-9]:[0-9][0-9]:[0-9][0-9]$|[0-9][0-9]:[0-9][0-9]:[0-9][0-9]`
   )
 
@@ -66,20 +78,20 @@ export function formatPercent(number) {
 
 export function validateTagArray(tagArray) {
   const invalidTag = tagArray.find(
-    tag => !tag.match(`^<@&[0-9]+>$|^<@[0-9]+>$`)
+    tag => !tag?.match(`^<@&[0-9]+>$|^<@[0-9]+>$`)
   )
 
   return invalidTag ? false : true
 }
 
 export function getImdbMovieId(imdbUrl) {
-  const movieId = imdbUrl.match(`tt[0-9]+`)?.[0]
+  const movieId = imdbUrl?.match(`tt[0-9]+`)?.[0]
 
   return movieId
 }
 
 export function extractAttendees(attendees) {
-  const attendeeText = attendees.match(`(?<=^\\d\. ).+`)?.[0]
+  const attendeeText = attendees?.match(`(?<=^\\d\. ).+`)?.[0]
 
   return attendeeText
 }

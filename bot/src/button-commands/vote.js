@@ -11,7 +11,11 @@ import { getPollSelectPicker } from '../utils/general-commands.js'
 import { getNicknameOrUsername } from '../utils/members.js'
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const message = interaction.message,
     endTime = await getPollEndTime(message.id),

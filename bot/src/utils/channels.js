@@ -5,6 +5,7 @@ import {
   ButtonStyle,
   OverwriteType,
   PermissionsBitField,
+  Collection,
 } from 'discord.js'
 import { getBot } from '../cache-bot.js'
 import {
@@ -40,6 +41,7 @@ import {
   getCategoryName,
 } from '../repositories/channels.js'
 import { getChannelBasename } from './voice.js'
+import { queueApiCall } from '../api-queue.js'
 
 const setChannelFunction = {
     adminChannel: setAdminChannel,
@@ -875,37 +877,26 @@ export async function CheckIfMemberNeedsToBeAdded(
   return `already added`
 }
 
-export async function addMemberToChannel(member, channelId, temporary = false) {
+export async function addMemberToChannel(member, channelId) {
   if (!channelId) return
 
   const guild = member.guild,
     channel = guild.channels.cache.get(channelId)
 
-  if (!channel) return `not added`
+  if (!channel) return false
 
-  const userOverwrite = channel.permissionOverwrites.cache.find(
-      permissionOverwrite => permissionOverwrite.id === member.id
-    ),
-    context = await CheckIfMemberNeedsToBeAdded(member, channelId, temporary)
+  const isMemberPermissible = checkIfMemberIsPermissible(channel, member)
 
-  if (!context) return
+  if (isMemberPermissible) return
 
-  const channelType = await getChannelType(channel.id)
+  await queueApiCall({
+    apiCall: `create`,
+    djsObject: channel.permissionOverwrites,
+    parameters: [member, { ViewChannel: true }],
+    multipleParameters: true,
+  })
 
-  if ([`not added`, `already added`].includes(context)) return context
-  else if (context.action === `delete`) {
-    await userOverwrite.delete()
-  } else {
-    await channel.permissionOverwrites[context.action](
-      member.id,
-      context.permissions
-    )
-
-    if (channelType === `private`)
-      addMemberToDynamicChannels(member, context.permissions, channel.name)
-  }
-
-  return `added`
+  return true
 }
 
 export async function removeMemberFromDynamicChannels(
@@ -1074,4 +1065,124 @@ export async function announceNewChannel(newChannel) {
         `\n${channelTypeMessage}, **${newChannelName}**, in the **${categoryName}** category 😁`,
       components: [buttonRow],
     })
+}
+
+export function checkIfMemberIsPermissible(channel, member) {
+  const { guild, permissionOverwrites, type } = channel
+
+  const relevantPermissions = []
+
+  switch (type) {
+    case ChannelType?.GuildVoice:
+      relevantPermissions.push(`ViewChannel`, `Connect`)
+      break
+    default:
+      relevantPermissions.push(`ViewChannel`)
+  }
+
+  const { id: guildId, roles } = guild,
+    roleCache = roles.cache,
+    channelOverwrites = permissionOverwrites.cache,
+    relevantOverwrites = channelOverwrites
+      .filter(overwrite => {
+        const { id } = overwrite
+
+        return (
+          member._roles.includes(id) ||
+          id === member.id ||
+          roleCache.get(id)?.name === `@everyone`
+        )
+      })
+      .map(overwrite => {
+        const { id } = overwrite
+
+        if (id === member.id)
+          return {
+            position: roleCache.size + 1,
+            overwrite: overwrite,
+          }
+        else
+          return {
+            position: roleCache.get(id).position,
+            overwrite: overwrite,
+            role: roleCache.get(id),
+          }
+      }),
+    collator = new Intl.Collator(undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    })
+
+  // console.log(channel)
+
+  if (relevantOverwrites.length === 0) {
+    const guildOverwrite = channelOverwrites.get(guildId),
+      denyPermissions = guildOverwrite?.overwrite.deny.serialize()
+
+    console.log(`made it`)
+
+    if (
+      relevantPermissions.some(permission => {
+        const existingPermission = denyPermissions?.[permission]
+      })
+    )
+      return false
+    else return true
+  }
+
+  relevantOverwrites.sort((a, b) => collator.compare(b.position, a.position))
+
+  const memberOverwrite =
+    relevantOverwrites[0]?.overwrite.type === OverwriteType.Member
+      ? relevantOverwrites[0].overwrite
+      : null
+
+  const collectionStartingPoint = relevantPermissions.map(permission => [
+      permission,
+      undefined,
+    ]),
+    permissionCollection = new Collection(collectionStartingPoint)
+
+  if (memberOverwrite) {
+    const allowPermissions = memberOverwrite.allow.serialize()
+
+    relevantPermissions.forEach(permission => {
+      permissionCollection.set(permission, allowPermissions?.[permission])
+    })
+
+    relevantOverwrites.shift()
+  }
+
+  for (const relevantOverwrite of relevantOverwrites) {
+    if (permissionCollection.every(permission => permission !== undefined))
+      break
+
+    const allowPermissions = relevantOverwrite.overwrite.allow.serialize(),
+      denyPermissions = relevantOverwrite.overwrite.deny.serialize(),
+      rolePermissions = relevantOverwrite?.role
+        ? relevantOverwrite.role.permissions.serialize()
+        : roleCache.get(relevantOverwrite?.id)
+
+    const _permissionCollection = new Collection(collectionStartingPoint)
+
+    relevantPermissions.forEach(permission => {
+      if (!allowPermissions?.[permission] && !denyPermissions?.[permission]) {
+        if (rolePermissions?.[permission])
+          _permissionCollection.set(permission, true)
+        else _permissionCollection.set(permission, false)
+      } else
+        _permissionCollection.set(permission, allowPermissions?.[permission])
+    })
+
+    relevantPermissions.forEach(permission => {
+      if (permissionCollection.get(permission) === undefined) {
+        if (_permissionCollection.get(permission))
+          permissionCollection.set(permission, true)
+        else permissionCollection.set(permission, false)
+      }
+    })
+  }
+
+  if (permissionCollection.every(permission => permission === true)) return true
+  else return false
 }

@@ -9,6 +9,7 @@ import {
   extractAttendees,
   getButtonContext,
 } from '../utils/validation.js'
+import { queueApiCall } from '../api-queue.js'
 
 function formatAttendees(attendeeArrays) {
   const attendeeArray = attendeeArrays[0],
@@ -135,7 +136,11 @@ export default async function (interaction) {
     }
   }
 
-  await interaction.editReply({ embeds: [newEmbed] })
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: { embeds: [newEmbed] },
+  })
 
   if (attending) await thread?.members?.add(userId)
   else await thread?.members?.remove(userId)

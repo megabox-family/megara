@@ -1,9 +1,14 @@
 import { getPages, generateListMessage } from '../utils/slash-commands.js'
 import { getColorButtons } from '../utils/buttons.js'
 import { createList } from '../repositories/lists.js'
+import { queueApiCall } from '../api-queue.js'
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
     member = interaction.member,

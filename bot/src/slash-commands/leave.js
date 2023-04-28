@@ -10,7 +10,11 @@ export const dmPermission = false,
   defaultMemberPermissions = `0`
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const { guild, member, channel } = interaction,
     { name: channelName } = channel

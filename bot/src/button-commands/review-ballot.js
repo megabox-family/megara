@@ -7,7 +7,11 @@ import { buildVoterEmbed } from '../utils/embeds.js'
 import { getNicknameOrUsername } from '../utils/members.js'
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const user = interaction.user,
     message = interaction.message,

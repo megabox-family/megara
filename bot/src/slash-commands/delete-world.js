@@ -1,5 +1,6 @@
 import { ApplicationCommandOptionType } from 'discord.js'
 import { getWorldId, deleteWorld } from '../repositories/coordinates.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Allows you to delete a world record in the worlds table for Minecraft.`
 export const dmPermission = false,
@@ -14,7 +15,11 @@ export const dmPermission = false,
   ]
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
     member = interaction.member,
@@ -23,8 +28,10 @@ export default async function (interaction) {
     existingWorldId = await getWorldId(worldName, guild.id)
 
   if (!existingWorldId) {
-    await interaction.editReply({
-      content: `A world named **${worldName}** doesn't exists in **${guild.name}** 🤔`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `A world named **${worldName}** doesn't exists in **${guild.name}** 🤔`,
     })
 
     return
@@ -32,7 +39,9 @@ export default async function (interaction) {
 
   await deleteWorld(existingWorldId)
 
-  await interaction.editReply({
-    content: `The world with name **${worldName}** has been destroyed 💥`,
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: `The world with name **${worldName}** has been destroyed 💥`,
   })
 }

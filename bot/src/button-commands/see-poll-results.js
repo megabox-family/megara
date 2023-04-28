@@ -4,7 +4,11 @@ import { getPollPages, getPollDetails } from '../utils/general-commands.js'
 import { generateListMessage } from '../utils/slash-commands.js'
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const message = interaction.message,
     customId = interaction.customId.match(`(?!:)[0-9]+`)?.[0],

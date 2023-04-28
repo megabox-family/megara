@@ -1,5 +1,6 @@
 import { ApplicationCommandOptionType } from 'discord.js'
 import { getWorldId, editWorld } from '../repositories/coordinates.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Allows you to edit a world record in the worlds table for Minecraft.`
 export const dmPermission = false,
@@ -13,24 +14,29 @@ export const dmPermission = false,
     },
     {
       name: `new-world-name`,
-      description: `A new name for the world you're editing.`,
+      description: `A new name for the world you're editing. 🌍`,
       type: ApplicationCommandOptionType.String,
       required: true,
     },
   ]
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
-    member = interaction.member,
     options = interaction.options,
     worldName = options.getString(`world-name`).toLowerCase(),
     existingWorldId = await getWorldId(worldName, guild.id)
 
   if (!existingWorldId) {
-    await interaction.editReply({
-      content: `A world named **${worldName}** doesn't exists in **${guild.name}** 🤔`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `A world named **${worldName}** doesn't exists in **${guild.name}** 🤔`,
     })
 
     return
@@ -40,7 +46,9 @@ export default async function (interaction) {
 
   await editWorld(existingWorldId, newWorldName)
 
-  await interaction.editReply({
-    content: `The specified world's name has been changed from **${worldName}** to **${newWorldName}** 📝`,
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: `The specified world's name has been changed from **${worldName}** to **${newWorldName}** 📝`,
   })
 }

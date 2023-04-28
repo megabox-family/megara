@@ -48,7 +48,7 @@ bot.on('roleUpdate', modifyRole)
 bot.on('roleDelete', deleteRole)
 bot.on('messageCreate', handleMessage)
 bot.on('interactionCreate', handleInteraction)
-bot.on('voiceStateUpdate', handleVoiceUpdate)
+// bot.on('voiceStateUpdate', handleVoiceUpdate)
 // bot.on('messageReactionAdd', handleReactionAdd)
 // bot.on('messageReactionRemove', handleReactionRemove)
 

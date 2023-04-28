@@ -65,7 +65,11 @@ export default async function (interaction) {
   let makePrivate = options.getBoolean(`make-private`)
   makePrivate = makePrivate === null ? false : true
 
-  await interaction.deferReply({ ephemeral: makePrivate })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: makePrivate },
+  })
 
   const winners = []
 

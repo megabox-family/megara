@@ -1,80 +1,101 @@
 import { ChannelType } from 'discord.js'
 import { getBot } from '../cache-bot.js'
-import { directMessageError } from '../utils/error-logging.js'
 import { getButtonContext } from '../utils/validation.js'
-import {
-  checkIfMemberIsPermissible,
-  getChannelBasename,
-} from '../utils/voice.js'
+import { getChannelBasename } from '../utils/voice.js'
+import { queueApiCall } from '../api-queue.js'
+import { checkIfMemberIsPermissible } from '../utils/channels.js'
 
 export default async function (interaction) {
-  await interaction.deferReply()
+  const { _guild, user, customId } = interaction,
+    isDm = _guild ? false : true,
+    messageObject = {}
 
-  const voiceChannelId = getButtonContext(interaction.customId),
+  if (isDm) {
+    await queueApiCall({
+      apiCall: `deferUpdate`,
+      djsObject: interaction,
+    })
+
+    messageObject.components = []
+  } else {
+    await queueApiCall({
+      apiCall: `deferReply`,
+      djsObject: interaction,
+      parameters: { ephemeral: true },
+    })
+  }
+
+  const voiceChannelId = getButtonContext(customId),
     voiceChannel = getBot().channels.cache.get(voiceChannelId)
 
   if (!voiceChannel) {
-    await interaction.editReply({
-      content: `The channel voice channel you're trying to join no long exists, sorry for the inconvenience 😬`,
+    messageObject.content = `The channel voice channel you're trying to join no longer exists, sorry for the inconvenience 😬`
+
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: messageObject,
     })
 
     return
   }
 
   const guild = voiceChannel.guild,
-    member = guild.members.cache.get(interaction.user.id)
+    member = guild.members.cache.get(user.id)
 
   if (!member) {
-    await interaction.editReply({
-      content: `You are no longer a member of ${guild.name}, you can't join a channel in a server you aren't a part of 🤔`,
+    messageObject.content = `You are no longer a member of ${guild.name}, you can't join a channel in a server you aren't a part of 🤔`
+
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: messageObject,
     })
 
     return
   }
 
-  const isMemberPermissible = checkIfMemberIsPermissible(voiceChannel, member),
-    interactionContent = `You've been added to **${voiceChannel}** ← click here to jump to it 😊`
+  const isMemberPermissible = checkIfMemberIsPermissible(voiceChannel, member)
+
+  messageObject.content = `You've been added to ${voiceChannel} ← click here to jump to it 😊`
 
   if (isMemberPermissible !== true) {
     const channelBaseName = getChannelBasename(voiceChannel.name),
-      parentChannel = guild.channels.cache.find(
-        channel => channel.name === channelBaseName
-      ),
       otherVoiceChannels = guild.channels.cache.filter(
         _channel =>
-          getChannelBasename(_channel.name) === parentChannel?.name &&
+          getChannelBasename(_channel.name) === channelBaseName &&
           _channel.id !== voiceChannel.id &&
           _channel.type === ChannelType.GuildVoice
       ),
-      voicePermissons = {}
+      voicePermissons = {
+        ViewChannel: true,
+        Connect: true,
+      }
 
-    if (!isMemberPermissible.viewChannel) voicePermissons.ViewChannel = true
-
-    if (!isMemberPermissible.connect) voicePermissons.Connect = true
-
-    await parentChannel?.permissionOverwrites.create(member, {
-      ViewChannel: true,
+    await queueApiCall({
+      apiCall: `create`,
+      djsObject: voiceChannel.permissionOverwrites,
+      parameters: [member, voicePermissons],
+      multipleParameters: true,
     })
-    await voiceChannel.permissionOverwrites.create(member, voicePermissons)
-
-    await interaction.editReply({
-      content: interactionContent,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: messageObject,
     })
 
-    for (const [voiceChannelId, voiceChannel] of otherVoiceChannels) {
-      await new Promise(resolution => setTimeout(resolution, 5000))
-
-      if (voiceChannel)
-        await voiceChannel.permissionOverwrites
-          .create(member, voicePermissons)
-          .catch(error =>
-            console.log(
-              `I was unable to add a member to a dynamic voice channel, it was probably deleted as I was adding them:\n${error}`
-            )
-          )
-    }
+    otherVoiceChannels.forEach(_voiceChannel =>
+      queueApiCall({
+        apiCall: `create`,
+        djsObject: _voiceChannel.permissionOverwrites,
+        parameters: [member, voicePermissons],
+        multipleParameters: true,
+      })
+    )
   } else
-    await interaction.editReply({
-      content: interactionContent,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: messageObject,
     })
 }

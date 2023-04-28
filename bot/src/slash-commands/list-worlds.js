@@ -5,6 +5,7 @@ import {
   generateListMessage,
 } from '../utils/slash-commands.js'
 import { createList } from '../repositories/lists.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Shows you all the Minecraft worlds within this Discord server.`
 export const dmPermission = false,
@@ -21,7 +22,11 @@ export const dmPermission = false,
   ]
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
     options = interaction.options,
@@ -42,9 +47,11 @@ export default async function (interaction) {
 
   const messageContents = await generateListMessage(pages, title)
 
-  await interaction.editReply(messageContents)
-
-  const message = await interaction.fetchReply()
+  const message = await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: messageContents,
+  })
 
   createList(message.id, title, null, pages, recordsPerPage, group)
 }

@@ -1,7 +1,11 @@
 import { setRules, getRules } from '../repositories/guilds.js'
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
     fields = interaction.fields,

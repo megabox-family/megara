@@ -1,46 +1,54 @@
 import { Collection } from 'discord.js'
 import { randomUUID } from 'crypto'
 
-const apiCallInfo = {
-  deferReply: {
-    pauseDuration: 100,
+const pauseDurations = {
+    default: 100,
   },
-  editReply: {
-    pauseDuration: 100,
-  },
-}
+  apiQueue = {},
+  completed = new Map(),
+  batchObjects = [],
+  test = []
 
-const apiQueue = {
-    deferReply: new Collection(),
-    editReply: new Collection(),
-  },
-  completed = new Map()
+function getBatchApiCall(collectionType, apiCall) {}
 
 async function emptyApiQueue(relevantQueue) {
-  if (relevantQueue?.size === 0) return
-
   const context = relevantQueue.first(),
-    { id, apiCall, collection, parameters } = context,
-    { pauseDuration, batchCommand } = apiCallInfo?.[apiCall],
+    { id, apiCall, djsObject, parameters, multipleParameters } = context
+
+  const collectionType = djsObject?.constructor?.name,
+    batchApiCall = getBatchApiCall(collectionType, apiCall),
     ids = []
 
-  let _collection = collection,
+  let _djsObject = djsObject,
     _apiCall = apiCall,
-    _parameters = parameters
+    _parameters = parameters,
+    pauseDuration = pauseDurations?.[apiCall]
 
-  if (batchCommand) {
+  pauseDuration = pauseDuration ? pauseDuration : pauseDurations.default
+
+  if (batchApiCall) {
   } else {
     ids.push(id)
   }
 
-  const response = _parameters
-    ? await _collection?.[_apiCall](_parameters)
-    : await _collection?.[_apiCall]()
+  let response
 
-  ids.forEach(id => {
-    relevantQueue?.delete(id)
+  if (multipleParameters) {
+    response = await _djsObject?.[_apiCall](..._parameters)
+  } else if (_parameters) {
+    response = await _djsObject?.[_apiCall](_parameters)
+  } else {
+    response = await _djsObject?.[_apiCall]()
+  }
+
+  for (const id of ids) {
+    relevantQueue.delete(id)
     completed.set(id, response)
-  })
+  }
+
+  const size = relevantQueue.size
+
+  if (relevantQueue.size === 0) return
 
   await new Promise(resolution => setTimeout(resolution, pauseDuration))
 
@@ -48,10 +56,17 @@ async function emptyApiQueue(relevantQueue) {
 }
 
 export async function queueApiCall(context) {
-  const { apiCall } = context,
-    relevantQueue = apiQueue?.[apiCall]
+  const { apiCall } = context
 
-  if (!relevantQueue) return
+  let relevantQueue
+
+  if (apiQueue?.[apiCall]) {
+    relevantQueue = apiQueue?.[apiCall]
+  } else {
+    relevantQueue = apiQueue[apiCall] = new Collection()
+
+    console.log(`${apiCall} queue created.`)
+  }
 
   const id = randomUUID()
 
@@ -59,10 +74,10 @@ export async function queueApiCall(context) {
 
   relevantQueue?.set(id, context)
 
-  if (relevantQueue?.size === 1) emptyApiQueue(relevantQueue)
+  if (relevantQueue?.size === 1) await emptyApiQueue(relevantQueue)
 
   while (!completed?.has(id)) {
-    await new Promise(resolution => setTimeout(resolution, 50))
+    await new Promise(resolution => setTimeout(resolution, 100))
   }
 
   const response = completed.get(id)

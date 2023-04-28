@@ -354,33 +354,15 @@ export async function handleMemberUpdate(oldMember, newMember) {
   handlePremiumSub(oldMember, newMember)
 }
 
-export function CheckIfVerificationLevelIsMismatched(member, _channel) {
+export function checkIfVerified(member) {
   const guild = member.guild,
-    channelId = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(
-      _channel.type
-    )
-      ? _channel.parentId
-      : null,
-    channel = channelId ? guild.channels.cache.get(channelId) : _channel,
     guildRoles = guild.roles.cache,
     verifiedRole = getRoleByName(guildRoles, `verified`),
     memberVerificationLevel = member._roles.includes(verifiedRole.id)
       ? `verified`
-      : `unverified`,
-    everyoneRole = getRoleByName(guildRoles, `@everyone`),
-    channelEveryoneOverwrite = channel.permissionOverwrites.cache.get(
-      everyoneRole.id
-    ),
-    everyoneAllowPermissions = channelEveryoneOverwrite.allow.serialize(),
-    everyoneDenyPermissions = channelEveryoneOverwrite.deny.serialize(),
-    everyoneRolePermissions = everyoneRole.permissions.serialize(),
-    isUnverified =
-      !everyoneAllowPermissions.ViewChannel &&
-      !everyoneDenyPermissions.ViewChannel
-        ? everyoneRolePermissions.ViewChannel
-        : everyoneAllowPermissions.ViewChannel
+      : `unverified`
 
-  if (memberVerificationLevel === `unverified` && !isUnverified) return true
+  if (memberVerificationLevel === `verified`) return true
   else return false
 }
 

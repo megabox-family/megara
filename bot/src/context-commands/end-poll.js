@@ -1,13 +1,18 @@
 import { ApplicationCommandType } from 'discord.js'
 import { getPollStartedBy } from '../repositories/polls.js'
 import { printPollResults } from '../utils/general-commands.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const type = ApplicationCommandType.Message,
   dmPermission = false,
   defaultMemberPermissions = `0`
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
     user = interaction.user,

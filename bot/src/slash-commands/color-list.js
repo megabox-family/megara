@@ -1,3 +1,4 @@
+import { queueApiCall } from '../api-queue.js'
 import { getPages, generateListMessage } from '../utils/slash-commands.js'
 import { getColorButtons } from '../utils/buttons.js'
 import { createList } from '../repositories/lists.js'
@@ -7,7 +8,11 @@ export const description = `Displays a list of colors that you can choose from t
   defaultMemberPermissions = `0`
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
     member = interaction.member,
@@ -16,9 +21,11 @@ export default async function (interaction) {
     pages = await getPages(recordLimit, groupBy, guild)
 
   if (!pages) {
-    await interaction.editReply(
-      `There are currently no color roles in ${guild} 😔`
-    )
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `There are currently no color roles in **${guild}** 😔`,
+    })
 
     return
   }
@@ -30,9 +37,11 @@ export default async function (interaction) {
 
   listMessage.components = [...listMessage.components, ...colorButtonComponents]
 
-  await interaction.editReply(listMessage)
-
-  const message = await interaction.fetchReply()
+  const message = await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: listMessage,
+  })
 
   createList(message.id, title, description, pages, recordLimit, groupBy)
 }

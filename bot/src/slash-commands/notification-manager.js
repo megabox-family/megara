@@ -7,7 +7,11 @@ export const description = `Allows you to subscribe and unsubscribe from notific
   defaultMemberPermissions = `0`
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
     member = interaction.member,

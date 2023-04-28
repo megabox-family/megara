@@ -46,7 +46,7 @@ export default async function (interaction) {
 
   await queueApiCall({
     apiCall: `deferReply`,
-    collection: interaction,
+    djsObject: interaction,
     parameters: { ephemeral: makePrivate },
   })
 
@@ -90,7 +90,7 @@ export default async function (interaction) {
 
   await queueApiCall({
     apiCall: `editReply`,
-    collection: interaction,
+    djsObject: interaction,
     parameters: messageObject,
   })
 }

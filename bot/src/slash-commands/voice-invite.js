@@ -1,6 +1,6 @@
 import { ApplicationCommandOptionType } from 'discord.js'
 import { getAllVoiceChannelIds } from '../repositories/channels.js'
-import { CheckIfVerificationLevelIsMismatched } from '../utils/members.js'
+import { checkIfVerified } from '../utils/members.js'
 import { handleVoiceChannel } from '../utils/slash-commands.js'
 
 export const description = `Allows you to invite an existing member to the voice channel you're currently in.`
@@ -16,7 +16,11 @@ export const dmPermission = false,
   ]
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
     member = interaction.member,
@@ -59,12 +63,9 @@ export default async function (interaction) {
     return
   }
 
-  const mismatchedVerificationLevel = CheckIfVerificationLevelIsMismatched(
-    invitedMember,
-    voiceChannel
-  )
+  const isVerified = checkIfVerified(invitedMember, voiceChannel)
 
-  if (mismatchedVerificationLevel) {
+  if (!isVerified) {
     await interaction.editReply({
       content: `You tried inviting an unverified member to a verified channel, this member must first finish the verification process before gaining access to this channel 🤔`,
     })

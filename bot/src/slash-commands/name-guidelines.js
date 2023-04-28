@@ -5,7 +5,11 @@ export const description = `Shows you the name guidelines for this sever.`,
   defaultMemberPermissions = `0`
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
     nameGuidelines = await getNameGuidelines(guild.id)

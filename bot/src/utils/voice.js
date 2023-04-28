@@ -18,6 +18,7 @@ import {
   getUnverifiedRoomChannelId,
   getChannelType,
 } from '../repositories/channels.js'
+import { getBot } from '../cache-bot.js'
 
 const voiceDeleteCounters = {}
 
@@ -499,87 +500,4 @@ export async function dynamicRooms(oldState, newState) {
 
   if (!newIsVoiceThread)
     await createDynamicVoiceChannel(newVoiceChannel, textChannelId)
-}
-
-export function checkIfMemberIsPermissible(channel, member) {
-  const guild = channel.guild,
-    channelOverwrites = channel.permissionOverwrites.cache,
-    relevantOverwrites = channelOverwrites
-      .filter(
-        overwrite =>
-          member._roles.includes(overwrite.id) ||
-          member.id === overwrite.id ||
-          guild.roles.cache.get(overwrite.id)?.name === `@everyone`
-      )
-      .map(overwrite => {
-        if (overwrite.id === member.id)
-          return {
-            position: guild.roles.cache.size + 1,
-            overwrite: overwrite,
-          }
-        else
-          return {
-            position: guild.roles.cache.get(overwrite.id).position,
-            overwrite: overwrite,
-            role: guild.roles.cache.get(overwrite.id),
-          }
-      }),
-    collator = new Intl.Collator(undefined, {
-      numeric: true,
-      sensitivity: 'base',
-    })
-
-  relevantOverwrites.sort((a, b) => collator.compare(b.position, a.position))
-
-  const memberOverwrite =
-    relevantOverwrites[0]?.overwrite.type === OverwriteType.Member
-      ? relevantOverwrites[0].overwrite
-      : null
-
-  let viewChannel, connect
-
-  if (memberOverwrite) {
-    const allowPermissions = memberOverwrite.allow.serialize()
-
-    if (allowPermissions.ViewChannel) viewChannel = true
-
-    if (allowPermissions.Connect) connect = true
-
-    relevantOverwrites.shift()
-  }
-
-  for (const relevantOverwrite of relevantOverwrites) {
-    const allowPermissions = relevantOverwrite.overwrite.allow.serialize(),
-      denyPermissions = relevantOverwrite.overwrite.deny.serialize(),
-      rolePermissions = relevantOverwrite.role.permissions.serialize()
-
-    let _viewChannel, _connect
-
-    if (!allowPermissions.ViewChannel && !denyPermissions.ViewChannel) {
-      if (rolePermissions.ViewChannel) _viewChannel = true
-    } else {
-      _viewChannel = allowPermissions.ViewChannel
-    }
-
-    if (!allowPermissions.Connect && !denyPermissions.Connect) {
-      if (rolePermissions.Connect) _connect = true
-    } else {
-      _connect = allowPermissions.Connect
-    }
-
-    if (viewChannel === undefined) {
-      if (_viewChannel == true) viewChannel = true
-      else if (_viewChannel == false) viewChannel = false
-    }
-
-    if (connect === undefined) {
-      if (_connect == true) connect = true
-      else if (_connect == false) connect = false
-    }
-
-    if (viewChannel !== undefined && connect !== undefined) break
-  }
-
-  if (viewChannel && connect) return true
-  else return { viewChannel: viewChannel, connect: connect }
 }
