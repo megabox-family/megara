@@ -21,22 +21,39 @@ export default async function (interaction) {
     message = await channel.messages.fetch(interaction.targetId)
 
   if (!message.pinned) {
-    await interaction.editReply(`This message isn't pinned pinned 🤔`)
-  } else {
-    const userId = await getPinnedMessageUserId(message.id)
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `This message isn't pinned pinned 🤔`,
+    })
 
-    if (userId !== interaction.user.id) {
-      await interaction.editReply(
-        `You didn't pin this message, so you don't have permission to unpin it 🤓`
-      )
-
-      return
-    }
-
-    await message.unpin()
-
-    await removePinnedMessage(message.id)
-
-    await interaction.editReply(`I unpinned the message for you 🙌`)
+    return
   }
+
+  const userId = await getPinnedMessageUserId(message.id)
+
+  if (userId !== interaction.user.id) {
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `You didn't pin this message, so you don't have permission to unpin it 🤓`,
+    })
+
+    return
+  }
+
+  await queueApiCall({
+    apiCall: `unpin`,
+    djsObject: message,
+  })
+
+  await message.unpin()
+
+  await removePinnedMessage(message.id)
+
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: `I unpinned the message for you 🙌`,
+  })
 }

@@ -1,8 +1,12 @@
 import { directMessageError } from '../utils/error-logging.js'
 import { getColorButtons } from '../utils/buttons.js'
+import { queueApiCall } from '../api-queue.js'
 
 export default async function (interaction) {
-  await interaction.deferUpdate()
+  await queueApiCall({
+    apiCall: `deferUpdate`,
+    djsObject: interaction,
+  })
 
   const guild = interaction.guild,
     member = interaction.member,
@@ -17,11 +21,11 @@ export default async function (interaction) {
     desiredColorRole = guild.roles.cache.get(desiredColorId)
 
   if (!desiredColorRole) {
-    member
-      .send({
-        content: `The color you've chosen no longer exists, please refresh the embed to get an updated list 😬`,
-      })
-      .catch(error => directMessageError(error, member))
+    await queueApiCall({
+      apiCall: `send`,
+      djsObject: member,
+      parameters: `The color you've chosen no longer exists, please refresh the embed to get an updated list 😬`,
+    })
 
     return
   }
@@ -50,7 +54,11 @@ export default async function (interaction) {
       remove: alreadyHas,
     })
 
-  await interaction.editReply({
-    components: [message.components[0], ...colorButtonComponents],
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: {
+      components: [message.components[0], ...colorButtonComponents],
+    },
   })
 }

@@ -1,3 +1,4 @@
+import { queueApiCall } from '../api-queue.js'
 import { setRules, getRules } from '../repositories/guilds.js'
 
 export default async function (interaction) {
@@ -15,7 +16,9 @@ export default async function (interaction) {
 
   const rules = await getRules(guild.id)
 
-  await interaction.editReply({
-    content: `You've set **${guild}'s** rules to the below: \n>>> ${rules}`,
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: `You've set **${guild}'s** rules to the below: \n>>> ${rules}`,
   })
 }

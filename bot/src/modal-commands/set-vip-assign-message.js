@@ -1,3 +1,4 @@
+import { queueApiCall } from '../api-queue.js'
 import {
   setVipAssignMessage,
   getVipAssignMessage,
@@ -18,7 +19,9 @@ export default async function (interaction) {
 
   const vipAssignMessage = await getVipAssignMessage(guild.id)
 
-  await interaction.editReply({
-    content: `You've set **${guild}'s** vip assign message to the below: \n>>> ${vipAssignMessage}`,
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: `You've set **${guild}'s** vip assign message to the below: \n>>> ${vipAssignMessage}`,
   })
 }

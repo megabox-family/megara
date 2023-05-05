@@ -1,3 +1,4 @@
+import { queueApiCall } from '../api-queue.js'
 import { getNameGuidelines } from '../repositories/guilds.js'
 
 export const description = `Shows you the name guidelines for this sever.`,
@@ -15,14 +16,15 @@ export default async function (interaction) {
     nameGuidelines = await getNameGuidelines(guild.id)
 
   if (nameGuidelines)
-    await interaction.editReply({
-      content: `These are **${interaction.guild}'s** nickname guidelines: \n>>> ${nameGuidelines}`,
-      ephemeral: true,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `These are **${interaction.guild}'s** nickname guidelines: \n>>> ${nameGuidelines}`,
     })
-  else {
-    await interaction.editReply({
-      content: `Sorry, name guidelines have not been set for this server 😔`,
-      ephemeral: true,
+  else
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `Sorry, name guidelines have not been set for this server 😔`,
     })
-  }
 }

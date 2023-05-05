@@ -19,20 +19,20 @@ export default async function (interaction) {
     message = interaction.message,
     listInfo = await getListInfo(message.id)
 
-    if (!listInfo) {
-      interaction.editReply(
-        `Something went wrong retreiving a page in the list, please dismiss this message and create a new list message 😬`
-      )
-      return
-    }
-  
-    const recordsPerPage = listInfo.recordsPerPage,
-      group = listInfo.groupBy,
-      filters = listInfo.filters,
-      pages = await getPages(recordsPerPage, group, guild, filters),
-      existingEmbed = message.embeds[0],
-      existingFooter = existingEmbed.footer,
-      currentPage = existingFooter.text.match(`[0-9]+(?=\\sof)`) - 1
+  if (!listInfo) {
+    interaction.editReply(
+      `Something went wrong retreiving a page in the list, please dismiss this message and create a new list message 😬`
+    )
+    return
+  }
+
+  const recordsPerPage = listInfo.recordsPerPage,
+    group = listInfo.groupBy,
+    filters = listInfo.filters,
+    pages = await getPages(recordsPerPage, group, guild, filters),
+    existingEmbed = message.embeds[0],
+    existingFooter = existingEmbed.footer,
+    currentPage = existingFooter.text.match(`[0-9]+(?=\\sof)`) - 1
 
   if (!channel) {
     member
@@ -62,7 +62,7 @@ export default async function (interaction) {
 
   if (joinOrLeaveChannel === `join`)
     result = await addMemberToChannel(member, channelId)
-  else result = await removeMemberFromChannel(member, channelId)
+  else result = await removeMemberFromChannel(member, channel)
 
   switch (result) {
     case `not added`:

@@ -28,10 +28,6 @@ export default async function (interaction) {
         .setCustomId(`!color-list:`)
         .setLabel(`color list`)
         .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`!notification-manager:`)
-        .setLabel(`notification manager`)
-        .setStyle(ButtonStyle.Primary),
     ],
     row = new ActionRowBuilder().addComponents(buttons)
 

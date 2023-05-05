@@ -122,10 +122,10 @@ export async function startup(bot) {
   await syncGuilds(bot.guilds.cache)
 
   bot.guilds.cache.forEach(async guild => {
-    await deleteNewRoles(guild)
-    await syncChannels(guild)
-    await syncRoles(guild)
-    await syncVipMembers(guild)
+    // await deleteNewRoles(guild)
+    // await syncChannels(guild)
+    // await syncRoles(guild)
+    // await syncVipMembers(guild)
   })
 
   await registerSlashCommands(bot)

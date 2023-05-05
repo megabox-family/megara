@@ -1,3 +1,4 @@
+import { queueApiCall } from '../api-queue.js'
 import { setNameGuidelines, getNameGuidelines } from '../repositories/guilds.js'
 
 export default async function (interaction) {
@@ -15,8 +16,10 @@ export default async function (interaction) {
 
   const nameGuidelines = await getNameGuidelines(guild.id)
 
-  await interaction.editReply({
-    content:
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters:
       `You've set **${guild}'s** name guidelines to the below:` +
       `\n>>> ${nameGuidelines}`,
   })

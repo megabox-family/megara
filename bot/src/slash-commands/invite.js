@@ -8,11 +8,6 @@ import {
 import { checkIfVerified, getNicknameOrUsername } from '../utils/members.js'
 import { checkIfMemberIsPermissible } from '../utils/channels.js'
 import { queueApiCall } from '../api-queue.js'
-import {
-  getNumberNotDescriminator,
-  isFirstCharacterAtSymbol,
-  removeSpacesAfterCommas,
-} from '../utils/validation.js'
 import { collator } from '../utils/general.js'
 
 const {
@@ -31,10 +26,46 @@ export const dmPermission = false,
   defaultMemberPermissions = `0`,
   options = [
     {
-      name: `members`,
-      description: `Comma delimited list of @s, username#discriminators, or user ids. Examples: @Zed, bob#0001, 36014079`,
-      type: ApplicationCommandOptionType.String,
+      name: `member`,
+      description: `The member you would like to invite.`,
+      type: ApplicationCommandOptionType.User,
       required: true,
+      autocomplete: true,
+    },
+    {
+      name: `member-2`,
+      description: `Another member you would like to invite.`,
+      type: ApplicationCommandOptionType.User,
+      required: false,
+      autocomplete: true,
+    },
+    {
+      name: `member-3`,
+      description: `Another member you would like to invite.`,
+      type: ApplicationCommandOptionType.User,
+      required: false,
+      autocomplete: true,
+    },
+    {
+      name: `member-4`,
+      description: `Another member you would like to invite.`,
+      type: ApplicationCommandOptionType.User,
+      required: false,
+      autocomplete: true,
+    },
+    {
+      name: `member-5`,
+      description: `Another member you would like to invite.`,
+      type: ApplicationCommandOptionType.User,
+      required: false,
+      autocomplete: true,
+    },
+    {
+      name: `member-6`,
+      description: `Another member you would like to invite.`,
+      type: ApplicationCommandOptionType.User,
+      required: false,
+      autocomplete: true,
     },
     {
       name: `channel`,
@@ -55,34 +86,18 @@ export const dmPermission = false,
     },
   ]
 
-const invalidTagMessage =
-  `You tried tagging someone (@someone), but you didn't *actually* tag them. If the text stays white that means: \n` +
-  "- You're spelling their tag (username/nickname) wrong after the `@`.\n" +
-  `- The member doesn't have access to this channel.\n` +
-  `In the case that the member doesn't have access to this channel you need to:\n` +
-  `1. Use their username + discriminator [username#descriminator], ie bob#2301.\n` +
-  `2. Use their id, ie 598729034867933195 → [how-to](<https://www.youtube.com/watch?v=vskWZbNa7qo>).\n\n`
-
 function generateConfirmationMessage(
-  someInvalidTags,
-  someInvalidMembers,
   someUnverifiedMembers,
   verifiedMembers,
   channel
 ) {
   let confirmationMessage = ``
 
-  if (someInvalidTags) confirmationMessage += invalidTagMessage
-
-  if (someInvalidMembers && someUnverifiedMembers)
-    confirmationMessage += `You provided one or more invalid username#discriminators or ids. And one or more of the members you tried to invite were unverified. `
-  else if (someInvalidMembers)
-    confirmationMessage += `You provided one or more invalid username#discriminators or ids. `
-  else if (someUnverifiedMembers)
-    confirmationMessage += `One or more of the members you tried to invite were unverified. `
+  if (someUnverifiedMembers)
+    confirmationMessage += `One or more of the members you tried to invite were unverified.\n\n`
 
   confirmationMessage = confirmationMessage
-    ? (confirmationMessage += `Nevertheless...`)
+    ? (confirmationMessage += `Nevertheless... `)
     : ``
 
   const memberNameArray = verifiedMembers
@@ -259,65 +274,39 @@ export default async function (interaction) {
 
   const { guild, member, options, channel } = interaction,
     { members } = guild,
-    invitedMembers = options.getString(`members`),
+    invitedMember1 = options.getUser(`member`),
+    invitedMember2 = options.getUser(`member-2`),
+    invitedMember3 = options.getUser(`member-3`),
+    invitedMember4 = options.getUser(`member-4`),
+    invitedMember5 = options.getUser(`member-5`),
+    invitedMember6 = options.getUser(`member-6`),
+    memberArray = [
+      invitedMember1,
+      invitedMember2,
+      invitedMember3,
+      invitedMember4,
+      invitedMember5,
+      invitedMember6,
+    ]
+      .filter(user => user)
+      .map(user => members.cache.get(user?.id)),
     optionChannel = options.getChannel(`channel`),
-    _channel = optionChannel ? optionChannel : channel,
-    membersString = removeSpacesAfterCommas(invitedMembers)
+    _channel = optionChannel ? optionChannel : channel
 
-  const memberStringArray = membersString.split(`,`)
-
-  let someInvalidTags = false
-
-  const memberArray = [
-      ...new Set(
-        memberStringArray.map(memberString => {
-          if (isFirstCharacterAtSymbol(memberString)) someInvalidTags = true
-
-          const userId = getNumberNotDescriminator(memberString)
-
-          return userId
-            ? members.cache.get(userId)
-            : members.cache.find(member => {
-                const { username, discriminator } = member.user
-
-                console.log(`${username}#${discriminator}`, memberString)
-
-                if (`${username}#${discriminator}` === memberString) return true
-              })
-        })
-      ),
-    ],
-    validMemberArray = memberArray.filter(member => member)
-
-  if (validMemberArray.length === 0) {
-    await queueApiCall({
-      apiCall: `editReply`,
-      djsObject: interaction,
-      parameters:
-        invalidTagMessage +
-        `You provided an invalid list of username#discriminators or ids. Keep in mind that this invite feature only works for members, ie users who are *already in the server* 🤔`,
-    })
-
-    return
-  }
-
-  const someInvalidMembers = memberArray?.length !== validMemberArray?.length,
-    verifiedMembers = validMemberArray.filter(member => checkIfVerified(member))
+  const verifiedMembers = memberArray.filter(member => checkIfVerified(member))
 
   if (verifiedMembers.length === 0) {
     await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,
-      parameters: someInvalidMembers
-        ? `You provided a list of invalid and unverified members 🤔`
-        : `You provided a list of unverified members 🤔`,
+      parameters: `You provided a list of unverified members 🤔`,
     })
 
     return
   }
 
   const { type } = _channel,
-    someUnverifiedMembers = verifiedMembers?.length !== validMemberArray?.length
+    someUnverifiedMembers = verifiedMembers?.length !== memberArray?.length
 
   if (type === ChannelType.GuildVoice) {
     await handleVoiceChannel(_channel, verifiedMembers, member)
@@ -330,8 +319,6 @@ export default async function (interaction) {
   }
 
   const confirmationMessage = generateConfirmationMessage(
-    someInvalidTags,
-    someInvalidMembers,
     someUnverifiedMembers,
     verifiedMembers,
     _channel

@@ -925,66 +925,38 @@ export async function removeMemberFromDynamicChannels(
   }
 }
 
-export async function checkIfmemberneedsToBeRemoved(member, channelId) {
-  if (!channelId) return
-
+export async function checkIfMemberneedsToBeRemoved(member, channel) {
   const guild = member.guild,
-    welcomeChannelId = await getWelcomeChannel(guild.id),
-    roomChannelId = await getRoomChannelId(guild.id),
-    unverifiedRoomId = await getUnverifiedRoomChannelId(guild.id)
+    channelId = channel?.id,
+    welcomeChannelId = await getWelcomeChannel(guild.id)
 
-  if ([welcomeChannelId, roomChannelId, unverifiedRoomId].includes(channelId))
-    return
+  if (channelId === welcomeChannelId) return `welcome`
 
-  const channel = guild.channels.cache.get(channelId)
+  if (!channel) return false
 
-  if (!channel) return `not removed`
+  const isPermissible = checkIfMemberIsPermissible(channel, member)
 
-  const channelType = await getChannelType(channel.id)
+  if (isPermissible) return true
 
-  if (channelType === `hidden`) return
-
-  const userOverwrite = channel.permissionOverwrites.cache.find(
-      permissionOverwrite => permissionOverwrite.id === member.id
-    ),
-    comparedPermissions = comparePermissions(userOverwrite)
-
-  if ([`archived`, `joinable`, `private`].includes(channelType)) {
-    if (userOverwrite) return { action: `delete` }
-  } else if (channelType === `public`) {
-    const permissions = {
-      ViewChannel: false,
-    }
-
-    if (!userOverwrite) return { action: `create`, permissions: permissions }
-    else if (comparedPermissions.ViewChannel)
-      return { action: `edit`, permissions: permissions }
-  }
-
-  return `already removed`
+  return false
 }
 
-export async function removeMemberFromChannel(member, channelId) {
-  if (!channelId) return
+export async function removeMemberFromChannel(member, channel) {
+  if (!member || !channel) return false
 
-  const context = await checkIfmemberneedsToBeRemoved(member, channelId)
+  const needsToBeRemoved = await checkIfMemberneedsToBeRemoved(member, channel)
 
-  if ([null, `not removed`].includes(context)) return context
+  if (!needsToBeRemoved || needsToBeRemoved === `welcome`)
+    return needsToBeRemoved
 
-  const guild = member.guild,
-    channel = guild.channels.cache.get(channelId)
+  await queueApiCall({
+    apiCall: `create`,
+    djsObject: channel.permissionOverwrites,
+    parameters: [member, { ViewChannel: false }],
+    multipleParameters: true,
+  })
 
-  if (!channel) return `not removed`
-
-  if ([`edit`, `create`].includes(context?.action)) {
-    channel?.permissionOverwrites[context.action](member, context.permissions)
-
-    return `removed`
-  } else if (context?.action === `delete`) {
-    channel?.permissionOverwrites[context.action](member)
-
-    return `removed`
-  } else return `already removed`
+  return true
 }
 
 export async function announceNewChannel(newChannel) {
@@ -1185,4 +1157,19 @@ export function checkIfMemberIsPermissible(channel, member) {
 
   if (permissionCollection.every(permission => permission === true)) return true
   else return false
+}
+
+export function isChannelThread(channel) {
+  if (!channel) return
+
+  const threadChannelTypes = [
+    ChannelType.PrivateThread,
+    ChannelType.PublicThread,
+    ChannelType.GuildStageVoice,
+    ChannelType.GuildVoice,
+  ]
+
+  if (threadChannelTypes.includes(channel?.type)) return true
+
+  return false
 }

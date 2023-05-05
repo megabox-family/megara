@@ -1,3 +1,4 @@
+import { queueApiCall } from '../api-queue.js'
 import {
   setVipRemoveMessage,
   getVipRemoveMessage,
@@ -18,7 +19,9 @@ export default async function (interaction) {
 
   const vipRemoveMessage = await getVipRemoveMessage(guild.id)
 
-  await interaction.editReply({
-    content: `You've set **${guild}'s** vip remove message to the below: \n>>> ${vipRemoveMessage}`,
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: `You've set **${guild}'s** vip remove message to the below: \n>>> ${vipRemoveMessage}`,
   })
 }

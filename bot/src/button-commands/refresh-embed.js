@@ -5,10 +5,18 @@ import {
   getNotificationButtons,
 } from '../utils/buttons.js'
 import { getListInfo, updateListPageData } from '../repositories/lists.js'
-import { getformattedChannelPages, getPollDetails, getPollPages } from '../utils/general-commands.js'
+import {
+  getformattedChannelPages,
+  getPollDetails,
+  getPollPages,
+} from '../utils/general-commands.js'
+import { queueApiCall } from '../api-queue.js'
 
 export default async function (interaction) {
-  await interaction.deferUpdate()
+  await queueApiCall({
+    apiCall: `deferUpdate`,
+    djsObject: interaction,
+  })
 
   const guild = interaction.guild,
     message = interaction.message,
@@ -16,9 +24,12 @@ export default async function (interaction) {
     listInfo = await getListInfo(message.id)
 
   if (!listInfo) {
-    interaction.editReply(
-      `Something went wrong retreiving a page in the list, please dismiss this message and create a new list message 😬`
-    )
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `Something went wrong retreiving a page in the list, please dismiss this message and create a new list message 😬`,
+    })
+
     return
   }
 
@@ -40,9 +51,11 @@ export default async function (interaction) {
   } else pages = await getPages(recordsPerPage, group, guild, filters)
 
   if (pages?.length === 0) {
-    interaction.editReply(
-      `There was an error refreshing the list, please dismiss this message and create a new list message 😬`
-    )
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `There was an error refreshing the list, please dismiss this message and create a new list message 😬`,
+    })
 
     return
   }
@@ -53,7 +66,7 @@ export default async function (interaction) {
     [`channels-joinable`, `channels-public`, `channels-archived`].includes(
       group
     )
-  ){
+  ) {
     displayPages = getformattedChannelPages(pages)
   }
 
@@ -95,5 +108,9 @@ export default async function (interaction) {
 
   await updateListPageData(message.id, pages)
 
-  await interaction.editReply(messageContent)
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: messageContent,
+  })
 }

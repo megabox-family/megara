@@ -9,6 +9,8 @@ import {
 import { commasFollowedBySpace, getImdbMovieId } from '../utils/validation.js'
 import { chunckButtons } from '../utils/buttons.js'
 import { createMovieInviteData } from '../repositories/movie-invites.js'
+import { isChannelThread } from '../utils/channels.js'
+import { queueApiCall } from '../api-queue.js'
 
 const { omdbKey } = config
 
@@ -50,31 +52,66 @@ function formatWhere(whereArray) {
 }
 
 export default async function (interaction) {
-  await interaction.deferReply()
+  const { options, channel } = interaction,
+    channelIsThread = isChannelThread(channel)
 
-  const { options } = interaction,
-    movieUrls = options.getString(`movies`),
+  if (channelIsThread) {
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: interaction,
+      parameters: {
+        content: '`/movie-invite` cannot be used in a thread 🤔',
+        ephemeral: true,
+      },
+    })
+
+    return
+  }
+
+  const movieUrls = options.getString(`movies`),
     when = options.getString(`when`),
     where = options.getString(`where`),
     commaMoviesUrls = movieUrls?.replaceAll(commasFollowedBySpace, `,`),
-    commaWhen = when?.replaceAll(commasFollowedBySpace, `,`),
-    commaWhere = where?.replaceAll(commasFollowedBySpace, `,`),
     movieUrlArray = commaMoviesUrls?.split(`,`),
-    whenArray = commaWhen?.split(`,`),
-    whereArray = commaWhere?.split(`,`),
     posters = [],
     movieDetails = await Promise.all(
       movieUrlArray.map(async movieUrl => {
-        const movieId = getImdbMovieId(movieUrl),
-          { Title: title, Poster: poster } = await fetch(
-            `http://www.omdbapi.com/?i=${movieId}&apikey=${omdbKey}`
-          ).then(response => response.json())
+        const movieId = getImdbMovieId(movieUrl)
+
+        if (!movieId) return null
+
+        const { Title: title, Poster: poster } = await fetch(
+          `http://www.omdbapi.com/?i=${movieId}&apikey=${omdbKey}`
+        ).then(response => response?.json())
 
         posters.push(poster)
 
         return { title: title, url: movieUrl }
       })
-    ),
+    )
+
+  if (movieDetails.includes(null)) {
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: interaction,
+      parameters: {
+        content: 'You provided invalid IMDb URLs 😡',
+        ephemeral: true,
+      },
+    })
+
+    return
+  }
+
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+  })
+
+  const commaWhen = when?.replaceAll(commasFollowedBySpace, `,`),
+    commaWhere = where?.replaceAll(commasFollowedBySpace, `,`),
+    whenArray = commaWhen?.split(`,`),
+    whereArray = commaWhere?.split(`,`),
     movieField = movieDetails.length === 1 ? `movie` : `movies`,
     movies =
       movieDetails.length === 1
@@ -105,7 +142,7 @@ export default async function (interaction) {
               const position = index + 1,
                 uriWhere = encodeURIComponent(where)
 
-              return `${position}. [${where}](https://www.google.c;;om/search?q=${uriWhere})`
+              return `${position}. [${where}](https://www.google.com/search?q=${uriWhere})`
             })
             .join(`\n`),
     attendees =
@@ -144,9 +181,13 @@ export default async function (interaction) {
     }),
     rows = chunckButtons(buttons)
 
-  const reply = await interaction.editReply({
-      embeds: [embed],
-      components: rows,
+  const reply = await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: {
+        embeds: [embed],
+        components: rows,
+      },
     }),
     threadName = movieDetails
       .map(movieDetail => {
@@ -156,5 +197,9 @@ export default async function (interaction) {
 
   await createMovieInviteData(reply?.id)
 
-  await reply.startThread({ name: threadName })
+  await queueApiCall({
+    apiCall: `startThread`,
+    djsObject: reply,
+    parameters: { name: threadName },
+  })
 }

@@ -2,6 +2,7 @@ import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js'
 import { extractElement, formatNumber } from '../utils/general.js'
 import { getNicknameOrUsername } from '../utils/members.js'
 import { commasFollowedBySpace } from '../utils/validation.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Takes a comma deliminted list of values and returns one of said values at random.`
 export const dmPermission = true,
@@ -115,5 +116,9 @@ export default async function (interaction) {
       )
       .setTimestamp()
 
-  await interaction.editReply({ embeds: [embed] })
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: { embeds: [embed] },
+  })
 }

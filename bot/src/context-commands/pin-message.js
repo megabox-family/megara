@@ -18,12 +18,27 @@ export default async function (interaction) {
     message = await channel.messages.fetch(interaction.targetId)
 
   if (message.pinned) {
-    interaction.editReply(`This message is already pinned 🤔`)
-  } else {
-    await message.pin()
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `This message is already pinned 🤔`,
+    })
 
-    await addPinnedMessage(message.id, interaction.user.id)
-
-    interaction.editReply(`I pinned the message for you 📌`)
+    return
   }
+
+  await queueApiCall({
+    apiCall: `pin`,
+    djsObject: message,
+  })
+
+  await message.pin()
+
+  await addPinnedMessage(message.id, interaction.user.id)
+
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: `I pinned the message for you 📌`,
+  })
 }

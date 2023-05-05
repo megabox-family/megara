@@ -43,9 +43,11 @@ export default async function (interaction) {
     ...channelButtonComponents,
   ]
 
-  await interaction.editReply(listMessage)
-
-  const message = await interaction.fetchReply()
+  const message = await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: listMessage,
+  })
 
   createList(message.id, title, description, pages, recordLimit, groupBy)
 }

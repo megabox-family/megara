@@ -1,5 +1,5 @@
+import { queueApiCall } from '../api-queue.js'
 import { createList } from '../repositories/lists.js'
-import { getPollQuestion } from '../repositories/polls.js'
 import { getPollPages, getPollDetails } from '../utils/general-commands.js'
 import { generateListMessage } from '../utils/slash-commands.js'
 
@@ -16,13 +16,19 @@ export default async function (interaction) {
     pollDetails = await getPollDetails(pollId)
 
   if (pollDetails === `no voter data`) {
-    await interaction.editReply(`There is currently no data for this poll 😔`)
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `There is currently no data for this poll 😔`,
+    })
 
     return
   } else if (!pollDetails) {
-    await interaction.editReply(
-      `I'm no longer storing the data for this poll, sorry for the inconvenience 😬`
-    )
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `I'm no longer storing the data for this poll, sorry for the inconvenience 😬`,
+    })
 
     return
   }
@@ -30,9 +36,11 @@ export default async function (interaction) {
   const pages = await getPollPages(pollDetails)
 
   if (pages?.length === 0) {
-    await interaction.editReply(
-      `I'm no longer storing the data for this poll, sorry for the inconvenience 😬`
-    )
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `I'm no longer storing the data for this poll, sorry for the inconvenience 😬`,
+    })
 
     return
   }
@@ -58,9 +66,11 @@ export default async function (interaction) {
 
   listMessage.content = `Here's the results of said poll thus far 📃`
 
-  await interaction.editReply(listMessage)
-
-  const replyMessage = await interaction.fetchReply()
+  const replyMessage = await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: listMessage,
+  })
 
   await createList(replyMessage.id, title, description, pages, 0, `poll`)
 }
