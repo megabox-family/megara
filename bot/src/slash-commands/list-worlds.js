@@ -28,8 +28,7 @@ export default async function (interaction) {
     parameters: { ephemeral: true },
   })
 
-  const guild = interaction.guild,
-    options = interaction.options,
+  const { guild, options } = interaction,
     _recordsPerPage = options.getInteger(`records-per-page`),
     recordsPerPage = _recordsPerPage ? _recordsPerPage : defaultRecordsPerPage,
     group = `worlds-world`,

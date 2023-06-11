@@ -4,6 +4,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from 'discord.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Generates a modal that allows admins to set the nickname guidelines for this server.`
 export const dmPermission = false,
@@ -22,5 +23,9 @@ export default async function (interaction) {
 
   nameGuidelinesModal.addComponents(firstActionRow)
 
-  await interaction.showModal(nameGuidelinesModal)
+  await queueApiCall({
+    apiCall: `showModal`,
+    djsObject: interaction,
+    parameters: nameGuidelinesModal,
+  })
 }

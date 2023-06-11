@@ -166,9 +166,12 @@ async function registerProdCommands(bot) {
               const choiceKeys = Object.keys(choice),
                 newChoice = commandObject.options[index].choices[jndex]
 
-              choiceKeys.forEach(key => {
-                if (!newChoice.hasOwnProperty(key)) newChoice[key] = undefined
-              })
+              if (newChoice) {
+                choiceKeys.forEach(key => {
+                  if (!newChoice?.hasOwnProperty(key))
+                    newChoice[key] = undefined
+                })
+              }
             }
           })
       })

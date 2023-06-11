@@ -1,6 +1,7 @@
 import { ApplicationCommandOptionType } from 'discord.js'
 import { getWorldId } from '../repositories/coordinates.js'
 import { setActiveWorld } from '../repositories/guilds.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Allows you to set the active Minecraft world within your Discord server, distinguished when listed.`
 export const dmPermission = false,
@@ -32,8 +33,10 @@ export default async function (interaction) {
     existingWorldId = await getWorldId(worldName, guild.id)
 
     if (!existingWorldId) {
-      await interaction.editReply({
-        content: `A world named **${worldName}** doesn't exists in **${guild.name}** 🤔`,
+      await queueApiCall({
+        apiCall: `editReply`,
+        djsObject: interaction,
+        parameters: `A world named **${worldName}** doesn't exists in **${guild.name}** 🤔`,
       })
 
       return
@@ -45,11 +48,15 @@ export default async function (interaction) {
   await setActiveWorld(existingWorldId, guild.id)
 
   if (worldName)
-    await interaction.editReply({
-      content: `The **${worldName}** world is now set as the active world for **${guild.name}** 🌍`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `The **${worldName}** world is now set as the active world for **${guild.name}** 🌍`,
     })
   else
-    await interaction.editReply({
-      content: `There is no longer an active world set in **${guild.name}** 😵`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `There is no longer an active world set in **${guild.name}** 😵`,
     })
 }

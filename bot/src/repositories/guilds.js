@@ -345,15 +345,14 @@ export async function getFunctionChannels(guildId) {
   return await pgPool
     .query(
       SQL`
-      select 
-        admin_channel,
-        log_channel,
-        announcement_channel,
-        verification_channel,
-        welcome_channel
-      from guilds 
-      where id = ${guildId}
-    `
+        select 
+          admin_channel,
+          announcement_channel,
+          verification_channel,
+          welcome_channel
+        from guilds 
+        where id = ${guildId}
+      `
     )
     .then(res => (res.rows[0] ? camelize(res.rows[0]) : undefined))
 }
@@ -361,12 +360,12 @@ export async function getFunctionChannels(guildId) {
 export async function setNameGuidelines(guildId, nameGuidelines) {
   return await pgPool.query(
     SQL`
-        update guilds
-        set
-          name_guidelines = ${nameGuidelines}
-        where id = ${guildId}
-        returning *;
-      `
+      update guilds
+      set
+        name_guidelines = ${nameGuidelines}
+      where id = ${guildId}
+      returning *;
+    `
   )
 }
 

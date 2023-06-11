@@ -17,6 +17,7 @@ import {
 import { getTotalBatchRoleQueueMembers } from './roles.js'
 import { getCommandByName } from './slash-commands.js'
 import { directMessageError } from '../utils/error-logging.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const pauseDuation = 5
 
@@ -202,53 +203,50 @@ async function handleVipRole(oldMember, newMember) {
 
   if (!wasVip && isVip) {
     if (vipMemberArray.includes(newMember)) {
-      const vipAssignMessage = await getVipAssignMessage(guild.id),
-        additonalMessage =
-          `Here's a message from **${guild}** with additional information:` +
-          `\n>>> ${vipAssignMessage}`
+      const vipAssignMessage = await getVipAssignMessage(guild.id)
 
-      newMember
-        ?.send(
-          `
-          Congratulations, you've been attributed the vip role in the **${guild}** server! 🎉\
-          ${additonalMessage}
-        `
-        )
-        .catch(error => directMessageError(error, newMember))
+      await queueApiCall({
+        apiCall: `send`,
+        djsObject: newMember,
+        parameters:
+          `Congratulations, you've been attributed the vip role (**@${vipRole?.name}**) in the **${guild}** server! 🎉` +
+          `\n\nHere's a message from **${guild}** with additional information:` +
+          `\n>>> ${vipAssignMessage}`,
+      })
 
       return
     }
 
     newMember.roles.remove(vipRoleId)
 
-    if (adminChannel)
-      adminChannel.send(
+    await queueApiCall({
+      apiCall: `send`,
+      djsObject: adminChannel,
+      parameters:
         `Somone tried giving ${oldMember} the VIP role but they do not qualify for VIP status, it has automatically been removed 🤔` +
-          `\nIf you'd like to give a member who does not typically qualify for VIP status the VIP role, please use the \`/vip-user-override\` command.`
-      )
+        `\nIf you'd like to give a member who does not typically qualify for VIP status the VIP role, please use the \`/vip-user-override\` command.`,
+    })
   } else {
     if (!vipMemberArray.includes(newMember)) {
-      const vipRemoveMessage = await getVipRemoveMessage(guild.id),
-        additonalMessage =
-          `\nHere's a message from **${guild}** with additional information:` +
-          `\n>>> ${vipRemoveMessage}`
+      const vipRemoveMessage = await getVipRemoveMessage(guild.id)
 
-      newMember
-        ?.send(
-          `
-          You're no longer a vip member in the **${guild}** server. 😢\
-          ${additonalMessage}
-        `
-        )
-        .catch(error => directMessageError(error, newMember))
+      await queueApiCall({
+        apiCall: `send`,
+        djsObject: newMember,
+        parameters:
+          `You're no longer a vip member in the **${guild}** server. 😢${additonalMessage}` +
+          `\n\nHere's a message from **${guild}** with additional information:` +
+          `\n>>> ${vipRemoveMessage}`,
+      })
 
       return
     }
 
-    if (adminChannel)
-      adminChannel.send(
-        `Somone tried removing the VIP role from ${oldMember} but they still qualify for VIP status, it has been automatically re-added 🤔`
-      )
+    await queueApiCall({
+      apiCall: `send`,
+      djsObject: adminChannel,
+      parameters: `Somone tried removing the VIP role from ${oldMember} but they still qualify for VIP status, it has been automatically re-added 🤔`,
+    })
 
     newMember.roles.add(vipRoleId)
   }

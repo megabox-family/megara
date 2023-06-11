@@ -4,6 +4,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from 'discord.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Generates a modal that allows you to request a new channel, note that anyone can join this channel.`
 export const dmPermission = false,
@@ -30,5 +31,9 @@ export default async function (interaction) {
 
   channelRequestModal.addComponents(firstActionRow, secondActionRow)
 
-  await interaction.showModal(channelRequestModal)
+  await queueApiCall({
+    apiCall: `showModal`,
+    djsObject: interaction,
+    parameters: channelRequestModal,
+  })
 }

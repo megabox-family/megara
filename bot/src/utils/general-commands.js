@@ -24,6 +24,7 @@ import {
   getUserIdFromTag,
 } from './validation.js'
 import { getBot } from '../cache-bot.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const pollTimeoutMap = new Map()
 
@@ -146,12 +147,16 @@ export async function generatePollMessage(
 
   const idObject = getIdsFromTags(tags)
 
-  const pollMessage = await interaction.reply({
-    content: content,
-    embeds: [embed],
-    components: components,
-    fetchReply: true,
-    allowedMentions: { users: idObject.userIds, roles: idObject.roleIds },
+  const pollMessage = await queueApiCall({
+    apiCall: `reply`,
+    djsObject: interaction,
+    parameters: {
+      content: content,
+      embeds: [embed],
+      components: components,
+      fetchReply: true,
+      allowedMentions: { users: idObject.userIds, roles: idObject.roleIds },
+    },
   })
 
   await createPoll(
@@ -443,7 +448,14 @@ export async function printPollResults(channelId, messageId) {
     pollDetails = await getPollDetails(message.id)
 
   if (!pollDetails) {
-    await message.reply(`I can't seem to find the results for this poll 😬`)
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: message,
+      parameters: {
+        content: `I can't seem to find the results for this poll 😬`,
+        ephemeral: true,
+      },
+    })
 
     return
   }
@@ -471,9 +483,14 @@ export async function printPollResults(channelId, messageId) {
   oldEmbed.fields[1].value = timeFrame
 
   if (pollDetails === `no voter data`) {
-    const resultsMessage = await message.reply(
-      `No one voted before the poll ended 😔`
-    )
+    const resultsMessage = await queueApiCall({
+      apiCall: `reply`,
+      djsObject: message,
+      parameters: {
+        content: `No one voted before the poll ended 😔`,
+        ephemeral: true,
+      },
+    })
 
     const seeFinalResults = new ButtonBuilder()
         .setLabel(`See final results`)
@@ -499,7 +516,14 @@ export async function printPollResults(channelId, messageId) {
   const pages = await getPollPages(pollDetails)
 
   if (pages?.length === 0) {
-    await message.reply(`I can't seem to find the results for this poll 😬`)
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: message,
+      parameters: {
+        content: `I can't seem to find the results for this poll 😬`,
+        ephemeral: true,
+      },
+    })
 
     return
   }
@@ -573,7 +597,11 @@ export async function printPollResults(channelId, messageId) {
 
   listMessage.content = `${resultMentions}The numbers are in, ${winner}`
 
-  const resultsMessage = await message.reply(listMessage)
+  await queueApiCall({
+    apiCall: `reply`,
+    djsObject: message,
+    parameters: listMessage,
+  })
 
   const seeFinalResults = new ButtonBuilder()
       .setLabel(`See final results`)
@@ -602,12 +630,15 @@ export async function printPollResults(channelId, messageId) {
   pollTimeoutMap.delete(message.id)
 }
 
-export function getformattedChannelPages(pages){
+export function getformattedChannelPages(pages) {
   const pagesCopy = JSON.parse(JSON.stringify(pages))
 
-  for(const [index, page] of pagesCopy.entries()){
-    for(let [jndex, list] of page.entries()){
-      pagesCopy[index][jndex].value = list?.value?.replaceAll(/ \([0-9]+\)/ig, '')
+  for (const [index, page] of pagesCopy.entries()) {
+    for (let [jndex, list] of page.entries()) {
+      pagesCopy[index][jndex].value = list?.value?.replaceAll(
+        / \([0-9]+\)/gi,
+        ''
+      )
     }
   }
 

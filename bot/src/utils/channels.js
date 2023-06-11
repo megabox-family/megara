@@ -23,7 +23,6 @@ import {
   setVerificationChannel,
   setWelcomeChannel,
   getAnnouncementChannel,
-  getVerificationChannel,
   getWelcomeChannel,
   getPauseChannelNotifications,
 } from '../repositories/guilds.js'
@@ -42,6 +41,7 @@ import {
 } from '../repositories/channels.js'
 import { getChannelBasename } from './voice.js'
 import { queueApiCall } from '../api-queue.js'
+import { isPositiveNumber } from './validation.js'
 
 const setChannelFunction = {
     adminChannel: setAdminChannel,
@@ -50,28 +50,7 @@ const setChannelFunction = {
     verificationChannel: setVerificationChannel,
     welcomeChannel: setWelcomeChannel,
   },
-  channelVisibilityQueue = [],
   channelSortingQueue = []
-
-async function emptyChannelVisibilityQueue() {
-  if (channelVisibilityQueue.length === 0) return
-
-  await setChannelVisibility(channelVisibilityQueue[0])
-
-  channelVisibilityQueue.shift()
-
-  // console.log(`channel visibility loop`)
-
-  emptyChannelVisibilityQueue()
-}
-
-export function pushToChannelVisibilityQueue(channelId) {
-  if (!channelVisibilityQueue.includes(channelId)) {
-    channelVisibilityQueue.push(channelId)
-
-    if (channelVisibilityQueue.length === 1) emptyChannelVisibilityQueue()
-  }
-}
 
 async function emptyChannelSortingQueue() {
   if (channelSortingQueue.length === 0) return
@@ -148,259 +127,6 @@ export function getPositionOverride(channel) {
   })
 
   return positionOverride ? +positionOverride.match(`-?[0-9]+`)[0] : null
-}
-
-function unarchiveUserOverwrites(overwrites) {
-  if (!overwrites) return
-
-  let permissionsHaveChanged = false
-
-  overwrites.forEach(overwrite => {
-    const denyPermissions = overwrite.deny.serialize()
-
-    if (
-      overwrite.type === OverwriteType.Member &&
-      (denyPermissions.SendMessages ||
-        denyPermissions.SendMessagesInThreads ||
-        denyPermissions.CreatePrivateThreads ||
-        denyPermissions.CreatePublicThreads ||
-        denyPermissions?.CreatePrivateThreads ||
-        denyPermissions?.CreatePublicThreads)
-    ) {
-      const newOverwrite = overwrites.get(overwrite.id),
-        permissionSets = getIndividualPermissionSets(overwrite)
-
-      permissionSets.allow.delete(`SendMessages`)
-      permissionSets.allow.delete(`SendMessagesInThreads`)
-      permissionSets.allow.delete(`CreatePrivateThreads`)
-      permissionSets.allow.delete(`CreatePublicThreads`)
-      permissionSets.allow.delete(`CreatePrivateThreads`)
-      permissionSets.allow.delete(`CreatePublicThreads`)
-
-      permissionSets.deny.delete(`SendMessages`)
-      permissionSets.deny.delete(`SendMessagesInThreads`)
-      permissionSets.deny.delete(`CreatePrivateThreads`)
-      permissionSets.deny.delete(`CreatePublicThreads`)
-      permissionSets.deny.delete(`CreatePrivateThreads`)
-      permissionSets.deny.delete(`CreatePublicThreads`)
-
-      newOverwrite.allow = new PermissionsBitField([...permissionSets.allow])
-      newOverwrite.deny = new PermissionsBitField([...permissionSets.deny])
-
-      permissionsHaveChanged = true
-    }
-  })
-
-  return permissionsHaveChanged
-}
-
-export async function setChannelVisibility(channelId) {
-  const channel = getBot().channels.cache.get(channelId)
-
-  if (!channel) {
-    console.log(
-      `We tried setting the channel visibility of a channel that no longer exists.`
-    )
-
-    return
-  }
-
-  const channelType = checkType(channel)
-
-  if ([`public thread`, `private thread`].includes(channelType)) return
-
-  const guild = channel.guild,
-    announcementChannelId = await getAnnouncementChannel(guild.id),
-    verificationChannelId = await getVerificationChannel(guild.id),
-    welcomeChannelId = await getWelcomeChannel(guild.id),
-    categoryName = channel.parentId
-      ? guild.channels.cache.get(channel.parentId).name
-      : ``,
-    roles = guild.roles.cache,
-    archivedRoleId = roles.find(
-      role => role.name === `!channel type: archived`
-    )?.id,
-    hiddenRoleId = roles.find(
-      role => role.name === `!channel type: hidden`
-    )?.id,
-    joinableRoleId = roles.find(
-      role => role.name === `!channel type: joinable`
-    )?.id,
-    publicRoleId = roles.find(
-      role => role.name === `!channel type: public`
-    )?.id,
-    undergoingVerificationRoleId = roles.find(
-      role => role.name === `undergoing verification`
-    )?.id,
-    verifiedRoleId = roles.find(role => role.name === `verified`)?.id,
-    everyoneRoleId = roles.find(role => role.name === `@everyone`).id,
-    overwrites = channel.permissionOverwrites.cache,
-    archivedOverwrite = archivedRoleId ? overwrites.get(archivedRoleId) : null,
-    hiddenOverwrite = hiddenRoleId ? overwrites.get(hiddenRoleId) : null,
-    joinableOverwrite = joinableRoleId ? overwrites.get(joinableRoleId) : null,
-    publicOverwrite = publicRoleId ? overwrites.get(publicRoleId) : null,
-    undergoingVerificationOverwrite = undergoingVerificationRoleId
-      ? overwrites.get(undergoingVerificationRoleId)
-      : null,
-    verifiedOverwrite = verifiedRoleId ? overwrites.get(verifiedRoleId) : null,
-    everyoneOverwrite = overwrites.get(everyoneRoleId)
-
-  if ([announcementChannelId, welcomeChannelId].includes(channel.id)) {
-    if (hiddenOverwrite) await hiddenOverwrite.delete()
-    if (archivedOverwrite) await archivedOverwrite.delete()
-    if (joinableOverwrite) await joinableOverwrite.delete()
-    if (undergoingVerificationOverwrite)
-      await undergoingVerificationRoleId.delete()
-    if (!publicOverwrite && publicRoleId)
-      channel.permissionOverwrites.create(publicRoleId, {})
-
-    if (verifiedOverwrite) {
-      const comparedPermissions = comparePermissions(verifiedOverwrite)
-
-      if (
-        !comparedPermissions.ViewChannel ||
-        comparedPermissions.SendMessages ||
-        comparedPermissions.SendMessagesInThreads ||
-        comparedPermissions.CreatePublicThreads ||
-        comparedPermissions.CreatePrivateThreads
-      )
-        await verifiedOverwrite.edit({
-          ViewChannel: true,
-          SendMessages: false,
-          SendMessagesInThreads: false,
-          CreatePublicThreads: false,
-          CreatePrivateThreads: false,
-        })
-    } else
-      await channel.permissionOverwrites.create(verifiedRoleId, {
-        ViewChannel: true,
-        SendMessages: false,
-        SendMessagesInThreads: false,
-        CreatePublicThreads: false,
-        CreatePrivateThreads: false,
-      })
-  } else if (channel.id === verificationChannelId) {
-    if (hiddenOverwrite) await hiddenOverwrite.delete()
-    if (archivedOverwrite) await archivedOverwrite.delete()
-    if (joinableOverwrite) await joinableOverwrite.delete()
-    if (publicOverwrite) await publicOverwrite.delete()
-    if (!undergoingVerificationOverwrite && undergoingVerificationRoleId)
-      await channel.permissionOverwrites.create(undergoingVerificationRoleId, {
-        ViewChannel: true,
-        SendMessages: true,
-      })
-
-    if (!verifiedOverwrite && verifiedRoleId)
-      await channel.permissionOverwrites.create(verifiedRoleId, {
-        ViewChannel: false,
-      })
-  } else if (channelType === `hidden`) {
-    if (archivedOverwrite) await archivedOverwrite.delete()
-    if (joinableOverwrite) await joinableOverwrite.delete()
-    if (publicOverwrite) await publicOverwrite.delete()
-    if (undergoingVerificationOverwrite)
-      await undergoingVerificationOverwrite.delete()
-
-    if (!verifiedOverwrite) {
-      await channel.permissionOverwrites.create(verifiedRoleId, {
-        ViewChannel: false,
-      })
-    } else {
-      const allowPermissions = verifiedOverwrite.allow.serialize()
-
-      if (allowPermissions.ViewChannel) {
-        verifiedOverwrite.edit({ ViewChannel: false })
-      }
-    }
-
-    const denyPermissions = everyoneOverwrite.deny.serialize()
-
-    if (denyPermissions.ViewChannel) {
-      everyoneOverwrite.edit({ ViewChannel: true })
-    }
-
-    let permissionsHaveChanged = unarchiveUserOverwrites(overwrites)
-
-    if (permissionsHaveChanged)
-      await channel.edit({ permissionOverwrites: overwrites })
-  } else if (
-    categoryName.toUpperCase() === `ARCHIVED` ||
-    channelType === `archived`
-  ) {
-    if (joinableOverwrite) await joinableOverwrite.delete()
-    if (publicOverwrite) await publicOverwrite.delete()
-    if (undergoingVerificationOverwrite)
-      await undergoingVerificationOverwrite.delete()
-    if (verifiedOverwrite) await verifiedOverwrite.delete()
-
-    if (!archivedOverwrite && archivedRoleId)
-      await channel.permissionOverwrites.create(archivedRoleId, {})
-
-    let permissionsHaveChanged = false
-
-    overwrites.forEach(overwrite => {
-      const comparedPermissions = comparePermissions(overwrite)
-
-      if (
-        overwrite.type === OverwriteType.Member &&
-        (comparedPermissions.SendMessages ||
-          comparedPermissions.SendMessagesInThreads ||
-          comparedPermissions.CreatePrivateThreads ||
-          comparedPermissions.CreatePublicThreads)
-      ) {
-        const newOverwrite = overwrites.get(overwrite.id),
-          permissionSets = getIndividualPermissionSets(overwrite)
-
-        permissionSets.allow.delete(`SendMessages`)
-        permissionSets.allow.delete(`SendMessagesInThreads`)
-        permissionSets.allow.delete(`CreatePrivateThreads`)
-        permissionSets.allow.delete(`CreatePublicThreads`)
-
-        permissionSets.deny.add(`SendMessages`)
-        permissionSets.deny.add(`SendMessagesInThreads`)
-        permissionSets.deny.add(`CreatePrivateThreads`)
-        permissionSets.deny.add(`CreatePublicThreads`)
-
-        newOverwrite.allow = new PermissionsBitField([...permissionSets.allow])
-        newOverwrite.deny = new PermissionsBitField([...permissionSets.deny])
-
-        permissionsHaveChanged = true
-      }
-    })
-
-    if (permissionsHaveChanged)
-      await channel.edit({ permissionOverwrites: overwrites })
-  } else if (channelType === `joinable`) {
-    if (undergoingVerificationOverwrite)
-      await undergoingVerificationOverwrite.delete()
-    if (verifiedOverwrite) await verifiedOverwrite.delete()
-
-    let permissionsHaveChanged = unarchiveUserOverwrites(overwrites)
-
-    if (permissionsHaveChanged)
-      await channel.edit({ permissionOverwrites: overwrites })
-  } else if (channelType === `public`) {
-    if (undergoingVerificationOverwrite)
-      await undergoingVerificationOverwrite.delete()
-    if (!verifiedOverwrite && verifiedRoleId)
-      await channel.permissionOverwrites.create(verifiedRoleId, {
-        ViewChannel: true,
-      })
-
-    let permissionsHaveChanged = unarchiveUserOverwrites(overwrites)
-
-    if (permissionsHaveChanged)
-      await channel.edit({ permissionOverwrites: overwrites })
-  } else if (channelType === `private`) {
-    // if (undergoingVerificationOverwrite)
-    //   await undergoingVerificationOverwrite.delete()
-    // if (verifiedOverwrite) await verifiedOverwrite.delete()
-
-    let permissionsHaveChanged = unarchiveUserOverwrites(overwrites)
-
-    if (permissionsHaveChanged)
-      await channel.edit({ permissionOverwrites: overwrites })
-  }
 }
 
 export async function sortChannels(guildId) {
@@ -534,12 +260,21 @@ export async function sortChannels(guildId) {
   ) {
     console.log(`sorted channels`)
 
-    await guild.channels
-      .setPositions(finalChannelArr)
-      .catch(error =>
-        console.log(`channel sorting failed, see error below:\n`, error)
-      )
+    await queueApiCall({
+      apiCall: `setPositions`,
+      djsObject: guild.channels,
+      parameters: finalChannelArr,
+    })
   }
+}
+
+export function checkIfChannelIsThread(channel) {
+  const channelTypeKeys = Object.keys(ChannelType).filter(
+      channelType => !isPositiveNumber(channelType)
+    ),
+    channelType = channel.type
+
+  console.log(channelType)
 }
 
 export async function createChannel(channel, skipAnnouncementAndSort = false) {
@@ -547,17 +282,7 @@ export async function createChannel(channel, skipAnnouncementAndSort = false) {
 
   if ([`public thread`, `private thread`].includes(channelType)) return
 
-  const commandLevel = getCommandLevel(channel),
-    positionOverride = getPositionOverride(channel)
-
-  await createChannelRecord(
-    channel,
-    channelType,
-    commandLevel,
-    positionOverride
-  )
-
-  pushToChannelVisibilityQueue(channel.id)
+  await createChannelRecord(channel, channelType)
 
   if (skipAnnouncementAndSort) {
     return channel.id
@@ -593,8 +318,6 @@ export async function modifyChannel(
     )
   }
 
-  pushToChannelVisibilityQueue(newChannel.id)
-
   //other stuffs
   const oldCatergoryId = oldChannel.hasOwnProperty(`categoryId`)
       ? oldChannel.categoryId
@@ -602,29 +325,19 @@ export async function modifyChannel(
     oldCommandLevel = oldChannel.hasOwnProperty(`commandLevel`)
       ? oldChannel.commandLevel
       : getCommandLevel(oldChannel),
-    oldPositionOverride = oldChannel.hasOwnProperty(`positionOverride`)
-      ? oldChannel.positionOverride
-      : getPositionOverride(oldChannel),
     newChannelType = checkType(newChannel),
-    newCommandLevel = getCommandLevel(newChannel),
-    newPositionOverride = getPositionOverride(newChannel)
+    newCommandLevel = getCommandLevel(newChannel)
 
   if (
     oldChannel.name !== newChannel.name ||
     oldCatergoryId !== newChannel.parentId ||
     oldChannelType !== newChannelType ||
     oldCommandLevel !== newCommandLevel ||
-    oldPositionOverride !== newPositionOverride ||
     oldChannel.position !== newChannel.position ||
     (oldChannel?.rawPosition &&
       oldChannel.rawPosition !== newChannel.rawPosition)
   ) {
-    await updateChannelRecord(
-      newChannel,
-      newChannelType,
-      newCommandLevel,
-      newPositionOverride
-    )
+    await updateChannelRecord(newChannel, newChannelType, newCommandLevel)
 
     if (skipAnnouncementAndSort) {
       if (oldChannelType !== newChannelType) return newChannel.id
@@ -668,24 +381,29 @@ export async function deleteChannel(channel, skipSort = false) {
     if (channelId === functionChannels[key]) {
       setChannelFunction[key](guild.id, null)
 
-      if (key === `adminChannel`)
-        guild.members.cache
-          .get(guild.ownerId)
-          .send(
+      if (key === `adminChannel`) {
+        const owner = guild.members.cache.get(guild.ownerId)
+
+        queueApiCall({
+          apiCall: `send`,
+          djsObject: owner,
+          parameters:
             `You're receiving this message because you are the owner of the ${guild.name} server.` +
-              `\nThe channel that was set as the admin channel was deleted at some point 🤔` +
-              `\nTo receive important notifications from me in the server this needs to be set again.`
-          )
-      else {
+            `\nThe channel that was set as the admin channel was deleted at some point 🤔` +
+            `\nTo receive important notifications from me in the server this needs to be set again.`,
+        })
+      } else {
         const adminChannel = guild.channels.cache.get(
           functionChannels.adminChannel
         )
 
-        if (adminChannel)
-          adminChannel.send(
+        queueApiCall({
+          apiCall: `send`,
+          djsObject: adminChannel,
+          parameters:
             `The channel that was set as the ${channelName} channel was deleted at some point 🤔` +
-              `\nYou'll need to set this channel function again to gain its functionality.`
-          )
+            `\nYou'll need to set this channel function again to gain its functionality.`,
+        })
       }
     }
   })

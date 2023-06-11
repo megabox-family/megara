@@ -95,3 +95,7 @@ export function extractAttendees(attendees) {
 
   return attendeeText
 }
+
+export function isPositiveNumber(string) {
+  return string.match(`^\\d+$`)
+}

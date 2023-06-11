@@ -1,3 +1,4 @@
+import { queueApiCall } from '../api-queue.js'
 import { getRules } from '../repositories/guilds.js'
 
 export const description = `Shows you the rules for this server.`,
@@ -15,13 +16,16 @@ export default async function (interaction) {
     rules = await getRules(guild.id)
 
   if (rules)
-    await interaction.editReply({
-      content: `These are **${interaction.guild}'s** rules: \n>>> ${rules}`,
-      ephemeral: true,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `These are **${interaction.guild}'s** rules: \n>>> ${rules}`,
     })
   else {
-    await interaction.editReply({
-      content: `Sorry, rules have not been set for this server 😔`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `Sorry, rules have not been set for this server 😔`,
     })
   }
 }

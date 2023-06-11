@@ -24,8 +24,10 @@ export default async function (interaction) {
       djsObject: interaction,
       parameters:
         `The admins of this server have something misconfigured, I am unable to submit your channel request.` +
-        `\nPlease contact an adminstrator or ask for help in a support channel for further assitence.`,
+        `\nPlease contact an adminstrator or ask for help in a support channel for further assistance.`,
     })
+
+    return
   }
 
   await queueApiCall({

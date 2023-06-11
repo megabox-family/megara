@@ -18,14 +18,18 @@ export default async function (interaction) {
       ? guild.channels.cache.get(adminChannelId)
       : null
 
+  console.log(adminChannel)
+
   if (!adminChannel) {
     await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,
       parameters:
         `The admins of this server have something misconfigured, I am unable to submit your channel request.` +
-        `Please contact an adminstrator or ask for help in a support channel for further assitence.`,
+        `Please contact an adminstrator or ask for help in a support channel for further assistance.`,
     })
+
+    return
   }
 
   await queueApiCall({

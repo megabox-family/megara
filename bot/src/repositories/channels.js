@@ -161,17 +161,12 @@ export async function getChannelsGuildById(channelId) {
     .then(res => (res.rows[0] ? res.rows[0].guild_id : undefined))
 }
 
-export async function createChannelRecord(
-  channel,
-  channelType,
-  commandLevel,
-  positionOverride
-) {
+export async function createChannelRecord(channel, channelType) {
   return await pgPool
     .query(
       SQL`
-        insert into channels (id, name, guild_id, category_id, channel_type, command_level, position_override, position)
-        values(${channel.id}, ${channel.name}, ${channel.guild.id}, ${channel.parentId}, ${channelType}, ${commandLevel}, ${positionOverride}, ${channel.position});
+        insert into channels (id, name, guild_id, category_id, channel_type, position)
+        values(${channel.id}, ${channel.name}, ${channel.guild.id}, ${channel.parentId}, ${channelType}, ${channel.position});
       `
     )
     .catch(error => {
@@ -179,12 +174,7 @@ export async function createChannelRecord(
     })
 }
 
-export async function updateChannelRecord(
-  channel,
-  channelType,
-  commandLevel,
-  positionOverride
-) {
+export async function updateChannelRecord(channel, channelType, commandLevel) {
   return await pgPool
     .query(
       SQL`
@@ -194,7 +184,6 @@ export async function updateChannelRecord(
           category_id = ${channel.parentId},
           channel_type = ${channelType},
           command_level = ${commandLevel},
-          position_override = ${positionOverride},
           position = ${channel.position}
         where id = ${channel.id}
         returning *;
@@ -475,6 +464,36 @@ export async function getUnverifiedRoomChannelId(guildId) {
       `
     )
     .then(res => (res.rows[0] ? res.rows[0].id : undefined))
+}
+
+export async function getPositionOverride(channelId) {
+  return await pgPool
+    .query(
+      SQL`
+        select
+          position_override
+        from channels
+        where id = ${channelId}
+      `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].id : undefined))
+}
+
+export async function setPositionOverride(channelId, positionOverride) {
+  return await pgPool
+    .query(
+      SQL`
+        update channels
+        set 
+          position_override = ${positionOverride}
+        where id = ${channelId}
+        returning *;
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
 }
 
 // 981719152106545232

@@ -1,3 +1,4 @@
+import { queueApiCall } from '../api-queue.js'
 import { getVipAssignMessage } from '../repositories/guilds.js'
 
 export const description = `Shows you the vip assign message for this server.`,
@@ -15,15 +16,17 @@ export default async function (interaction) {
     vipAssignMessage = await getVipAssignMessage(guild.id)
 
   if (vipAssignMessage)
-    await interaction.editReply({
-      content:
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters:
         `This is **${interaction.guild}'s** vip assign message:` +
         `\n>>> ${vipAssignMessage}`,
-      ephemeral: true,
     })
-  else {
-    await interaction.editReply({
-      content: `The vip assign message has not been set for this server, please use the \`/set-vip-assign-message\` to do so.`,
+  else
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `The vip assign message has not been set for this server, please use the \`/set-vip-assign-message\` to do so.`,
     })
-  }
 }

@@ -7,7 +7,7 @@ import { cacheBot, getBot } from '../cache-bot.js'
 import { readdirSync, existsSync } from 'fs'
 import { basename, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { syncChannels } from './channels.js'
+import { checkIfChannelIsThread, syncChannels } from './channels.js'
 import { syncVipMembers } from './members.js'
 import { syncRoles } from './roles.js'
 import { dynamicRooms } from './voice.js'
@@ -120,6 +120,10 @@ export async function startup(bot) {
 
   cacheBot(bot)
   await syncGuilds(bot.guilds.cache)
+
+  const channel = bot.channels.cache.get(`1100545697515843654`)
+
+  checkIfChannelIsThread(channel)
 
   bot.guilds.cache.forEach(async guild => {
     // await deleteNewRoles(guild)
