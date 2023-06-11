@@ -50,38 +50,6 @@ export async function getJoinableChannels() {
     .then(res => camelize(res.rows))
 }
 
-export async function getCommandLevelForChannel(channelId) {
-  return await pgPool
-    .query(SQL`select command_level from channels where id = ${channelId};`)
-    .then(res => (res.rows[0] ? camelize(res.rows[0]).commandLevel : {}))
-}
-
-export async function getFormatedCommandChannels(guildId, commandLevel) {
-  let channelType
-
-  if (commandLevel.includes(`admin`))
-    channelType = [`private`, `public`, `joinable`]
-  else channelType = [`public`, `joinable`]
-  if (commandLevel.constructor === String) commandLevel = [commandLevel]
-
-  const commandChannels = await pgPool
-    .query(
-      SQL`
-        select
-          channels.id
-        from channels as categories, channels as channels
-        where categories.id = channels.category_id and
-          channels.channel_type = any(${channelType}) and
-          categories.guild_id = ${guildId} and
-          channels.command_level = any(${commandLevel})
-        order by categories.position, categories.id, channels.position;
-      `
-    )
-    .then(res => camelize(res.rows))
-
-  return commandChannels.map(record => `<#${record.id}>`).join(`, `)
-}
-
 export async function updateChannelMessageId(channelId, messageId) {
   return await pgPool
     .query(`update channels set message_id = $1 where id = $2 returning *;`, [
@@ -174,7 +142,7 @@ export async function createChannelRecord(channel, channelType) {
     })
 }
 
-export async function updateChannelRecord(channel, channelType, commandLevel) {
+export async function updateChannelRecord(channel, channelType) {
   return await pgPool
     .query(
       SQL`
@@ -183,7 +151,6 @@ export async function updateChannelRecord(channel, channelType, commandLevel) {
           name = ${channel.name},
           category_id = ${channel.parentId},
           channel_type = ${channelType},
-          command_level = ${commandLevel},
           position = ${channel.position}
         where id = ${channel.id}
         returning *;

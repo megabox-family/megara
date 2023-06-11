@@ -8,11 +8,7 @@ import {
   Collection,
 } from 'discord.js'
 import { getBot } from '../cache-bot.js'
-import {
-  getIndividualPermissionSets,
-  comparePermissions,
-} from '../utils/general.js'
-import { requiredRoleDifference } from './roles.js'
+import { comparePermissions } from '../utils/general.js'
 import {
   getAdminChannel,
   getFunctionChannels,
@@ -70,48 +66,6 @@ export function pushToChannelSortingQueue(GuildId) {
 
     if (channelSortingQueue.length === 1) emptyChannelSortingQueue()
   }
-}
-
-export function checkType(channel) {
-  switch (channel.type) {
-    case ChannelType.GuildCategory:
-      return `category`
-    case ChannelType.GuildVoice:
-      return `voice`
-    case ChannelType.GuildStageVoice:
-      return `voice`
-    case ChannelType.PublicThread:
-      return `public thread`
-    case ChannelType.PrivateThread:
-      return `private thread`
-  }
-
-  const roles = channel.guild.roles.cache,
-    permissions = channel.permissionOverwrites.cache.map(
-      role => roles.get(role.id)?.name
-    )
-
-  if (permissions.includes(`!channel type: archived`)) return `archived`
-  else if (permissions.includes(`!channel type: hidden`)) return `hidden`
-  else if (permissions.includes(`!channel type: joinable`)) return `joinable`
-  else if (permissions.includes(`!channel type: public`)) return `public`
-  else return `private`
-}
-
-export function getCommandLevel(channel) {
-  const roles = channel.guild.roles.cache,
-    channelPermissionOverwrites = channel.permissionOverwrites.cache,
-    alphaPermissions = channelPermissionOverwrites.map(
-      role => roles.get(role.id)?.name
-    )
-
-  if (alphaPermissions.includes(`!command level: admin`)) return `admin`
-  else if (alphaPermissions.includes(`!command level: unrestricted`))
-    return `unrestricted`
-  else if (alphaPermissions.includes(`!command level: cinema`)) return `cinema`
-  else if (alphaPermissions.includes(`!command level: restricted`))
-    return `restricted`
-  else return `prohibited`
 }
 
 export function getPositionOverride(channel) {
@@ -268,19 +222,35 @@ export async function sortChannels(guildId) {
   }
 }
 
-export function checkIfChannelIsThread(channel) {
+export function checkType(channel) {
   const channelTypeKeys = Object.keys(ChannelType).filter(
-      channelType => !isPositiveNumber(channelType)
+      channelTypeKey => !isPositiveNumber(channelTypeKey)
     ),
-    channelType = channel.type
+    alphaChannelType = channelTypeKeys.find(
+      channelTypeKey => ChannelType[channelTypeKey] === channel.type
+    )
 
-  console.log(channelType)
+  return alphaChannelType
+}
+
+export function checkIfChannelTypeIsThread(channelType) {
+  const channelTypeKeys = Object.keys(ChannelType).filter(
+      channelTypeKey => !isPositiveNumber(channelTypeKey)
+    ),
+    theadChannelTypes = channelTypeKeys.filter(channelTypeKey =>
+      channelTypeKey.match(`Thread`)
+    )
+
+  if (theadChannelTypes.includes(channelType)) return true
+
+  return false
 }
 
 export async function createChannel(channel, skipAnnouncementAndSort = false) {
-  const channelType = checkType(channel)
+  const channelType = checkType(channel),
+    channelIsThread = checkIfChannelTypeIsThread(channel)
 
-  if ([`public thread`, `private thread`].includes(channelType)) return
+  if (channelIsThread) return
 
   await createChannelRecord(channel, channelType)
 
@@ -300,52 +270,33 @@ export async function modifyChannel(
   skipAnnouncementAndSort = false
 ) {
   const oldChannelType = oldChannel.hasOwnProperty(`channelType`)
-    ? oldChannel.channelType
-    : checkType(oldChannel)
+      ? oldChannel.channelType
+      : checkType(oldChannel),
+    channelIsThread = checkIfChannelTypeIsThread(oldChannelType)
 
-  if ([`public thread`, `private thread`].includes(oldChannelType)) return
+  if (channelIsThread) return
 
-  //queue stuffs
-  if (oldChannel?.permissionOverwrites) {
-    const requiredRole = requiredRoleDifference(
-      newChannel.guild,
-      oldChannel.permissionOverwrites.cache.map(
-        permissionOverwrite => permissionOverwrite.id
-      ),
-      newChannel.permissionOverwrites.cache.map(
-        permissionOverwrite => permissionOverwrite.id
-      )
-    )
-  }
-
-  //other stuffs
   const oldCatergoryId = oldChannel.hasOwnProperty(`categoryId`)
       ? oldChannel.categoryId
       : oldChannel.parentId,
-    oldCommandLevel = oldChannel.hasOwnProperty(`commandLevel`)
-      ? oldChannel.commandLevel
-      : getCommandLevel(oldChannel),
-    newChannelType = checkType(newChannel),
-    newCommandLevel = getCommandLevel(newChannel)
+    newChannelType = checkType(newChannel)
 
   if (
     oldChannel.name !== newChannel.name ||
     oldCatergoryId !== newChannel.parentId ||
     oldChannelType !== newChannelType ||
-    oldCommandLevel !== newCommandLevel ||
     oldChannel.position !== newChannel.position ||
     (oldChannel?.rawPosition &&
       oldChannel.rawPosition !== newChannel.rawPosition)
   ) {
-    await updateChannelRecord(newChannel, newChannelType, newCommandLevel)
+    await updateChannelRecord(newChannel, newChannelType)
 
     if (skipAnnouncementAndSort) {
       if (oldChannelType !== newChannelType) return newChannel.id
     } else {
       if (
         !channelSortingQueue.includes(newChannel.guild.id) &&
-        (oldPositionOverride !== newPositionOverride ||
-          oldChannel.position !== newChannel.position ||
+        (oldChannel.position !== newChannel.position ||
           (oldChannel?.rawPosition &&
             oldChannel.rawPosition !== newChannel.rawPosition) ||
           oldChannel.name !== newChannel.name)
@@ -409,8 +360,6 @@ export async function deleteChannel(channel, skipSort = false) {
   })
 
   await deleteChannelRecord(channelId)
-
-  // if (!skipSort) pushToChannelSortingQueue(guild.id) //I'm not sure why this is needed
 }
 
 export async function syncChannels(guild) {
@@ -471,13 +420,15 @@ export async function syncChannels(guild) {
   if (positionHasChanged) pushToChannelSortingQueue(guild.id)
 
   if (channelsToAnnounce.length >= 5) {
-    const adminChannelId = await getAdminChannel(guild.id)
+    const adminChannelId = await getAdminChannel(guild.id),
+      adminChannel = guild.channels.cache.get(adminChannelId)
 
-    if (!adminChannelId)
-      guild.channels.cache.get(adminChannelId)?.send(
-        `Potential oopsie detected. More than five channels were marked for announcement:
-          ${channelsToAnnounce.join(', ')}`
-      )
+    await queueApiCall({
+      apiCall: `send`,
+      djsObject: adminChannel,
+      parameters: `Potential oopsie detected. More than five channels were marked for announcement:
+      ${channelsToAnnounce.join(', ')}`,
+    })
   } else {
     channelsToAnnounce.forEach(channelToAnnounce => {
       announceNewChannel(channelToAnnounce)
