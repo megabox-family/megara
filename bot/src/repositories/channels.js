@@ -102,10 +102,12 @@ export async function getChannelsGuildById(channelId) {
 }
 
 export async function createChannelRecord(channel, channelType) {
+  const position_override = checkIfChannelIsGeneralRoom()
+
   return await pgPool
     .query(
       SQL`
-        insert into channels (id, name, guild_id, category_id, channel_type, position)
+        insert into channels (id, name, guild_id, category_id, channel_type, position_override, position)
         values(${channel.id}, ${channel.name}, ${channel.guild.id}, ${channel.parentId}, ${channelType}, ${channel.rawPosition});
       `
     )
