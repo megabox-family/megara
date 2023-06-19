@@ -4,7 +4,6 @@ import {
   ButtonBuilder,
   ButtonStyle,
   OverwriteType,
-  PermissionsBitField,
   Collection,
 } from 'discord.js'
 import { getBot } from '../cache-bot.js'
@@ -34,6 +33,7 @@ import {
   getRoomChannelId,
   getUnverifiedRoomChannelId,
   getCategoryName,
+  getPositionOverride,
 } from '../repositories/channels.js'
 import { getChannelBasename } from './voice.js'
 import { queueApiCall } from '../api-queue.js'
@@ -60,27 +60,12 @@ async function emptyChannelSortingQueue() {
   emptyChannelSortingQueue()
 }
 
-export function pushToChannelSortingQueue(GuildId) {
-  if (!channelSortingQueue.includes(GuildId)) {
-    channelSortingQueue.push(GuildId)
+export function pushToChannelSortingQueue(guildId) {
+  if (!channelSortingQueue.includes(guildId)) {
+    channelSortingQueue.push(guildId)
 
     if (channelSortingQueue.length === 1) emptyChannelSortingQueue()
   }
-}
-
-export function getPositionOverride(channel) {
-  const roles = channel.guild.roles.cache,
-    channelPermissionOverwrites = channel.permissionOverwrites.cache,
-    alphaPermissions = channelPermissionOverwrites.map(
-      role => roles.get(role.id)?.name
-    )
-
-  const positionOverride = alphaPermissions.find(alphaPermission => {
-    if (alphaPermission)
-      return alphaPermission.match(`(?!!)position override(?=:)`)
-  })
-
-  return positionOverride ? +positionOverride.match(`-?[0-9]+`)[0] : null
 }
 
 export async function sortChannels(guildId) {
@@ -95,106 +80,112 @@ export async function sortChannels(guildId) {
     ),
     alphabeticalCategories = await getAlphabeticalCategories(guildId),
     alphabeticalBuckets = [alphabeticalCategories],
-    finalChannelArr = []
-
-  await Promise.all(
-    alphabeticalCategories.map(async category =>
+    finalChannelArr = [],
+    createAlphabeticalBucket = alphabeticalCategories.map(async category =>
       alphabeticalBuckets.push(
         await getAlphabeticalChannelsByCategory(category.id)
       )
     )
+
+  await Promise.all(createAlphabeticalBucket)
+
+  const createFinalChannelArr = alphabeticalBuckets.map(
+    async alphabeticalBucket => {
+      const channelsWithPositionOverrides = {},
+        orderedChannels = [],
+        channelsWithPositiveOverrides = [],
+        channelsWithNegativeOverrides = [],
+        voiceChannelsWithPositionOverrides = {},
+        orderedVoiceChannels = [],
+        voiceChannelsWithPositiveOverrides = [],
+        voiceChannelsWithNegativeOverrides = [],
+        createPositionOverrideArrays = alphabeticalBucket.map(async channel => {
+          const positionOverride = await getPositionOverride(channel.id)
+
+          if (positionOverride) {
+            if (channel.channelType === `GuildVoice`)
+              voiceChannelsWithPositionOverrides[channel.id] = positionOverride
+            else channelsWithPositionOverrides[channel.id] = positionOverride
+          }
+        })
+
+      await Promise.all(createPositionOverrideArrays)
+
+      alphabeticalBucket.forEach(channel => {
+        if (channelsWithPositionOverrides.hasOwnProperty(channel.id)) {
+          if (channelsWithPositionOverrides[channel.id] > 0)
+            channelsWithPositiveOverrides.push({
+              id: channel.id,
+              positionOverride: channelsWithPositionOverrides[channel.id],
+            })
+          else
+            channelsWithNegativeOverrides.push({
+              id: channel.id,
+              positionOverride: channelsWithPositionOverrides[channel.id],
+            })
+        } else if (
+          voiceChannelsWithPositionOverrides.hasOwnProperty(channel.id)
+        ) {
+          if (voiceChannelsWithPositionOverrides[channel.id] > 0)
+            voiceChannelsWithPositiveOverrides.push({
+              id: channel.id,
+              positionOverride: voiceChannelsWithPositionOverrides[channel.id],
+            })
+          else
+            voiceChannelsWithNegativeOverrides.push({
+              id: channel.id,
+              positionOverride: voiceChannelsWithPositionOverrides[channel.id],
+            })
+        } else if (channel.channelType === `GuildVoice`)
+          orderedVoiceChannels.push(channel.id)
+        else orderedChannels.push(channel.id)
+      })
+
+      channelsWithPositiveOverrides.sort((a, b) =>
+        a.positionOverride > b.positionOverride ? -1 : 1
+      )
+
+      channelsWithNegativeOverrides.sort((a, b) =>
+        a.positionOverride < b.positionOverride ? -1 : 1
+      )
+
+      channelsWithPositiveOverrides.forEach(categoriesWithPositiveOverride =>
+        orderedChannels.unshift(categoriesWithPositiveOverride.id)
+      )
+
+      channelsWithNegativeOverrides.forEach(categoriesWithNegativeOverride =>
+        orderedChannels.push(categoriesWithNegativeOverride.id)
+      )
+
+      voiceChannelsWithPositiveOverrides.sort((a, b) =>
+        a.positionOverride > b.positionOverride ? -1 : 1
+      )
+
+      voiceChannelsWithNegativeOverrides.sort((a, b) =>
+        a.positionOverride < b.positionOverride ? -1 : 1
+      )
+
+      voiceChannelsWithPositiveOverrides.forEach(
+        categoriesWithPositiveOverride =>
+          orderedVoiceChannels.unshift(categoriesWithPositiveOverride.id)
+      )
+
+      voiceChannelsWithNegativeOverrides.forEach(
+        categoriesWithNegativeOverride =>
+          orderedVoiceChannels.push(categoriesWithNegativeOverride.id)
+      )
+
+      orderedChannels.forEach((channelId, index) =>
+        finalChannelArr.push({ channel: channelId, position: index })
+      )
+
+      orderedVoiceChannels.forEach((channelId, index) =>
+        finalChannelArr.push({ channel: channelId, position: index })
+      )
+    }
   )
 
-  alphabeticalBuckets.forEach(alphabeticalBucket => {
-    const channelsWithPositionOverrides = {},
-      orderedChannels = [],
-      channelsWithPositiveOverrides = [],
-      channelsWithNegativeOverrides = [],
-      voiceChannelsWithPositionOverrides = {},
-      orderedVoiceChannels = [],
-      voiceChannelsWithPositiveOverrides = [],
-      voiceChannelsWithNegativeOverrides = []
-
-    channels.forEach(channel => {
-      const positionOverride = getPositionOverride(channel)
-
-      if (positionOverride) {
-        if (channel.type === ChannelType.GuildVoice)
-          voiceChannelsWithPositionOverrides[channel.id] = positionOverride
-        else channelsWithPositionOverrides[channel.id] = positionOverride
-      }
-    })
-
-    alphabeticalBucket.forEach(channel => {
-      if (channelsWithPositionOverrides.hasOwnProperty(channel.id)) {
-        if (channelsWithPositionOverrides[channel.id] > 0)
-          channelsWithPositiveOverrides.push({
-            id: channel.id,
-            positionOverride: channelsWithPositionOverrides[channel.id],
-          })
-        else
-          channelsWithNegativeOverrides.push({
-            id: channel.id,
-            positionOverride: channelsWithPositionOverrides[channel.id],
-          })
-      } else if (
-        voiceChannelsWithPositionOverrides.hasOwnProperty(channel.id)
-      ) {
-        if (voiceChannelsWithPositionOverrides[channel.id] > 0)
-          voiceChannelsWithPositiveOverrides.push({
-            id: channel.id,
-            positionOverride: voiceChannelsWithPositionOverrides[channel.id],
-          })
-        else
-          voiceChannelsWithNegativeOverrides.push({
-            id: channel.id,
-            positionOverride: voiceChannelsWithPositionOverrides[channel.id],
-          })
-      } else if (channel.channelType === `voice`)
-        orderedVoiceChannels.push(channel.id)
-      else orderedChannels.push(channel.id)
-    })
-
-    channelsWithPositiveOverrides.sort((a, b) =>
-      a.positionOverride > b.positionOverride ? -1 : 1
-    )
-
-    channelsWithNegativeOverrides.sort((a, b) =>
-      a.positionOverride < b.positionOverride ? -1 : 1
-    )
-
-    channelsWithPositiveOverrides.forEach(categoriesWithPositiveOverride =>
-      orderedChannels.unshift(categoriesWithPositiveOverride.id)
-    )
-
-    channelsWithNegativeOverrides.forEach(categoriesWithNegativeOverride =>
-      orderedChannels.push(categoriesWithNegativeOverride.id)
-    )
-
-    voiceChannelsWithPositiveOverrides.sort((a, b) =>
-      a.positionOverride > b.positionOverride ? -1 : 1
-    )
-
-    voiceChannelsWithNegativeOverrides.sort((a, b) =>
-      a.positionOverride < b.positionOverride ? -1 : 1
-    )
-
-    voiceChannelsWithPositiveOverrides.forEach(categoriesWithPositiveOverride =>
-      orderedVoiceChannels.unshift(categoriesWithPositiveOverride.id)
-    )
-
-    voiceChannelsWithNegativeOverrides.forEach(categoriesWithNegativeOverride =>
-      orderedVoiceChannels.push(categoriesWithNegativeOverride.id)
-    )
-
-    orderedChannels.forEach((channelId, index) =>
-      finalChannelArr.push({ channel: channelId, position: index })
-    )
-
-    orderedVoiceChannels.forEach((channelId, index) =>
-      finalChannelArr.push({ channel: channelId, position: index })
-    )
-  })
+  await Promise.all(createFinalChannelArr)
 
   const currentChannelPosition = finalChannelArr.map(channel => {
     const _channel = channels.get(channel.channel)
@@ -204,7 +195,7 @@ export async function sortChannels(guildId) {
         `This channel is deleted but we're trying to sort it: ${channel.channel}`
       )
 
-    return { channel: _channel?.id, position: _channel?.position }
+    return { channel: _channel?.id, position: _channel?.rawPosition }
   })
 
   console.log(`tried sorting channels`)

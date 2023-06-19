@@ -1,5 +1,7 @@
 import { ApplicationCommandOptionType, ChannelType } from 'discord.js'
 import { queueApiCall } from '../api-queue.js'
+import { setPositionOverride } from '../repositories/channels.js'
+import { pushToChannelSortingQueue } from '../utils/channels.js'
 
 const {
   AnnouncementThread,
@@ -33,7 +35,7 @@ export const description = `Allows you to override the sort position of channel 
     },
     {
       name: `position-override`,
-      description: `Positive numbers override position from the top, negative from the bottom.`,
+      description: `Positive numbers override position from the top, negative from the bottom (input 0 to clear).`,
       type: ApplicationCommandOptionType.Integer,
       required: true,
     },
@@ -48,7 +50,20 @@ export default async function (interaction) {
 
   const { guild, options } = interaction,
     channel = options.getChannel(`channel`),
-    positionOverride = options.getInteger(`position-override`)
+    { id } = channel,
+    positionOverride = options.getInteger(`position-override`),
+    _positionOverride = positionOverride === 0 ? null : positionOverride,
+    message = _positionOverride
+      ? `**${channel}**'s position override has been set to ${positionOverride} 👍`
+      : `**${channel}**'s position override has been removed 🧼`
 
-  console.log(channel, positionOverride)
+  await setPositionOverride(id, _positionOverride)
+
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: message,
+  })
+
+  pushToChannelSortingQueue(guild.id)
 }

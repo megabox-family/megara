@@ -10,11 +10,7 @@ import { directMessageError } from './error-logging.js'
 import { slashCommands, contextCommands } from './general.js'
 import { getListRoles } from './roles.js'
 import { getActiveWorld } from '../repositories/guilds.js'
-import {
-  getJoinableChannelList,
-  getPublicChannelList,
-  getArchivedChannelList,
-} from '../repositories/channels.js'
+import { getPositionOverrides } from '../repositories/channels.js'
 import {
   getWorldName,
   getWorldGroups,
@@ -210,6 +206,9 @@ export async function getPages(recordsPerPage, groupBy, guild, filters) {
   let query, activeWorldName
 
   switch (groupBy) {
+    case `position-overrides`:
+      query = await getPositionOverrides(guild.id)
+      break
     case `coordinates-world`:
       query = await getCoordinatesByWorld(guild.id, filters)
       break
@@ -226,21 +225,6 @@ export async function getPages(recordsPerPage, groupBy, guild, filters) {
       query = await getWorldGroups(guild.id, filters)
       const activeWorldId = await getActiveWorld(guild.id)
       activeWorldName = await getWorldName(activeWorldId)
-      break
-    case `roles-color`:
-      query = getListRoles(guild, `colors`)
-      break
-    case `roles-notifications`:
-      query = getListRoles(guild, `notifications`)
-      break
-    case `channels-joinable`:
-      query = await getJoinableChannelList(guild.id)
-      break
-    case `channels-public`:
-      query = await getPublicChannelList(guild.id)
-      break
-    case `channels-archived`:
-      query = await getArchivedChannelList(guild.id)
       break
   }
 

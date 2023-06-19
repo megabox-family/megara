@@ -26,19 +26,12 @@ create table guilds (
 --channels
 drop table if exists channels;
 
-drop type if exists channel_type;
-drop type if exists command_level;
-
-create type channel_type as enum('archived', 'category', 'hidden', 'joinable', 'private', 'public', 'voice');
-create type command_level as enum('admin', 'unrestricted', 'cinema', 'restricted', 'prohibited');
-
 create table channels (
   id text not null primary key,
   name text not null,
   guild_id text not null,
   category_id text, 
-  channel_type channel_type,
-  command_level command_level,
+  channel_type text not null,
   position_override integer,
   position integer,
   active_voice_channel_id text

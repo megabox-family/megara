@@ -1,11 +1,11 @@
 import { ApplicationCommandOptionType } from 'discord.js'
 import {
   defaultRecordsPerPage,
-  getPages,
   generateListMessage,
+  getPages,
 } from '../utils/slash-commands.js'
-import { createList } from '../repositories/lists.js'
 import { queueApiCall } from '../api-queue.js'
+import { createList } from '../repositories/lists.js'
 
 export const description = `Shows you all the Minecraft worlds within this Discord server.`
 export const dmPermission = false,
@@ -31,22 +31,21 @@ export default async function (interaction) {
   const { guild, options } = interaction,
     _recordsPerPage = options.getInteger(`records-per-page`),
     recordsPerPage = _recordsPerPage ? _recordsPerPage : defaultRecordsPerPage,
-    group = `worlds-world`,
+    group = `position-overrides`,
     pages = await getPages(recordsPerPage, group, guild)
 
   if (pages.length === 0) {
     await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,
-      parameters: `There are no Minecraft worlds in **${guild.name}** to list 🤔`,
+      parameters: `No position overrides have been set 🤔`,
     })
 
     return
   }
 
-  const title = `micecraft worlds`
-
-  const messageContents = await generateListMessage(pages, title)
+  const title = `position overrides`,
+    messageContents = await generateListMessage(pages, title)
 
   const message = await queueApiCall({
     apiCall: `editReply`,

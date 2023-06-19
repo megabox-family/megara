@@ -40,16 +40,6 @@ export async function getChannelId(channelName, guildId) {
     .then(res => (res.rows[0] ? res.rows[0].id : undefined))
 }
 
-export async function getJoinableChannels() {
-  return await pgPool
-    .query(
-      `select c1.id, c2.name as category_name, c1.name from channels c1
-    join channels c2 on c1.category_id = c2.id and c2.channel_type = 'category'
-    where c1.channel_type = 'joinable';`
-    )
-    .then(res => camelize(res.rows))
-}
-
 export async function updateChannelMessageId(channelId, messageId) {
   return await pgPool
     .query(`update channels set message_id = $1 where id = $2 returning *;`, [
@@ -80,24 +70,6 @@ export async function removeActiveVoiceChannelId(voiceChannelId) {
     `update channels set active_voice_channel_id = null where active_voice_channel_id = $1;`,
     [voiceChannelId]
   )
-}
-
-export async function channelWithVoiceChannelIsJoinable(voiceChannelId) {
-  return await pgPool
-    .query(
-      `select id from channels where active_voice_channel_id = $1 and channel_type = 'joinable';`,
-      [voiceChannelId]
-    )
-    .then(res => !!res.rows[0])
-}
-
-export async function channelIsJoinable(channelId) {
-  return await pgPool
-    .query(
-      `select id from channels where id = $1 and channel_type = 'joinable';`,
-      [channelId]
-    )
-    .then(res => !!res.rows[0])
 }
 
 export async function channelHasActiveVoiceChannel(channelId) {
@@ -134,7 +106,7 @@ export async function createChannelRecord(channel, channelType) {
     .query(
       SQL`
         insert into channels (id, name, guild_id, category_id, channel_type, position)
-        values(${channel.id}, ${channel.name}, ${channel.guild.id}, ${channel.parentId}, ${channelType}, ${channel.position});
+        values(${channel.id}, ${channel.name}, ${channel.guild.id}, ${channel.parentId}, ${channelType}, ${channel.rawPosition});
       `
     )
     .catch(error => {
@@ -151,7 +123,7 @@ export async function updateChannelRecord(channel, channelType) {
           name = ${channel.name},
           category_id = ${channel.parentId},
           channel_type = ${channelType},
-          position = ${channel.position}
+          position = ${channel.rawPosition}
         where id = ${channel.id}
         returning *;
       `
@@ -223,9 +195,11 @@ export async function getAlphabeticalCategories(guildId) {
   return await pgPool
     .query(
       SQL`
-        select id
+        select 
+          id,
+          channel_type
         from channels 
-        where channel_type = 'category' and 
+        where category_id is null and 
           guild_id = ${guildId} 
         order by name
       `
@@ -246,79 +220,6 @@ export async function getAlphabeticalChannelsByCategory(categoryId) {
       `
     )
     .then(res => camelize(res.rows))
-}
-
-export async function getJoinableChannelList(guildId) {
-  const query = await pgPool
-    .query(
-      SQL`
-      select
-        categories.name as group,
-        concat('#', channels.name, ' (', channels.id, ')') as values
-      from channels as categories, channels as channels
-      where categories.id = channels.category_id and
-        channels.channel_type = 'joinable' and
-        categories.guild_id = ${guildId}
-      order by categories.position, categories.id, channels.position;
-    `
-    )
-    .then(res => camelize(res.rows))
-
-  query.forEach(
-    (record, index) => (record.values = `${index + 1}. ${record.values}`)
-  )
-
-  return query
-}
-
-export async function getArchivedChannelList(guildId) {
-  const query = await pgPool
-    .query(
-      SQL`
-        select
-          categories.name as group,
-          concat('#', channels.name, ' (', channels.id, ')') as values
-        from channels as categories, channels as channels
-        where categories.id = channels.category_id and
-          channels.channel_type = 'archived' and
-          categories.guild_id = ${guildId}
-        order by categories.position, categories.id, channels.position;
-      `
-    )
-    .then(res => camelize(res.rows))
-
-  query.forEach(
-    (record, index) => (record.values = `${index + 1}. ${record.values}`)
-  )
-
-  return query
-}
-
-export async function getPublicChannelList(guildId) {
-  const _welcomeChannelId = await getWelcomeChannel(guildId),
-    welcomeChannelId = _welcomeChannelId ? _welcomeChannelId : ``,
-    query = await pgPool
-      .query(
-        SQL`
-        select
-          categories.name as group,
-          concat('#', channels.name, ' (', channels.id, ')') as values
-        from channels as categories, channels as channels
-        where categories.id = channels.category_id and
-          channels.channel_type = 'public' and
-          channels.name not like 'room%' and
-          categories.guild_id = ${guildId} and
-          channels.id != ${welcomeChannelId}
-        order by categories.position, categories.id, channels.position;
-      `
-      )
-      .then(res => camelize(res.rows))
-
-  query.forEach(
-    (record, index) => (record.values = `${index + 1}. ${record.values}`)
-  )
-
-  return query
 }
 
 export async function getPublicChannels(guildId) {
@@ -443,7 +344,7 @@ export async function getPositionOverride(channelId) {
         where id = ${channelId}
       `
     )
-    .then(res => (res.rows[0] ? res.rows[0].id : undefined))
+    .then(res => (res.rows[0] ? res.rows[0].position_override : undefined))
 }
 
 export async function setPositionOverride(channelId, positionOverride) {
@@ -463,4 +364,47 @@ export async function setPositionOverride(channelId, positionOverride) {
     })
 }
 
-// 981719152106545232
+export async function getPositionOverrides(guildId) {
+  let query = await pgPool
+    .query(
+      SQL`
+        select 
+
+        case
+          when categories.position_override is null then 0
+          when categories.position_override < 0 then categories.position_override * -1 + 10000
+          else categories.position_override 
+        end as "cateogrySort",
+        categories.name as "categoryName",
+        case
+          when categories.name is null then 'aaaaaaaa'
+          else concat('<#', categories.id, '>')
+        end as "group",
+        case
+          when channels.position_override is null then 0
+          when channels.position_override < 0 then categories.position_override * -1 + 10000
+          else channels.position_override
+        end as "channelSort",
+        channels.name as "channelName",
+        concat('<#', channels.id, '>: ', cast(channels.position_override as varchar)) as "values"
+        from channels
+        left join channels as categories
+          on channels.category_id = categories.id
+        where channels.guild_id = ${guildId} and
+          channels.position_override is not null
+        order by "cateogrySort", "categoryName", "channelSort", "channelName"
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+
+  query = query.map(record => {
+    if (record.group === `aaaaaaaa`) record.group = `*no category*`
+
+    return record
+  })
+
+  return query
+}
