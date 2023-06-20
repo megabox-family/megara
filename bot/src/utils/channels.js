@@ -228,11 +228,15 @@ export function checkIfChannelTypeIsThread(channelType) {
   const channelTypeKeys = Object.keys(ChannelType).filter(
       channelTypeKey => !isPositiveNumber(channelTypeKey)
     ),
-    theadChannelTypes = channelTypeKeys.filter(channelTypeKey =>
+    alphaThreadChannelTypes = channelTypeKeys.filter(channelTypeKey =>
       channelTypeKey.match(`Thread`)
-    )
+    ),
+    threadChannelTypes = alphaThreadChannelTypes.map(alphaThreadChannelType => ChannelType[alphaThreadChannelType])
 
-  if (theadChannelTypes.includes(channelType)) return true
+    
+  if(threadChannelTypes.includes(channelType)) return true
+  else if (alphaThreadChannelTypes.includes(channelType)) return true
+  
 
   return false
 }

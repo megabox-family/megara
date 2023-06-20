@@ -594,3 +594,63 @@ export async function getServerSubscriptionButtonText(guildId) {
       res.rows[0] ? res.rows[0].server_subscription_button_text : undefined
     )
 }
+
+export async function getActiveVoiceCategoryId(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          active_voice_category_id 
+        from guilds 
+        where id = ${guildId}
+      `
+    )
+    .then(res => res.rows[0]?.active_voice_category_id)
+    .catch(error => console.log(`query error: \n${error}`))
+}
+
+export async function getInactiveVoiceCategoryId(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          inactive_voice_category_id 
+        from guilds 
+        where id = ${guildId}
+      `
+    )
+    .then(res => res.rows[0]?.inactive_voice_category_id)
+    .catch(error => console.log(`query error: \n${error}`))
+}
+
+export async function setActiveVoiceCategoryId(guildId, categoryId) {
+  return await pgPool
+    .query(
+      SQL`
+        update guilds
+        set
+          active_voice_category_id = ${categoryId}
+        where id = ${guildId}
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function setInactiveVoiceCategoryId(guildId, categoryId) {
+  return await pgPool
+    .query(
+      SQL`
+        update guilds
+        set
+          inactive_voice_category_id = ${categoryId}
+        where id = ${guildId}
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}

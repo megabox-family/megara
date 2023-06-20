@@ -19,7 +19,13 @@ create table guilds (
   verification_channel text,
   welcome_channel text,
   active_world text,
-  vip_role text
+  vip_role text,
+  pause_channel_notifications boolean not null,
+  vip_assign_message text,
+  vip_remove_message text,
+  server_subscription_button_text text,
+  active_voice_category_id text,
+  inactive_voice_category_id text
 );
 
 
@@ -141,4 +147,10 @@ drop table if exists movie_invites;
 create table movie_invites (
   id text not null primary key,
   last_updated bigint not null
+);
+
+drop table if exists voice;
+
+create table voice (
+
 );

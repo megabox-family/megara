@@ -1,5 +1,5 @@
 import { ApplicationCommandOptionType, ChannelType } from 'discord.js'
-import { checkType } from '../utils/channels.js'
+import { checkIfChannelTypeIsThread, checkType } from '../utils/channels.js'
 import {
   checkIfRoomOrTextChannel,
   createVoiceChannel,
@@ -9,8 +9,12 @@ import {
 } from '../utils/voice.js'
 import { getDynamicVoiceRecordById } from '../repositories/voice.js'
 import { queueApiCall } from '../api-queue.js'
+import {
+  getActiveVoiceCategoryId,
+  setActiveVoiceCategoryId,
+} from '../repositories/guilds.js'
 
-export const description = `Opens a voice channel in relation to the current text channel.`
+export const description = `Creates a new voice channel with variable functionality.`
 export const dmPermission = false,
   defaultMemberPermissions = `0`,
   options = [
@@ -22,7 +26,19 @@ export const dmPermission = false,
     },
     {
       name: `dynamic`,
-      description: `Choose if the voice channel dynamically expands so there's always an open channel (default true).`,
+      description: `Choose if the voice channel dynamically expands (default true if channel, false if thread).`,
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
+    {
+      name: `temporary`,
+      description: `Channel will delete itself after the last person leaves (default false if channel, true if thread).`,
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
+    {
+      name: `disable-chat`,
+      description: `If true chat linked to voice channel is disabled (default false if channel, true if thread).`,
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
@@ -38,22 +54,59 @@ export const dmPermission = false,
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
+    {
+      name: `ephemeral`,
+      description: `If true only you will see the reply to this command (default true if channel, false if thread).`,
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
   ]
 
 export default async function (interaction) {
-  await queueApiCall({
-    apiCall: `deferReply`,
-    djsObject: interaction,
-    parameters: { ephemeral: true },
-  })
+  const { guild, channel, member, options } = interaction,
+    { id: guildId, name: guildName, channels } = guild
 
-  const { guild, channel, options } = interaction,
-    { name: channelName, id: channelId } = channel
+  const activeVoiceCategoryId = await getActiveVoiceCategoryId(guildId)
+
+  if (!activeVoiceCategoryId) {
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: {
+        content: `There is currently no active voice category set in **${guildName}**, please set this before using \`/voice\` 🤔`,
+        ephemeral: true,
+      },
+    })
+
+    return
+  }
+
+  const activeVoiceCategory = channels.cache.get(activeVoiceCategoryId)
+
+  if (!activeVoiceCategory) {
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: {
+        content: `The category previously set as the active voice category no longer exists, please set this before using \`/voice\` 🤔`,
+        ephemeral: true,
+      },
+    })
+
+    await setActiveVoiceCategoryId(guildId, null)
+
+    return
+  }
+
+  const { name: channelName, id: channelId, type: channelType } = channel
 
   let name = options.getString(`name`),
     dynamic = options.getBoolean(`dynamic`),
+    temporary = options.getBoolean(`temporary`),
+    disableChat = options.getBoolean(`disable-chat`),
     alwaysActive = options.getBoolean(`always-active`),
-    isPrivate = options.getBoolean(`private`)
+    isPrivate = options.getBoolean(`private`),
+    ephemeral = options.getBoolean(`ephemeral`)
 
   if (!name) {
     const dynamicVoiceRecord = await getDynamicVoiceRecordById(channelId)
@@ -73,43 +126,52 @@ export default async function (interaction) {
     }
   }
 
-  const parentChannel = name ? null : channel
+  const parentChannel = name ? null : channel,
+    channelIsThread = parentChannel
+      ? checkIfChannelTypeIsThread(channelType)
+      : false,
+    parentTextChannel = channelIsThread
+      ? channels.cache.get(parentChannel.parentId)
+      : parentChannel,
+    parentThread = channelIsThread ? parentChannel : null
 
   name = name ? name : channelName
-  dynamic = dynamic ? dynamic : true
+
+  if (channelIsThread) {
+    if (dynamic === undefined) dynamic = false
+    if (temporary === undefined) temporary = true
+    if (disableChat === undefined) disableChat = true
+    if (ephemeral === undefined) ephemeral = false
+  } else if (!channelIsThread) {
+    if (dynamic === undefined) dynamic = true
+    if (temporary === undefined) temporary = false
+    if (disableChat === undefined) disableChat = false
+    if (ephemeral === undefined) ephemeral = true
+  }
+
   alwaysActive = alwaysActive ? alwaysActive : false
   isPrivate = isPrivate ? isPrivate : false
 
-  // if(parentChannel ===) //check if thread, can't be dynamic
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: ephemeral },
+  })
 
-  const channelType = checkType(channel),
-    isEphemeral = channelType === `public thread` ? false : true
+  const voiceChannel = await createVoiceChannel(
+    name,
+    dynamic,
+    alwaysActive,
+    isPrivate,
+    guild,
+    parentTextChannel,
+    parentThread,
+    member
+  )
 
-  await interaction.deferReply({ ephemeral: isEphemeral })
+  console.log(voiceChannel)
 
-  if ([`archived`, `hidden`, `voice`, `private thread`].includes(channelType)) {
-    await interaction.editReply({
-      content: `Sorry, this command cannot be used in private threads and some other channel types 😔`,
-    })
-
-    return
-  }
-
-  let voiceChannelName
-
-  switch (channel.name) {
-    case `rooms`:
-      voiceChannelName = `room-1`
-      break
-    case `unverified-rooms`:
-      voiceChannelName = `unverified-room-1`
-      break
-    default:
-      if (channelType === `public thread`) voiceChannelName = `${channel.name}`
-      else voiceChannelName = `${channel.name}-1`
-  }
-
-  const voiceChannel = await createVoiceChannel(channel, voiceChannelName)
+  return
 
   if (!voiceChannel) {
     let voiceChannel = guild.channels.cache.find(

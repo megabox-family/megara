@@ -47,6 +47,16 @@ export default async function (interaction) {
     oldChannelId = functionChannels?.[`${channelFunction}Channel`],
     oldChannel = channels.cache.get(oldChannelId)
 
+  if (!oldChannelId) {
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `There is no channel set for the ${channelFunction} function 🤔`,
+    })
+
+    return
+  }
+
   if (!oldChannel) {
     await queueApiCall({
       apiCall: `editReply`,

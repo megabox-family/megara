@@ -6,7 +6,11 @@ import {
   OverwriteType,
 } from 'discord.js'
 import { directMessageError } from '../utils/error-logging.js'
-import { addMemberToChannel, removeMemberFromChannel } from './channels.js'
+import {
+  addMemberToChannel,
+  checkIfMemberIsPermissible,
+  removeMemberFromChannel,
+} from './channels.js'
 import {
   getThreadByName,
   unarchiveThread,
@@ -19,6 +23,7 @@ import {
   getChannelType,
 } from '../repositories/channels.js'
 import { getBot } from '../cache-bot.js'
+import { setActiveVoiceCategoryId } from '../repositories/guilds.js'
 
 const voiceDeleteCounters = {}
 
@@ -299,62 +304,43 @@ export async function deleteDynamicVoiceChannel(
   }
 }
 
-export async function createVoiceChannel(channel, voiceChannelname) {
-  const guild = channel.guild,
-    channels = guild.channels.cache,
-    textChannel =
-      channel.type === ChannelType.PublicThread
-        ? channels.get(channel.parentId)
-        : channel,
-    channelAlreadyExists = channels.find(
-      channel =>
-        channel.name === voiceChannelname &&
-        channel.parentId === textChannel.parentId &&
-        channel.type === ChannelType.GuildVoice
-    )
+export async function createVoiceChannel(
+  name,
+  dynamic,
+  alwaysActive,
+  isPrivate,
+  guild,
+  parentTextChannel,
+  parentThread,
+  member
+) {
+  const { id: guildId, channels } = guild,
+    getActiveVoiceCategoryId = await getActiveVoiceCategoryId(guildId)
 
-  if (channelAlreadyExists) return
+  if (!getActiveVoiceCategoryId) return `active voice category not set`
 
-  const category = channels.get(textChannel.parentId),
-    verifiedRoleId = guild.roles.cache.find(
-      role => role.name === `verified`
-    )?.id,
-    everyoneRoleId = guild.roles.cache.find(
-      role => role.name === `@everyone`
-    ).id,
-    textChannelType = await getChannelType(textChannel.id),
-    textChannelPermissionArray = []
+  const activeVoiceCategory = channels.cache.get(getActiveVoiceCategoryId)
 
-  if ([`joinable`, `public`].includes(textChannelType))
-    textChannelPermissionArray.push(
-      {
-        id: verifiedRoleId,
-        allow: [`ViewChannel`],
-      },
-      {
-        id: everyoneRoleId,
-        deny: [`ViewChannel`],
-      }
-    )
-  else
-    textChannel.permissionOverwrites.cache.forEach(overwrite => {
-      if (overwrite.id === everyoneRoleId) {
-        const individualAllowPermissions = overwrite.allow.serialize(),
-          permissionObject = {
-            id: overwrite.id,
-          }
+  if (!activeVoiceCategory) {
+    await setActiveVoiceCategoryId(guildId, null)
 
-        if (individualAllowPermissions.ViewChannel)
-          permissionObject.allow = [`ViewChannel`]
-        else permissionObject.deny = [`ViewChannel`]
+    return `active voice category not longer exists`
+  }
 
-        textChannelPermissionArray.push(permissionObject)
-      } else
-        textChannelPermissionArray.push({
-          id: overwrite.id,
-          allow: [`ViewChannel`],
-        })
-    })
+  const existingChannel = channels.cache.find(channel => channel.name === name),
+    memberIsPermissible =
+      existingChannel && member
+        ? checkIfMemberIsPermissible(existingChannel, member)
+        : null
+
+  if (
+    (existingChannel && memberIsPermissible === null) ||
+    memberIsPermissible
+  ) {
+    return { channel: existingChannel, preexisting: true }
+  } else if (existingChannel && !memberIsPermissible) {
+    return `non-permissible`
+  }
 
   const premiumTier = guild.premiumTier
 
@@ -363,10 +349,13 @@ export async function createVoiceChannel(channel, voiceChannelname) {
   switch (premiumTier) {
     case `TIER_1`:
       maxBitrate = 128000
+      break
     case `TIER_2`:
       maxBitrate = 256000
+      break
     case `TIER_3`:
       maxBitrate = 384000
+      break
     default:
       maxBitrate = 96000
   }
