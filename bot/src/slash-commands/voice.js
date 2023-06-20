@@ -51,7 +51,6 @@ export default async function (interaction) {
     { name: channelName, id: channelId } = channel
 
   let name = options.getString(`name`),
-    basename = getChannelBasename(name),
     dynamic = options.getBoolean(`dynamic`),
     alwaysActive = options.getBoolean(`always-active`),
     isPrivate = options.getBoolean(`private`)
@@ -69,16 +68,19 @@ export default async function (interaction) {
           ephemeral: true,
         },
       })
+
+      return
     }
   }
 
-  return
+  const parentChannel = name ? null : channel
 
   name = name ? name : channelName
-  basename = basename ? basename : name
   dynamic = dynamic ? dynamic : true
   alwaysActive = alwaysActive ? alwaysActive : false
   isPrivate = isPrivate ? isPrivate : false
+
+  // if(parentChannel ===) //check if thread, can't be dynamic
 
   const channelType = checkType(channel),
     isEphemeral = channelType === `public thread` ? false : true
