@@ -142,7 +142,7 @@ export async function startup(bot) {
   await startPollTimers()
 
   // const guild = bot.guilds.cache.get(`1100538270263291904`),
-  //   channel = guild.channels.cache.get(`1101270255269068870`)
+  //   channel = guild.channels.cache.get(`1100670557978112070`)
 
   // console.log(channel)
 }

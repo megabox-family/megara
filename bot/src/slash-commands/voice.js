@@ -1,31 +1,84 @@
-import { ChannelType } from 'discord.js'
+import { ApplicationCommandOptionType, ChannelType } from 'discord.js'
 import { checkType } from '../utils/channels.js'
 import {
   checkIfRoomOrTextChannel,
   createVoiceChannel,
-  deleteDynamicVoiceChannel,
+  getChannelBasename,
   getChannelNumber,
   queueDelayedVoiceDelete,
 } from '../utils/voice.js'
-import { getChannelType } from '../repositories/channels.js'
+import { getDynamicVoiceRecordById } from '../repositories/voice.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Opens a voice channel in relation to the current text channel.`
 export const dmPermission = false,
-  defaultMemberPermissions = `0`
+  defaultMemberPermissions = `0`,
+  options = [
+    {
+      name: `name`,
+      description: `The name of the voice channel you're creating (defaults to the name of the channel you're in).`,
+      type: ApplicationCommandOptionType.String,
+      required: false,
+    },
+    {
+      name: `dynamic`,
+      description: `Choose if the voice channel dynamically expands so there's always an open channel (default true).`,
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
+    {
+      name: `always-active`,
+      description: `Choose if the voice channel always persists in the active voice category (default is false).`,
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
+    {
+      name: `private`,
+      description: `Contributors only; choose if the channel is private, /invite others (default is false).`,
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
+  ]
 
 export default async function (interaction) {
-  const guild = interaction.guild,
-    channel = interaction.channel,
-    channelNumber = getChannelNumber(channel.name)
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
-  if (channelNumber) {
-    await interaction.reply({
-      content: `Sorry, this command cannot be used in a dynamic thread or dynamic voice channel 😔`,
-      ephemeral: true,
-    })
+  const { guild, channel, options } = interaction,
+    { name: channelName, id: channelId } = channel
 
-    return
+  let name = options.getString(`name`),
+    basename = getChannelBasename(name),
+    dynamic = options.getBoolean(`dynamic`),
+    alwaysActive = options.getBoolean(`always-active`),
+    isPrivate = options.getBoolean(`private`)
+
+  if (!name) {
+    const dynamicVoiceRecord = await getDynamicVoiceRecordById(channelId)
+
+    if (dynamicVoiceRecord) {
+      await queueApiCall({
+        apiCall: `deferReply`,
+        djsObject: interaction,
+        parameters: {
+          content:
+            "You can't create a voice channel based on another voice channel generated with `/voice` 🤔",
+          ephemeral: true,
+        },
+      })
+    }
   }
+
+  return
+
+  name = name ? name : channelName
+  basename = basename ? basename : name
+  dynamic = dynamic ? dynamic : true
+  alwaysActive = alwaysActive ? alwaysActive : false
+  isPrivate = isPrivate ? isPrivate : false
 
   const channelType = checkType(channel),
     isEphemeral = channelType === `public thread` ? false : true
