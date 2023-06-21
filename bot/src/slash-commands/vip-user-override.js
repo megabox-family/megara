@@ -52,7 +52,7 @@ export default async function (interaction) {
   const vipRole = guild.roles.cache.get(vipRoleId)
 
   if (!vipRole) {
-    await setVipRoleId(null, guild.id)
+    await setVipRoleId(guild.id, null)
 
     await queueApiCall({
       apiCall: `editReply`,

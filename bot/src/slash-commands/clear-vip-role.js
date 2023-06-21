@@ -51,7 +51,7 @@ export default async function (interaction) {
         `\nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑`
     }
 
-    await setVipRoleId(null, guild.id)
+    await setVipRoleId(guild.id, null)
 
     await queueApiCall({
       apiCall: `editReply`,

@@ -15,7 +15,7 @@ const setCommands = {
   welcome: setWelcomeChannel,
 }
 
-export const description = `Sets the specified channel's special function..`
+export const description = `Sets the specified channel's special function.`
 export const dmPermission = false,
   defaultMemberPermissions = `0`,
   options = [

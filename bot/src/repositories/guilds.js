@@ -357,6 +357,21 @@ export async function getFunctionChannels(guildId) {
     .then(res => (res.rows[0] ? camelize(res.rows[0]) : undefined))
 }
 
+export async function getFunctionRoles(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          vip_role_id,
+          verified_role_id,
+          undergoing_verification_role_id
+        from guilds 
+        where id = ${guildId}
+      `
+    )
+    .then(res => (res.rows[0] ? camelize(res.rows[0]) : undefined))
+}
+
 export async function setNameGuidelines(guildId, nameGuidelines) {
   return await pgPool.query(
     SQL`
@@ -415,7 +430,7 @@ export async function getActiveWorld(guildId) {
     })
 }
 
-export async function setVipRoleId(roleId, guildId) {
+export async function setVipRoleId(guildId, roleId) {
   return await pgPool
     .query(
       SQL`
@@ -443,6 +458,72 @@ export async function getVipRoleId(guildId) {
       `
     )
     .then(res => (res.rows[0] ? res.rows[0].vip_role_id : undefined))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function setVerifiedRoleId(guildId, roleId) {
+  return await pgPool
+    .query(
+      SQL`
+        update guilds
+        set
+          verified_role_id = ${roleId}
+        where id = ${guildId}
+        returning *;
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function getVerifiedRoleId(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          verified_role_id 
+        from guilds
+        where id = ${guildId} 
+      `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].verified_role_id : undefined))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function setUndergoingVerificationRoleId(guildId, roleId) {
+  return await pgPool
+    .query(
+      SQL`
+        update guilds
+        set
+          undergoing_verification_role_id = ${roleId}
+        where id = ${guildId}
+        returning *;
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function getUndergoingVerificationRoleId(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          undergoing_verification_id 
+        from guilds
+        where id = ${guildId} 
+      `
+    )
+    .then(res => (res.rows[0] ? res.rows[0].undergoing_verification_role_id : undefined))
     .catch(error => {
       console.log(error)
     })

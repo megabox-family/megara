@@ -8,24 +8,24 @@ create type command_symbol as enum ('!', '$', '%', '^', '&', '(', ')', '-', '+',
 create table guilds (
   id text not null primary key,
   guild_name text not null,
-  command_symbol command_symbol default '!',
   channel_sorting boolean not null default false,
   role_sorting boolean not null default false,
   rules text,
   name_guidelines text,
   admin_channel text,
-  log_channel text,
   announcement_channel text,
   verification_channel text,
   welcome_channel text,
   active_world text,
-  vip_role text,
   pause_channel_notifications boolean not null,
   vip_assign_message text,
   vip_remove_message text,
   server_subscription_button_text text,
   active_voice_category_id text,
   inactive_voice_category_id text
+  vip_role_id text,
+  verified_role_id text,
+  undergoing_verification_role_id text
 );
 
 

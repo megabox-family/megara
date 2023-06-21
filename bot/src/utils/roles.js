@@ -511,7 +511,7 @@ export async function deleteRole(role) {
     vipRoleId = await getVipRoleId(guild.id)
 
   if (role.id === vipRoleId) {
-    await setVipRoleId(null, guild.id)
+    await setVipRoleId(guild.id, null)
 
     const adminChannelId = await getAdminChannel(guild.id),
       adminChannel = adminChannelId

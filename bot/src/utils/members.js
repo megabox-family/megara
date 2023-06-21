@@ -84,7 +84,7 @@ export async function syncVipMembers(guild) {
       : null
 
   if (!vipRole) {
-    await setVipRoleId(null, guild.id)
+    await setVipRoleId(guild.id, null)
 
     if (adminChannel) {
       adminChannel.send(
@@ -154,7 +154,7 @@ async function handlePremiumRole(oldMember, newMember) {
   const vipRole = guild.roles.cache.get(vipRoleId)
 
   if (!vipRole) {
-    await setVipRoleId(null, guild.Id)
+    await setVipRoleId(guild.id, null)
 
     const adminChannelId = await getAdminChannel(guild.id),
       adminChannel = adminChannelId
@@ -234,7 +234,7 @@ async function handleVipRole(oldMember, newMember) {
         apiCall: `send`,
         djsObject: newMember,
         parameters:
-          `You're no longer a vip member in the **${guild}** server. 😢${additonalMessage}` +
+          `You're no longer a vip member in the **${guild}** server. 😢` +
           `\n\nHere's a message from **${guild}** with additional information:` +
           `\n>>> ${vipRemoveMessage}`,
       })
@@ -317,7 +317,7 @@ async function handlePremiumSub(oldMember, newMember) {
   const vipRole = guild.roles.cache.get(vipRoleId)
 
   if (!vipRole) {
-    await setVipRoleId(null, guild.Id)
+    await setVipRoleId(guild.id, null)
 
     const adminChannelId = await getAdminChannel(guild.id),
       adminChannel = adminChannelId

@@ -54,7 +54,7 @@ export default async function (interaction) {
       `\nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑`
   }
 
-  await setVipRoleId(vipRoleId, guild.id)
+  await setVipRoleId(guild.id, vipRoleId)
 
   const curratedVipMembers = vipMemberArray.filter(
     member => !member._roles.includes(vipRoleId)
