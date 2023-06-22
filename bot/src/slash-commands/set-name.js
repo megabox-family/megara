@@ -1,6 +1,11 @@
 import { ApplicationCommandOptionType } from 'discord.js'
 import { logErrorMessageToChannel } from '../utils/general.js'
-import { getWelcomeChannel } from '../repositories/guilds.js'
+import {
+  getWelcomeChannel,
+  getUndergoingVerificationRoleId,
+  getVerifiedRoleId,
+  getAdminRoleId,
+} from '../repositories/guilds.js'
 import { queueApiCall } from '../api-queue.js'
 
 export const description = `Allows you to set your nickname within this server, and verifies you if you haven't been.`
@@ -15,68 +20,10 @@ export const dmPermission = false,
     },
   ]
 
-function isNicknameValid(nickname, allowedSymbols) {
-  if (nickname.match(`^[A-Za-z]+$`)) return true
-  if (nickname.length > 32) return false
-
-  const charArr = nickname.split('')
-  let lastValue
-
-  return !charArr.find((currentValue, index) => {
-    if (allowedSymbols.includes(currentValue) && index === 0) return true
-    else if (currentValue === ' ' && !lastValue.match(`^[A-Za-z]$|^[.]$`))
-      return true
-    else if (
-      ['-', "'", '.'].includes(currentValue) &&
-      !lastValue.match(`^[A-Za-z]$`)
-    )
-      return true
-    else if (currentValue.match(`^[A-Za-z]$`) && lastValue === `.`) return true
-    else if (
-      ![' ', '-', "'", '.'].includes(currentValue) &&
-      !currentValue.match(`^[A-Za-z]$`)
-    )
-      return true
-
-    lastValue = currentValue
-  })
-}
-
-const handleNicknameFailure = (err, guild) => {
-  console.log(err)
-  logErrorMessageToChannel(err.message, guild)
-}
-
-const timeout = ms => {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
 export default async function (interaction) {
   const { guild, member, options } = interaction,
-    nickname = options.getString(`name`)
-
-  const allowedSymbols = [' ', '-', "'", '.']
-
-  if (!isNicknameValid(nickname, allowedSymbols)) {
-    const allowedSymbolList = allowedSymbols.join(`\`, \``)
-
-    await queueApiCall({
-      apiCall: `reply`,
-      djsObject: interaction,
-      parameters: {
-        content:
-          `Sorry, names must be below 32 characters and cannot contain numbers or most special characters. 😔` +
-          `\nHere's a list of acceptable special characters: \`${allowedSymbolList}\` (not including commas)` +
-          `\nAllowed special characters cannot be repeating, and spaces must follow periods.` +
-          `\nExample: \`/set-name Jason\`, \`/set-name Chris W.\`, \`/set-name Dr. White\`, \`/set-name Brett-Anne\`, \`/set-name O'Brien`,
-        ephemeral: true,
-      },
-    })
-
-    return
-  }
-
-  const isOwner = member.id === guild.ownerId ? true : false
+    nickname = options.getString(`name`),
+    isOwner = member.id === guild.ownerId ? true : false
 
   if (isOwner) {
     await queueApiCall({
@@ -91,65 +38,51 @@ export default async function (interaction) {
     return
   }
 
-  let newNickname = nickname.toLowerCase(),
-    failed = false
+  const undergoingVerificationRoleId = await getUndergoingVerificationRoleId(
+      guild.id
+    ),
+    verifiedRoleId = await getVerifiedRoleId(guild.id),
+    undergoingVerificationRole = guild.roles.cache.get(
+      undergoingVerificationRoleId
+    ),
+    verifiedRole = guild.roles.cache.get(verifiedRoleId),
+    adminRoleId = await getAdminRoleId(guild.id),
+    adminRole = guild.roles.cache.get(adminRoleId)
 
-  allowedSymbols.forEach(symbol => {
-    newNickname = newNickname
-      .split(symbol)
-      .map(x => x.charAt(0).toUpperCase() + x.substring(1))
-      .join(symbol)
-  })
+  if (
+    !undergoingVerificationRoleId ||
+    !undergoingVerificationRole ||
+    !verifiedRoleId ||
+    !verifiedRole
+  ) {
+    const messageContent = adminRole
+      ? `It looks like the verification roles haven't been set up yet, I'll ping the admins. ${adminRole}`
+      : `Oops! Looks like verification is broken. Reach out to whoever invited you to **${guild.name}** 😅`
 
-  await queueApiCall({
-    apiCall: `fetch`,
-    djsObject: guild.members,
-  })
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: interaction,
+      parameters: {
+        content: messageContent,
+        allowedMentions: { roles: [adminRoleId] },
+      },
+    })
+    return
+  }
 
-  if (newNickname !== member.user.username) {
+  return
+
+  if (nickname !== member.user.username) {
     // Attempt to set nickname
-    try {
-      let nicknameIsUpdated = false
-      let attempts = 0
 
-      while (!nicknameIsUpdated) {
-        await Promise.all([
-          queueApiCall({
-            apiCall: `setNickname`,
-            djsObject: member,
-            parameters: newNickname,
-          }),
-          timeout(1000),
-        ])
-
-        let updatedNickname = await member.nickname
-
-        nicknameIsUpdated = updatedNickname === newNickname
-
-        if (!nicknameIsUpdated) {
-          attempts++
-          logErrorMessageToChannel(
-            `Failed to update nickname after ${attempts} second(s), retrying...`,
-            guild
-          )
-        }
-      }
-    } catch (error) {
-      failed = true
-      handleNicknameFailure(error, guild)
-
-      await queueApiCall({
-        apiCall: `reply`,
-        djsObject: interaction,
-        parameters: {
-          content: `Sorry I wasn't able to change your nickname, you may have a role that is above mine, which prevents me from doing so. 🙇`,
-          ephemeral: true,
-        },
-      })
-    }
+    await queueApiCall({
+      apiCall: `setNickname`,
+      djsObject: member,
+      parameters: nickname,
+    })
   } else if (
-    newNickname === member.user.username &&
-    (await member.nickname) !== newNickname
+    nickname === member.user.username &&
+    member.nickname !== nickname
   ) {
     await queueApiCall({
       apiCall: `setNickname`,
@@ -158,14 +91,14 @@ export default async function (interaction) {
     })
   }
 
-  const verifiedRole = guild.roles.cache.find(role => role.name === `verified`)
+  // const verifiedRole = guild.roles.cache.find(role => role.name === `verified`)
 
   if (member.roles.cache.get(verifiedRole.id)) {
     await queueApiCall({
       apiCall: `reply`,
       djsObject: interaction,
       parameters: {
-        content: `You're nickname as been set to **${newNickname}** 😁`,
+        content: `Your nickname as been set to **${nickname}** 😁`,
         ephemeral: true,
       },
     })
@@ -215,13 +148,13 @@ export default async function (interaction) {
     })
   }
 
-  const undergoingVerificationRoleId = guild.roles.cache.find(
-      role => role.name === `undergoing-verification`
-    ).id,
-    userUndergoingVerificationRole = member.roles.cache.find(
-      role => role.id === undergoingVerificationRoleId
-    ),
-    welcomeChannelId = await getWelcomeChannel(guild.id)
+  // const undergoingVerificationRoleId = guild.roles.cache.find(
+  //     role => role.name === `undergoing-verification`
+  //   ).id,
+  //   userUndergoingVerificationRole = member.roles.cache.find(
+  //     role => role.id === undergoingVerificationRoleId
+  //   ),
+  //   welcomeChannelId = await getWelcomeChannel(guild.id)
 
   if (userUndergoingVerificationRole) {
     if (welcomeChannelId)
@@ -230,7 +163,7 @@ export default async function (interaction) {
         djsObject: interaction,
         parameters:
           `\nCongratulations! 🎉` +
-          `\nYour nickname has been changed to **${newNickname}**, and you've been fully verified!` +
+          `\nYour nickname has been changed to **${nickname}**, and you've been fully verified!` +
           `\nI'd recommend checking out the <#${welcomeChannelId}> channel for more information on what to do next.`,
       })
     else
@@ -239,7 +172,7 @@ export default async function (interaction) {
         djsObject: interaction,
         parameters:
           `\nCongratulations! 🎉` +
-          `\nYour nickname has been changed to **${newNickname}**, and you've been fully verified!` +
+          `\nYour nickname has been changed to **${nickname}**, and you've been fully verified!` +
           `\nThis server doesn't have a welcome channel officially set, so if I were you I'd just take a look around 👀`,
       })
 
@@ -248,7 +181,7 @@ export default async function (interaction) {
     await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,
-      parameters: `Your nickname has been changed to **${newNickname}** 🥰`,
+      parameters: `Your nickname has been changed to **${nickname}** 🥰`,
     })
   }
 }
