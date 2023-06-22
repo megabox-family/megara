@@ -1,5 +1,4 @@
 import { ApplicationCommandOptionType } from 'discord.js'
-import { logErrorMessageToChannel } from '../utils/general.js'
 import {
   getWelcomeChannel,
   getUndergoingVerificationRoleId,
@@ -14,7 +13,7 @@ export const dmPermission = false,
   options = [
     {
       name: `name`,
-      description: `The nickname you want in this server (use real life nickname pls).`,
+      description: `The nickname you want in this server (use real life name pls).`,
       type: ApplicationCommandOptionType.String,
       required: true,
     },
@@ -70,11 +69,7 @@ export default async function (interaction) {
     return
   }
 
-  return
-
   if (nickname !== member.user.username) {
-    // Attempt to set nickname
-
     await queueApiCall({
       apiCall: `setNickname`,
       djsObject: member,
@@ -91,9 +86,7 @@ export default async function (interaction) {
     })
   }
 
-  // const verifiedRole = guild.roles.cache.find(role => role.name === `verified`)
-
-  if (member.roles.cache.get(verifiedRole.id)) {
+  if (member.roles.cache.get(verifiedRoleId)) {
     await queueApiCall({
       apiCall: `reply`,
       djsObject: interaction,
@@ -111,50 +104,16 @@ export default async function (interaction) {
     djsObject: interaction,
   })
 
-  // Attempt to set verified role
-  try {
-    let roleIsUpdated = false
-    let attempts = 0
+  await queueApiCall({
+    apiCall: `add`,
+    djsObject: member.roles,
+    parameters: verifiedRoleId,
+  })
 
-    while (!roleIsUpdated) {
-      await queueApiCall({
-        apiCall: `add`,
-        djsObject: member.roles,
-        parameters: verifiedRole.id,
-      })
-
-      await new Promise(resolution => setTimeout(resolution, 1000))
-
-      roleIsUpdated = await member.roles.cache.some(
-        x => x.id === verifiedRole.id
-      )
-
-      if (!roleIsUpdated) {
-        attempts++
-        logErrorMessageToChannel(
-          `Failed to update role after ${attempts} second(s), retrying...`,
-          guild
-        )
-      }
-    }
-  } catch (error) {
-    failed = true
-    handleNicknameFailure(error, guild)
-
-    await queueApiCall({
-      apiCall: `editReply`,
-      djsObject: interaction,
-      parameters: `Sorry I wasn't able to change your nickname, you may have a role that is above mine, which prevents me from doing so. 🙇`,
-    })
-  }
-
-  // const undergoingVerificationRoleId = guild.roles.cache.find(
-  //     role => role.name === `undergoing-verification`
-  //   ).id,
-  //   userUndergoingVerificationRole = member.roles.cache.find(
-  //     role => role.id === undergoingVerificationRoleId
-  //   ),
-  //   welcomeChannelId = await getWelcomeChannel(guild.id)
+  const userUndergoingVerificationRole = member.roles.cache.find(
+      role => role.id === undergoingVerificationRoleId
+    ),
+    welcomeChannelId = await getWelcomeChannel(guild.id)
 
   if (userUndergoingVerificationRole) {
     if (welcomeChannelId)
@@ -176,8 +135,12 @@ export default async function (interaction) {
           `\nThis server doesn't have a welcome channel officially set, so if I were you I'd just take a look around 👀`,
       })
 
-    member.roles.remove(undergoingVerificationRoleId)
-  } else if (!failed) {
+    await queueApiCall({
+      apiCall: `remove`,
+      djsObject: member.roles,
+      parameters: undergoingVerificationRoleId,
+    })
+  } else {
     await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,
