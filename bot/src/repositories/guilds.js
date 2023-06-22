@@ -364,7 +364,8 @@ export async function getFunctionRoles(guildId) {
         select 
           vip_role_id,
           verified_role_id,
-          undergoing_verification_role_id
+          undergoing_verification_role_id,
+          admin_role_id
         from guilds 
         where id = ${guildId}
       `
@@ -457,7 +458,7 @@ export async function getVipRoleId(guildId) {
         where id = ${guildId} 
       `
     )
-    .then(res => (res.rows[0] ? res.rows[0].vip_role_id : undefined))
+    .then(res => res.rows[0]?.vip_role_id)
     .catch(error => {
       console.log(error)
     })
@@ -490,7 +491,7 @@ export async function getVerifiedRoleId(guildId) {
         where id = ${guildId} 
       `
     )
-    .then(res => (res.rows[0] ? res.rows[0].verified_role_id : undefined))
+    .then(res => res.rows[0]?.verified_role_id)
     .catch(error => {
       console.log(error)
     })
@@ -518,12 +519,45 @@ export async function getUndergoingVerificationRoleId(guildId) {
     .query(
       SQL`
         select 
-          undergoing_verification_id 
+          undergoing_verification_role_id 
         from guilds
         where id = ${guildId} 
       `
     )
-    .then(res => (res.rows[0] ? res.rows[0].undergoing_verification_role_id : undefined))
+    .then(res => res.rows[0]?.undergoing_verification_role_id)
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function setAdminRoleId(guildId, roleId) {
+  return await pgPool
+    .query(
+      SQL`
+        update guilds
+        set
+          admin_role_id = ${roleId}
+        where id = ${guildId}
+        returning *;
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function getAdminRoleId(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          admin_role_id 
+        from guilds
+        where id = ${guildId} 
+      `
+    )
+    .then(res => res.rows[0].admin_role_id)
     .catch(error => {
       console.log(error)
     })

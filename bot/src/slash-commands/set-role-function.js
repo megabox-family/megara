@@ -1,11 +1,12 @@
 import { ApplicationCommandOptionType } from 'discord.js'
 import { noCase } from 'change-case'
 import {
-  getVipRoleId,
-  setVipRoleId,
-  setVerifiedRoleId,
-  setUndergoingVerificationRoleId,
   getFunctionRoles,
+  getVipRoleId,
+  setAdminRoleId,
+  setUndergoingVerificationRoleId,
+  setVerifiedRoleId,
+  setVipRoleId,
 } from '../repositories/guilds.js'
 import { getExpectedRunTime, getVipMemberArray } from '../utils/members.js'
 import {
@@ -18,6 +19,7 @@ const setCommands = {
   vip: setVipRoleId,
   verified: setVerifiedRoleId,
   undergoingVerification: setUndergoingVerificationRoleId,
+  admin: setAdminRoleId,
 }
 
 export const description = `Sets the specified role's special function.`
@@ -33,6 +35,7 @@ export const dmPermission = false,
         { name: `vip`, value: `vip` },
         { name: `verified`, value: `verified` },
         { name: `undergoing-verification`, value: `undergoingVerification` },
+        { name: `admin`, value: `admin` },
       ],
     },
     {

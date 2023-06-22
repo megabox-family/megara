@@ -1,10 +1,6 @@
 --guilds
 drop table if exists guilds;
 
-drop type if exists command_symbol;
-
-create type command_symbol as enum ('!', '$', '%', '^', '&', '(', ')', '-', '+', '=', '{', '}', '[', ']', '?', ',', '.');
-
 create table guilds (
   id text not null primary key,
   guild_name text not null,
@@ -25,7 +21,8 @@ create table guilds (
   inactive_voice_category_id text
   vip_role_id text,
   verified_role_id text,
-  undergoing_verification_role_id text
+  undergoing_verification_role_id text,
+  admin_role_id text
 );
 
 

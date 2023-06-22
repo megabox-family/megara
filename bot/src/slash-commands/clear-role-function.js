@@ -1,10 +1,11 @@
 import { ApplicationCommandOptionType } from 'discord.js'
 import { noCase } from 'change-case'
 import {
-  setVipRoleId,
-  setVerifiedRoleId,
-  setUndergoingVerificationRoleId,
   getFunctionRoles,
+  setAdminRoleId,
+  setUndergoingVerificationRoleId,
+  setVerifiedRoleId,
+  setVipRoleId,
 } from '../repositories/guilds.js'
 import { getExpectedRunTime, getVipMemberArray } from '../utils/members.js'
 import {
@@ -17,6 +18,7 @@ const setCommands = {
   vip: setVipRoleId,
   verified: setVerifiedRoleId,
   undergoingVerification: setUndergoingVerificationRoleId,
+  admin: setAdminRoleId,
 }
 
 export const description = `Removes a special function from the role it's assignd to.`
@@ -32,6 +34,7 @@ export const dmPermission = false,
         { name: `vip`, value: `vip` },
         { name: `verified`, value: `verified` },
         { name: `undergoing-verification`, value: `undergoingVerification` },
+        { name: `admin`, value: `admin` },
       ],
     },
   ]
