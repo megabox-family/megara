@@ -1,17 +1,16 @@
-import { ApplicationCommandOptionType, ChannelType } from 'discord.js'
-import { checkIfChannelTypeIsThread, checkType } from '../utils/channels.js'
+import { ApplicationCommandOptionType } from 'discord.js'
+import { checkIfChannelIsSuggestedType } from '../utils/channels.js'
 import {
-  checkIfRoomOrTextChannel,
-  createVoiceChannel,
-  getChannelBasename,
-  getChannelNumber,
-  queueDelayedVoiceDelete,
+  createVoiceCommandChannel,
+  deactivateOrDeleteVoiceChannel,
 } from '../utils/voice.js'
-import { getDynamicVoiceRecordById } from '../repositories/voice.js'
+import { getVoiceRecordById } from '../repositories/voice.js'
 import { queueApiCall } from '../api-queue.js'
 import {
   getActiveVoiceCategoryId,
+  getInactiveVoiceCategoryId,
   setActiveVoiceCategoryId,
+  setInactiveVoiceCategoryId,
 } from '../repositories/guilds.js'
 
 export const description = `Creates a new voice channel with variable functionality.`
@@ -66,34 +65,28 @@ export default async function (interaction) {
   const { guild, channel, member, options } = interaction,
     { id: guildId, name: guildName, channels } = guild
 
-  const activeVoiceCategoryId = await getActiveVoiceCategoryId(guildId)
+  const activeVoiceCategoryId = await getActiveVoiceCategoryId(guildId),
+    inactiveVoiceCategoryId = await getInactiveVoiceCategoryId(guildId),
+    activeVoiceCategory = channels.cache.get(activeVoiceCategoryId),
+    inactiveVoiceCategory = channels.cache.get(inactiveVoiceCategoryId)
 
-  if (!activeVoiceCategoryId) {
+  if (
+    !activeVoiceCategoryId ||
+    !inactiveVoiceCategoryId ||
+    !activeVoiceCategory ||
+    !inactiveVoiceCategory
+  ) {
+    if (!activeVoiceCategory) await setActiveVoiceCategoryId(guildId, null)
+    if (!inactiveVoiceCategory) await setInactiveVoiceCategoryId(guildId, null)
+
     await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,
       parameters: {
-        content: `There is currently no active voice category set in **${guildName}**, please set this before using \`/voice\` 🤔`,
+        content: `It seems that the voice functionality in this server is misconfigured, please contact an admin 🤔`,
         ephemeral: true,
       },
     })
-
-    return
-  }
-
-  const activeVoiceCategory = channels.cache.get(activeVoiceCategoryId)
-
-  if (!activeVoiceCategory) {
-    await queueApiCall({
-      apiCall: `editReply`,
-      djsObject: interaction,
-      parameters: {
-        content: `The category previously set as the active voice category no longer exists, please set this before using \`/voice\` 🤔`,
-        ephemeral: true,
-      },
-    })
-
-    await setActiveVoiceCategoryId(guildId, null)
 
     return
   }
@@ -109,11 +102,11 @@ export default async function (interaction) {
     ephemeral = options.getBoolean(`ephemeral`)
 
   if (!name) {
-    const dynamicVoiceRecord = await getDynamicVoiceRecordById(channelId)
+    const dynamicVoiceRecord = await getVoiceRecordById(channelId)
 
     if (dynamicVoiceRecord) {
       await queueApiCall({
-        apiCall: `deferReply`,
+        apiCall: `reply`,
         djsObject: interaction,
         parameters: {
           content:
@@ -124,29 +117,64 @@ export default async function (interaction) {
 
       return
     }
+  } else if (name) {
+    const existingChannelWithSameName = channels.cache.find(channel => {
+      const isVoiceChannel = checkIfChannelIsSuggestedType(channel, `Voice`)
+
+      if (channel.name === name && !isVoiceChannel) return true
+    })
+
+    if (existingChannelWithSameName) {
+      await queueApiCall({
+        apiCall: `reply`,
+        djsObject: interaction,
+        parameters: {
+          content:
+            "You can't create a new voice channel with the same name as an existing channel, rather use the `/voice` command in said channel without setting the name parameter. 🤔",
+          ephemeral: true,
+        },
+      })
+
+      return
+    }
   }
 
   const parentChannel = name ? null : channel,
     channelIsThread = parentChannel
-      ? checkIfChannelTypeIsThread(channelType)
+      ? checkIfChannelIsSuggestedType(channel, `Thread`)
       : false,
     parentTextChannel = channelIsThread
       ? channels.cache.get(parentChannel.parentId)
       : parentChannel,
     parentThread = channelIsThread ? parentChannel : null
 
+  if (parentTextChannel && isPrivate) {
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: interaction,
+      parameters: {
+        content:
+          `You can't create a voice channel based on a text channel and make it private 🤔\n` +
+          'Please set the `name` parameter if you want to bypass copying the permissions of the channel you use `/voice` in 🤓',
+        ephemeral: true,
+      },
+    })
+
+    return
+  }
+
   name = name ? name : channelName
 
   if (channelIsThread) {
-    if (dynamic === undefined) dynamic = false
-    if (temporary === undefined) temporary = true
-    if (disableChat === undefined) disableChat = true
-    if (ephemeral === undefined) ephemeral = false
+    if (dynamic === null) dynamic = false
+    if (temporary === null) temporary = true
+    if (disableChat === null) disableChat = true
+    if (ephemeral === null) ephemeral = false
   } else if (!channelIsThread) {
-    if (dynamic === undefined) dynamic = true
-    if (temporary === undefined) temporary = false
-    if (disableChat === undefined) disableChat = false
-    if (ephemeral === undefined) ephemeral = true
+    if (dynamic === null) dynamic = true
+    if (temporary === null) temporary = false
+    if (disableChat === null) disableChat = false
+    if (ephemeral === null) ephemeral = true
   }
 
   alwaysActive = alwaysActive ? alwaysActive : false
@@ -158,42 +186,89 @@ export default async function (interaction) {
     parameters: { ephemeral: ephemeral },
   })
 
-  const voiceChannel = await createVoiceChannel(
+  const voiceChannelContext = await createVoiceCommandChannel(
     name,
     dynamic,
+    temporary,
+    disableChat,
     alwaysActive,
     isPrivate,
     guild,
     parentTextChannel,
     parentThread,
+    null,
     member
   )
 
-  console.log(voiceChannel)
+  const {
+    message,
+    channel: voiceChannel,
+    preexisting,
+    voiceRecord,
+    channelMoved,
+    channelInUse,
+  } = voiceChannelContext
 
-  return
+  switch (message) {
+    case `active voice category not set`:
+      await queueApiCall({
+        apiCall: `editReply`,
+        djsObject: interaction,
+        parameters: `Voice categories aren't properly configured, please contact an admin 😬`,
+      })
 
-  if (!voiceChannel) {
-    let voiceChannel = guild.channels.cache.find(
-      channel =>
-        channel.name === voiceChannelName &&
-        channel.type === ChannelType.GuildVoice
-    )
+      return
+    case `active voice category no longer exists`:
+      await queueApiCall({
+        apiCall: `editReply`,
+        djsObject: interaction,
+        parameters: `Voice categories aren't properly configured, please contact an admin 😬`,
+      })
 
-    await interaction.editReply({
-      content: `The **${voiceChannel}** voice channel already exists 🤔`,
-    })
+      return
+    case `non-permissible`:
+      await queueApiCall({
+        apiCall: `editReply`,
+        djsObject: interaction,
+        parameters: `A channel exists, but I can't seem to give you access to it, please contact an admin 😬`,
+      })
 
-    return
+      return
   }
 
-  const voiceChannelType = await checkIfRoomOrTextChannel(voiceChannel, guild)
+  const temporaryMessage = temporary
+      ? `deleted as it is a temporary voice channel`
+      : `moved to the **${inactiveVoiceCategory.name}** category`,
+    timerMessage = alwaysActive
+      ? ``
+      : `\n\n*Note that if no one joins this channel within the next 30 seconds it will be ${temporaryMessage}.*`
 
-  await interaction.editReply({
-    content:
-      `The **${voiceChannel}** voice channel has been created, have fun 😁` +
-      `\n\n*Note that if no one joins a voice channel generated by this command within 30 seconds of creation it will be automatically deleted.*`,
-  })
+  if (preexisting) {
+    const movedMessage = channelMoved ? `was moved to` : `is in`,
+      dynamicMessage = voiceRecord?.dynamic
+        ? ` But since this is a dynamic voice channel you can join the next channel down if you want to start a new call.`
+        : ``,
+      channelInUseMessage = channelInUse
+        ? `\n\nHeads up, this channel is currently in use by others, feel free to join them if you want of course.${dynamicMessage}`
+        : ``,
+      _timerMessage = channelInUseMessage ? `` : timerMessage
 
-  queueDelayedVoiceDelete(voiceChannel, voiceChannelType)
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters:
+        `${voiceChannel} ${movedMessage} the **${activeVoiceCategory.name}** category, click here to join it → ${voiceChannel} 😄` +
+        `${channelInUseMessage}${_timerMessage}`,
+    })
+  } else {
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters:
+        `I created ${voiceChannel} and placed it in the **${activeVoiceCategory.name}** category, click here to join it → ${voiceChannel} 😄` +
+        `${timerMessage}`,
+    })
+  }
+
+  setTimeout(deactivateOrDeleteVoiceChannel.bind(null, voiceChannel), 30000)
 }

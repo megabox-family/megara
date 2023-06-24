@@ -99,3 +99,11 @@ export function extractAttendees(attendees) {
 export function isPositiveNumber(string) {
   return string.match(`^\\d+$`)
 }
+
+export function getVoiceChannelBasename(channelName) {
+  return channelName.match(`.+(?=-\\d+$)`)?.[0]
+}
+
+export function getDynamicVoiceChannelNumber(channelName) {
+  return channelName.match(`(?<=-)\\d+$`)?.[0]
+}

@@ -5,6 +5,8 @@ import {
   ButtonStyle,
   OverwriteType,
   Collection,
+  PermissionsBitField,
+  PermissionOverwrites,
 } from 'discord.js'
 import { getBot } from '../cache-bot.js'
 import { comparePermissions } from '../utils/general.js'
@@ -26,10 +28,9 @@ import {
   createChannelRecord,
   updateChannelRecord,
   deleteChannelRecord,
-  getChannelTableByGuild,
+  getChannelsByGuild,
   getAlphabeticalCategories,
   getAlphabeticalChannelsByCategory,
-  getChannelsGuildById,
   getChannelType,
   getRoomChannelId,
   getUnverifiedRoomChannelId,
@@ -39,6 +40,7 @@ import {
 import { getChannelBasename } from './voice.js'
 import { queueApiCall } from '../api-queue.js'
 import { isPositiveNumber } from './validation.js'
+import { deleteVoiceRecord, getVoiceRecordById } from '../repositories/voice.js'
 
 const setChannelFunction = {
     adminChannel: setAdminChannel,
@@ -49,14 +51,17 @@ const setChannelFunction = {
   },
   channelSortingQueue = []
 
+// Check this
 async function emptyChannelSortingQueue() {
   if (channelSortingQueue.length === 0) return
 
-  await sortChannels(channelSortingQueue[0])
+  const guildId = channelSortingQueue[0]
+
+  await sortChannels(guildId)
 
   channelSortingQueue.shift()
 
-  console.log(`channel sorting loop`)
+  // console.log(`channel sorting loop`)
 
   emptyChannelSortingQueue()
 }
@@ -89,6 +94,8 @@ export async function sortChannels(guildId) {
     )
 
   await Promise.all(createAlphabeticalBucket)
+
+  // console.log(alphabeticalBuckets)
 
   const createFinalChannelArr = alphabeticalBuckets.map(
     async alphabeticalBucket => {
@@ -196,10 +203,12 @@ export async function sortChannels(guildId) {
         `This channel is deleted but we're trying to sort it: ${channel.channel}`
       )
 
-    return { channel: _channel?.id, position: _channel?.rawPosition }
+    return {
+      name: _channel?.name,
+      channel: _channel?.id,
+      position: _channel?.rawPosition,
+    }
   })
-
-  console.log(`tried sorting channels`)
 
   if (
     JSON.stringify(finalChannelArr) !== JSON.stringify(currentChannelPosition)
@@ -214,113 +223,56 @@ export async function sortChannels(guildId) {
   }
 }
 
-export function checkType(channel) {
+export function checkIfChannelIsSuggestedType(channel, type) {
   const channelTypeKeys = Object.keys(ChannelType).filter(
-      channelTypeKey => !isPositiveNumber(channelTypeKey)
-    ),
-    alphaChannelType = channelTypeKeys.find(
-      channelTypeKey => ChannelType[channelTypeKey] === channel.type
-    )
+    channelTypeKey => !isPositiveNumber(channelTypeKey)
+  )
 
-  return alphaChannelType
+  const alphaChannelType = channelTypeKeys.find(
+    channelTypeKey => ChannelType[channelTypeKey] === channel.type
+  )
+
+  return alphaChannelType?.match(type)
 }
 
-export function checkIfChannelTypeIsThread(channelType) {
-  const channelTypeKeys = Object.keys(ChannelType).filter(
-      channelTypeKey => !isPositiveNumber(channelTypeKey)
-    ),
-    alphaThreadChannelTypes = channelTypeKeys.filter(channelTypeKey =>
-      channelTypeKey.match(`Thread`)
-    ),
-    threadChannelTypes = alphaThreadChannelTypes.map(
-      alphaThreadChannelType => ChannelType[alphaThreadChannelType]
-    )
-
-  if (threadChannelTypes.includes(channelType)) return true
-  else if (alphaThreadChannelTypes.includes(channelType)) return true
-
-  return false
-}
-
-export async function createChannel(channel, skipAnnouncementAndSort = false) {
-  const channelType = checkType(channel),
-    channelIsThread = checkIfChannelTypeIsThread(channel)
+export async function handleCreateChannel(channel) {
+  const channelIsThread = checkIfChannelIsSuggestedType(channel, `Thread`)
 
   if (channelIsThread) return
 
-  await createChannelRecord(channel, channelType)
-
-  if (skipAnnouncementAndSort) {
-    return channel.id
-  }
-
-  if (!channelSortingQueue.includes(channel.guild.id))
-    pushToChannelSortingQueue(channel.guild.id)
+  await createChannelRecord(channel)
 
   announceNewChannel(channel)
 }
 
-export async function modifyChannel(
-  oldChannel,
-  newChannel,
-  skipAnnouncementAndSort = false
-) {
-  const oldChannelType = oldChannel.hasOwnProperty(`channelType`)
-      ? oldChannel.channelType
-      : checkType(oldChannel),
-    channelIsThread = checkIfChannelTypeIsThread(oldChannelType)
+export async function handleModifyChannel(oldChannel, newChannel) {
+  const channelIsThread = checkIfChannelIsSuggestedType(oldChannel, `Thread`),
+    { guild } = newChannel
 
   if (channelIsThread) return
 
-  const oldCatergoryId = oldChannel.hasOwnProperty(`categoryId`)
-      ? oldChannel.categoryId
-      : oldChannel.parentId,
-    newChannelType = checkType(newChannel)
-
   if (
     oldChannel.name !== newChannel.name ||
-    oldCatergoryId !== newChannel.parentId ||
-    oldChannelType !== newChannelType ||
-    oldChannel.position !== newChannel.position ||
-    (oldChannel?.rawPosition &&
-      oldChannel.rawPosition !== newChannel.rawPosition)
+    oldChannel.parentId !== newChannel.parentId ||
+    oldChannel.rawPosition !== newChannel.rawPosition ||
+    oldChannel.position !== newChannel.position
   ) {
-    await updateChannelRecord(newChannel, newChannelType)
+    pushToChannelSortingQueue(guild.id)
+  }
 
-    if (skipAnnouncementAndSort) {
-      if (oldChannelType !== newChannelType) return newChannel.id
-    } else {
-      if (
-        !channelSortingQueue.includes(newChannel.guild.id) &&
-        (oldChannel.position !== newChannel.position ||
-          (oldChannel?.rawPosition &&
-            oldChannel.rawPosition !== newChannel.rawPosition) ||
-          oldChannel.name !== newChannel.name)
-      ) {
-        pushToChannelSortingQueue(newChannel.guild.id)
-      }
-
-      if (oldChannelType !== newChannelType) {
-        console.log(
-          `Channel type ${oldChannelType} changed to ${newChannelType} in ${newChannel.name}.`
-        )
-
-        if (newChannelType !== `private`) announceNewChannel(newChannel)
-      }
-    }
+  if (oldChannel.name !== newChannel.name) {
+    await updateChannelRecord(newChannel)
   }
 }
 
-export async function deleteChannel(channel, skipSort = false) {
-  let channelId
+export async function handleDeleteChannel(channel) {
+  const { id: channelId, guild } = channel
 
-  if (channel?.id) channelId = channel.id
-  else channelId = channel
+  if (await getVoiceRecordById(channelId)) {
+    await deleteVoiceRecord(channelId)
+  }
 
-  const guild = getBot().guilds.cache.get(
-      await getChannelsGuildById(channelId)
-    ),
-    functionChannels = await getFunctionChannels(guild.id)
+  const functionChannels = await getFunctionChannels(guild.id)
 
   Object.keys(functionChannels).forEach(key => {
     const channelName = key.match(`^[a-z]+`)[0]
@@ -371,7 +323,7 @@ export async function syncChannels(guild) {
       liveChannelIds.push(channel.id)
   })
 
-  const channelTable = await getChannelTableByGuild(guild.id),
+  const channelTable = await getChannelsByGuild(guild.id),
     tabledChannelIds = channelTable.map(row => row.id),
     allIds = [...new Set([...liveChannelIds, ...tabledChannelIds])],
     channelsToAnnounce = []
@@ -393,7 +345,7 @@ export async function syncChannels(guild) {
       ) {
         positionHasChanged = true
 
-        deleteChannel({ id: id }, true)
+        deleteChannelRecord({ id: id }, true)
       } else {
         const record = channelTable.find(row => {
             return row.id === id
@@ -675,6 +627,10 @@ export async function announceNewChannel(newChannel) {
 export function checkIfMemberIsPermissible(channel, member) {
   const { guild, permissionOverwrites, type } = channel
 
+  if (member.id === guild.ownerId) {
+    return true
+  }
+
   const relevantPermissions = []
 
   switch (type) {
@@ -721,8 +677,6 @@ export function checkIfMemberIsPermissible(channel, member) {
   if (relevantOverwrites.length === 0) {
     const guildOverwrite = channelOverwrites.get(guildId),
       denyPermissions = guildOverwrite?.overwrite.deny.serialize()
-
-    console.log(`made it`)
 
     if (
       relevantPermissions.some(permission => {
@@ -803,4 +757,53 @@ export function isChannelThread(channel) {
   if (threadChannelTypes.includes(channel?.type)) return true
 
   return false
+}
+
+export function convertSerialzedPermissionsToPermissionsBitfield(
+  serializedPermissions
+) {
+  const permissionKeys = Object.keys(serializedPermissions),
+    permissionsBitFieldFlags = []
+
+  permissionKeys.forEach(permissionKey => {
+    if (serializedPermissions[permissionKey])
+      permissionsBitFieldFlags.push(PermissionsBitField.Flags[permissionKey])
+  })
+
+  const permissionsBitField = new PermissionsBitField(permissionsBitFieldFlags)
+
+  return permissionsBitField
+}
+
+export function formatPositionOverrides(guild, positionOverrideRecords) {
+  const positionOverrideObject = {}
+
+  positionOverrideRecords.forEach(
+    record => (positionOverrideObject[record.id] = record.positionOverride)
+  )
+
+  const guildCategories = guild.channels.cache.filter(channel => {
+      channel.type === ChannelType.GuildCategory
+    }),
+    categoryBuckets = guildCategories.map(category => {
+      const children = guild.channels.cache.filter(
+          channel => channel.parentId === category.id
+        ),
+        childrenBucket = children.map(child => {
+          return {
+            id: child.id,
+            name: child.name,
+            positionOverride: positionOverrideObject[child.id],
+          }
+        })
+
+      return {
+        id: category.id,
+        name: category.name,
+        positionOverride: positionOverrideObject[category.id],
+        children: childrenBucket,
+      }
+    })
+
+  console.log(categoryBuckets)
 }

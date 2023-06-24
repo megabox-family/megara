@@ -20,7 +20,10 @@ import {
 import { getBot } from '../cache-bot.js'
 import { cacheCommands } from '../cache-commands.js'
 import { queueApiCall } from '../api-queue.js'
-import { checkIfMemberIsPermissible } from './channels.js'
+import {
+  checkIfMemberIsPermissible,
+  formatPositionOverrides,
+} from './channels.js'
 
 export const defaultRecordsPerPage = 20,
   dimensions = [`overworld`, `nether`, `end`]
@@ -206,6 +209,7 @@ export async function getPages(recordsPerPage, groupBy, guild, filters) {
   switch (groupBy) {
     case `position-overrides`:
       query = await getPositionOverrides(guild.id)
+      query = formatPositionOverrides(guild, query)
       break
     case `coordinates-world`:
       query = await getCoordinatesByWorld(guild.id, filters)

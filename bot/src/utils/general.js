@@ -5,7 +5,6 @@ import { readdirSync, existsSync } from 'fs'
 import { basename, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { syncChannels } from './channels.js'
-import { dynamicRooms } from './voice.js'
 import { pinMessage, unpinMessage } from './emoji.js'
 import { registerSlashCommands } from './slash-commands.js'
 import {
@@ -13,7 +12,6 @@ import {
   getLogChannel,
   getChannelNotificationsRoleId,
 } from '../repositories/guilds.js'
-import { removeActiveVoiceChannelId } from '../repositories/channels.js'
 import { isNotificationRole } from './validation.js'
 import { registerContextCommands } from './context-commands.js'
 import { getCommands } from '../cache-commands.js'
@@ -173,15 +171,6 @@ export async function logErrorMessageToChannel(errorMessage, guild) {
   getBot().channels.cache.get(logChannelId).send(`Error: ${errorMessage}`)
 }
 
-export function removeVoiceChannelIfEmpty(voiceChannel) {
-  const currentMembers = voiceChannel?.members.size
-
-  if (!currentMembers)
-    voiceChannel.delete().then(() => {
-      removeActiveVoiceChannelId(voiceChannel.id)
-    })
-}
-
 function getNotificationRoles(message) {
   const mentionedRoles = message.mentions.roles
 
@@ -297,10 +286,6 @@ export async function handleInteraction(interaction) {
 
     import(selectCommand.fullPath).then(module => module.default(interaction))
   }
-}
-
-export async function handleVoiceUpdate(oldState, newState) {
-  dynamicRooms(oldState, newState)
 }
 
 export function getIndividualPermissionSets(overwrite) {
