@@ -156,7 +156,7 @@ export default async function (interaction) {
       parameters: userId,
     })
   else
-    await await queueApiCall({
+    await queueApiCall({
       apiCall: `remove`,
       djsObject: thread?.members,
       parameters: userId,

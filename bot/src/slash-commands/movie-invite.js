@@ -174,7 +174,7 @@ export default async function (interaction) {
       const { title } = movieDetail,
         button = new ButtonBuilder()
           .setCustomId(`!attend: ${index}`)
-          .setLabel(`Attend ${title}`)
+          .setLabel(`attend ${title}`)
           .setStyle(ButtonStyle.Primary)
 
       return button

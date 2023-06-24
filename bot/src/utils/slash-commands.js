@@ -6,9 +6,7 @@ import {
   ApplicationCommandType,
 } from 'discord.js'
 import { isEqual } from 'lodash-es'
-import { directMessageError } from './error-logging.js'
-import { slashCommands, contextCommands } from './general.js'
-import { getListRoles } from './roles.js'
+import { slashCommands } from './general.js'
 import { getActiveWorld } from '../repositories/guilds.js'
 import { getPositionOverrides } from '../repositories/channels.js'
 import {
@@ -378,7 +376,7 @@ export async function handleVoiceChannel(channel, invitedMember, interaction) {
     const joinChannelButton = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`!join-voice-channel: ${channel.id}`)
-        .setLabel(`Join ${channelName}`)
+        .setLabel(`join ${channelName}`)
         .setStyle(ButtonStyle.Primary)
     )
 

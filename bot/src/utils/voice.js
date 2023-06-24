@@ -188,11 +188,11 @@ async function addMemberToChannelTemporarily(member, channelId) {
     buttons = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`!join-channel: ${channel.id}`)
-        .setLabel(`Join ${channel.name}`)
+        .setLabel(`join ${channel.name}`)
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
         .setCustomId(`!leave-channel: ${channel.id}`)
-        .setLabel(`Leave ${channel.name}`)
+        .setLabel(`leave ${channel.name}`)
         .setStyle(ButtonStyle.Secondary)
     )
 

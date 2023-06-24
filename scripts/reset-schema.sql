@@ -20,9 +20,9 @@ create table guilds (
   active_voice_category_id text,
   inactive_voice_category_id text
   vip_role_id text,
-  verified_role_id text,
   undergoing_verification_role_id text,
-  admin_role_id text
+  admin_role_id text,
+  channel_notifications_role_id text
 );
 
 
@@ -36,8 +36,7 @@ create table channels (
   category_id text, 
   channel_type text not null,
   position_override integer,
-  position integer,
-  active_voice_channel_id text
+  position integer
 );
 
 -- vip-user-overrides

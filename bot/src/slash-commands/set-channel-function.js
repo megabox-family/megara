@@ -37,7 +37,7 @@ export const dmPermission = false,
       type: ApplicationCommandOptionType.Channel,
       required: true,
       autocomplete: true,
-      channelTypes: [ChannelType.GuildText],
+      channelTypes: [ChannelType.GuildText, ChannelType.GuildAnnouncement],
     },
   ]
 

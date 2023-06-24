@@ -1,5 +1,4 @@
-import { ChannelType } from 'discord.js'
-import { addToBatchRoleQueue, getRoleByName } from './roles.js'
+import { addToBatchRoleQueue } from './roles.js'
 import {
   getAdminChannel,
   getVipRoleId,
@@ -9,6 +8,7 @@ import {
   getNameGuidelines,
   getVipAssignMessage,
   getVipRemoveMessage,
+  getUndergoingVerificationRoleId,
 } from '../repositories/guilds.js'
 import {
   getVipOverriedId,
@@ -16,7 +16,6 @@ import {
 } from '../repositories/vip-user-overrides.js'
 import { getTotalBatchRoleQueueMembers } from './roles.js'
 import { getCommandByName } from './slash-commands.js'
-import { directMessageError } from '../utils/error-logging.js'
 import { queueApiCall } from '../api-queue.js'
 
 export const pauseDuation = 5
@@ -258,10 +257,9 @@ export async function verifyNewMember(oldMember, newMember) {
   const guild = newMember.guild,
     verificationChannelId = await getVerificationChannel(guild.id),
     verificationChannel = guild.channels.cache.get(verificationChannelId),
-    undergoingVerificationRole = guild.roles.cache.find(
-      role => role.name === `undergoing verification`
+    undergoingVerificationRoleId = await getUndergoingVerificationRoleId(
+      guild.id
     ),
-    verifiedRole = guild.roles.cache.find(role => role.name === `verified`),
     welcomeChannelId = await getWelcomeChannel(guild.id),
     welcomeChannel = guild.channels.cache.get(welcomeChannelId),
     nameGuidelines = await getNameGuidelines(guild.id)
@@ -271,8 +269,8 @@ export async function verifyNewMember(oldMember, newMember) {
       { name: commandName, id: commandId } = setNameCommand
 
     await verificationChannel?.send(
-      `↓` +
-        `\n__**[Step 2/2]**__ ${newMember} you need to set your nickname, here are **${guild}'s** nickname guidelines:` +
+      `Hey ${newMember}, welcome to **${guild.name}** 👋` +
+        `\nBefore we continue, you need to set your nickname, here are **${guild}'s** nickname guidelines:` +
         `\n> ${nameGuidelines}` +
         `\n\nTo change your nickname click here → </${commandName}:${commandId}>, then type your nickname into the "name" text box below and hit enter.`
     )
@@ -290,7 +288,7 @@ export async function verifyNewMember(oldMember, newMember) {
           `\n\nYou're good to go now, **${guild}** doesn't have a welcome channel so I'd just take a look around 👀`
       )
 
-    newMember.roles.add(verifiedRole.id)
+    newMember.roles.remove(undergoingVerificationRoleId)
   }
 }
 
@@ -346,46 +344,39 @@ async function handlePremiumSub(oldMember, newMember) {
 }
 
 export async function handleMemberUpdate(oldMember, newMember) {
-  verifyNewMember(oldMember, newMember)
+  const guild = newMember.guild,
+    nameGuidelines = await getNameGuidelines(guild.id),
+    undergoingVerificationRoleId = await getUndergoingVerificationRoleId(
+      guild.id
+    )
+
+  if (nameGuidelines && undergoingVerificationRoleId)
+    verifyNewMember(oldMember, newMember)
   handlePremiumRole(oldMember, newMember)
   handleVipRole(oldMember, newMember)
   handlePremiumSub(oldMember, newMember)
 }
 
-export function checkIfVerified(member) {
-  const guild = member.guild,
-    guildRoles = guild.roles.cache,
-    verifiedRole = getRoleByName(guildRoles, `verified`),
-    memberVerificationLevel = member._roles.includes(verifiedRole.id)
-      ? `verified`
-      : `unverified`
+export async function filterVerifiedUsers(guildId, members) {
+  const undergoingVerificationRoleId = await getUndergoingVerificationRoleId(
+    guildId
+  )
 
-  if (memberVerificationLevel === `verified`) return true
-  else return false
+  return members.filter(
+    member => !member._roles.includes(undergoingVerificationRoleId)
+  )
 }
 
 export async function handleNewMember(guildMember) {
-  const guild = guildMember.guild,
-    verificationChannelId = await getVerificationChannel(guild.id),
-    verificationChannel = guild.channels.cache.get(verificationChannelId)
+  const guild = guildMember.guild
 
-  if (!verificationChannel) return
-
-  const undergoingVerificationRole = guild.roles.cache.find(
-    role => role.name === `undergoing-verification`
+  const undergoingVerificationRoleId = await getUndergoingVerificationRoleId(
+    guild.id
   )
 
-  if (!undergoingVerificationRole) return
+  if (!undergoingVerificationRoleId) return
 
-  await guildMember.roles.add(undergoingVerificationRole.id)
-
-  const nameGuidelines = await getNameGuidelines(guild.id),
-    stepText = nameGuidelines ? `__**[Step 1/2]**__ ` : ``
-
-  verificationChannel?.send(
-    `Hey ${guildMember}, welcome to **${guild.name}** 👋` +
-      `\n\n${stepText}Before we can continue, I'm gonna need you to press the "Complete" button below (→ on mobile).`
-  )
+  await guildMember.roles.add(undergoingVerificationRoleId)
 }
 
 export function getNicknameOrUsername(member, user) {

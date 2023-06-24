@@ -3,12 +3,10 @@ import camelize from 'camelize'
 import SQL from 'sql-template-strings'
 import { deleteNewRoles } from '../utils/general.js'
 import { syncChannels } from '../utils/channels.js'
-import { syncRoles } from '../utils/roles.js'
 import { deleteAllGuildChannels } from './channels.js'
 
 export async function createGuild(guild, syncBool = false) {
   await deleteNewRoles(guild)
-  await syncRoles(guild)
 
   if (!syncBool) await syncChannels(guild)
 
@@ -363,9 +361,9 @@ export async function getFunctionRoles(guildId) {
       SQL`
         select 
           vip_role_id,
-          verified_role_id,
           undergoing_verification_role_id,
-          admin_role_id
+          admin_role_id,
+          channel_notifications_role_id
         from guilds 
         where id = ${guildId}
       `
@@ -464,39 +462,6 @@ export async function getVipRoleId(guildId) {
     })
 }
 
-export async function setVerifiedRoleId(guildId, roleId) {
-  return await pgPool
-    .query(
-      SQL`
-        update guilds
-        set
-          verified_role_id = ${roleId}
-        where id = ${guildId}
-        returning *;
-      `
-    )
-    .then(res => camelize(res.rows))
-    .catch(error => {
-      console.log(error)
-    })
-}
-
-export async function getVerifiedRoleId(guildId) {
-  return await pgPool
-    .query(
-      SQL`
-        select 
-          verified_role_id 
-        from guilds
-        where id = ${guildId} 
-      `
-    )
-    .then(res => res.rows[0]?.verified_role_id)
-    .catch(error => {
-      console.log(error)
-    })
-}
-
 export async function setUndergoingVerificationRoleId(guildId, roleId) {
   return await pgPool
     .query(
@@ -558,6 +523,39 @@ export async function getAdminRoleId(guildId) {
       `
     )
     .then(res => res.rows[0].admin_role_id)
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function setChannelNotificationsRoleId(guildId, roleId) {
+  return await pgPool
+    .query(
+      SQL`
+        update guilds
+        set
+          channel_notifications_role_id = ${roleId}
+        where id = ${guildId}
+        returning *;
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function getChannelNotificationsRoleId(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          channel_notifications_role_id 
+        from guilds
+        where id = ${guildId} 
+      `
+    )
+    .then(res => res.rows[0].channel_notifications_role_id)
     .catch(error => {
       console.log(error)
     })

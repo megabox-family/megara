@@ -1,36 +1,22 @@
-import {
-  ActionRowBuilder,
-  StringSelectMenuBuilder,
-  EmbedBuilder,
-} from '@discordjs/builders'
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
+import { queueApiCall } from '../api-queue.js'
 import { cacheBot, getBot } from '../cache-bot.js'
 import { readdirSync, existsSync } from 'fs'
 import { basename, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { syncChannels } from './channels.js'
-import { syncVipMembers } from './members.js'
-import { syncRoles } from './roles.js'
 import { dynamicRooms } from './voice.js'
 import { pinMessage, unpinMessage } from './emoji.js'
 import { registerSlashCommands } from './slash-commands.js'
 import {
   syncGuilds,
-  getCommandSymbol,
-  getVerificationChannel,
   getLogChannel,
-  getNameGuidelines,
+  getChannelNotificationsRoleId,
 } from '../repositories/guilds.js'
 import { removeActiveVoiceChannelId } from '../repositories/channels.js'
-import {
-  isNotificationRole,
-  getNotificationRoleBasename,
-} from './validation.js'
+import { isNotificationRole } from './validation.js'
 import { registerContextCommands } from './context-commands.js'
 import { getCommands } from '../cache-commands.js'
-import {
-  generateChannelButtons,
-  generateNotificationButtons,
-} from './buttons.js'
 import { pollTimeoutMap, printPollResults } from './general-commands.js'
 import { getPollStartTime, getRunningPolls } from '../repositories/polls.js'
 import moment from 'moment/moment.js'
@@ -58,19 +44,7 @@ const relativePath = dirname(fileURLToPath(import.meta.url)),
     }
   })
 
-export const validCommandSymbols = [
-    `!`,
-    `$`,
-    `%`,
-    `^`,
-    `&`,
-    `-`,
-    `+`,
-    `=`,
-    `?`,
-    `.`,
-  ],
-  slashCommands = slashCommandFiles.map(slashCommandFile => {
+export const slashCommands = slashCommandFiles.map(slashCommandFile => {
     return {
       baseName: basename(slashCommandFile, '.js'),
       fullPath: `${srcPath}/${slashCommandFolderName}/${slashCommandFile}`,
@@ -142,9 +116,25 @@ export async function startup(bot) {
   await startPollTimers()
 
   // const guild = bot.guilds.cache.get(`1100538270263291904`),
-  //   channel = guild.channels.cache.get(`1100670557978112070`)
+  //   channel = guild.channels.cache.get(`1121600665790205975`)
 
-  // console.log(channel)
+  // const parentPermissionOverwrites =
+  //   parentTextChannel.permissionOverwrites.cache
+
+  // parentPermissionOverwrites.forEach(permissionOverwrite => {
+  //   const allowPermissions = permissionOverwrite.allow.serialize(),
+  //     denyPermissions = permissionOverwrite.deny.serialize()
+
+  //   console.log(denyPermissions)
+  // })
+
+  //check that deny "view channel" permission is set to false
+
+  // console.log(
+  //   channel.permissionOverwrites.cache
+  //     .get('1100538270263291904')
+  //     .deny.serialize()
+  // )
 }
 
 export async function logMessageToChannel(message) {
@@ -192,15 +182,7 @@ export function removeVoiceChannelIfEmpty(voiceChannel) {
     })
 }
 
-function checkIfMessageHasChannelMentions(message) {
-  const mentionedChannels = message.mentions.channels
-
-  if (mentionedChannels.size === 0) return
-
-  return mentionedChannels
-}
-
-function checkIfMessageHasNotificationRole(message) {
+function getNotificationRoles(message) {
   const mentionedRoles = message.mentions.roles
 
   if (mentionedRoles.size === 0) return
@@ -214,6 +196,9 @@ function checkIfMessageHasNotificationRole(message) {
 }
 
 export async function handleMessage(message) {
+  const { guild } = message
+  if (!message?.guild) return
+
   let pollResults = false
 
   if (message.author.id === message.client.user.id) {
@@ -229,27 +214,40 @@ export async function handleMessage(message) {
   )
     return
 
-  if (!message?.guild) return
+  const notificationRoles = getNotificationRoles(message)
 
-  const notificationRoles = checkIfMessageHasNotificationRole(message),
-    mentionedChannels = checkIfMessageHasChannelMentions(message),
-    channelNotification = notificationRoles?.find(
-      notificationRole => notificationRole?.name === `-channel notifications-`
+  if (!notificationRoles) return
+
+  const channelNotificationsRoleId = await getChannelNotificationsRoleId(
+      guild.id
+    ),
+    hasChannelNotificationRole = notificationRoles.has(
+      channelNotificationsRoleId
     )
 
-  if (channelNotification && mentionedChannels) {
-    const components = await generateChannelButtons(mentionedChannels)
-
-    await message.reply({
-      components: components,
-    })
-  }
-
   if (notificationRoles) {
-    const components = generateNotificationButtons(notificationRoles)
+    const buttonRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel(
+          hasChannelNotificationRole
+            ? `channels & roles`
+            : `manage notifications`
+        )
+        .setStyle(ButtonStyle.Link)
+        .setURL(`https://discord.com/channels/${guild.id}/customize-community`)
+    )
 
-    await message.reply({
-      components: components,
+    const parameters = {
+      components: [buttonRow],
+    }
+
+    if (hasChannelNotificationRole)
+      parameters.content = `You can join/leave channels or manage these notifications by clicking the button below.`
+
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: message,
+      parameters,
     })
   }
 }

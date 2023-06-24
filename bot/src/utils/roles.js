@@ -1,32 +1,18 @@
-import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  EmbedBuilder,
-} from 'discord.js'
 import { getBot } from '../cache-bot.js'
 import { isColorRole, isNotificationRole } from './validation.js'
-import { getExpectedRunTime, pauseDuation } from './members.js'
+import { pauseDuation } from './members.js'
 import {
   getRoleSorting,
   getAdminChannel,
-  getAnnouncementChannel,
   getVipRoleId,
   setVipRoleId,
-  getPauseColorNotifications,
 } from '../repositories/guilds.js'
 
 const validator = { isColorRole, isNotificationRole }
 
 export const roleSortPauseDuration = 3000
 
-const requiredRoles = [
-    `verified`,
-    `undergoing-verification`,
-    `-server-notifications-`,
-    `-channel-notifications-`,
-  ],
-  roleSortingQueue = [],
+const roleSortingQueue = [],
   batchRoleQueue = new Map()
 
 export function getTotalBatchRoleQueueMembers() {
@@ -95,20 +81,6 @@ export function pushToRoleSortingQueue(GuildId) {
 
     if (roleSortingQueue.length === 1) emptyRoleSortingQueue()
   }
-}
-
-export function requiredRoleDifference(guild, oldRoles, newRoles) {
-  const _requiredRoles = guild.roles.cache.filter(guildRole =>
-    requiredRoles.includes(guildRole.name)
-  )
-
-  return _requiredRoles.find(_requriedRole => {
-    if (
-      oldRoles.includes(_requriedRole.id) &&
-      !newRoles.includes(_requriedRole.id)
-    )
-      return _requriedRole
-  })
 }
 
 export async function sortRoles(guildId) {
@@ -202,127 +174,6 @@ export async function syncCustomColors(guild) {
   }
 }
 
-export async function syncRoles(guild) {
-  requiredRoles.forEach(async requiredRole => {
-    if (guild.roles.cache.filter(role => role.name === requiredRole).size === 0)
-      await guild.roles.create({
-        name: requiredRole,
-      })
-    else if (
-      guild.roles.cache.filter(role => role.name === requiredRole).size > 1
-    ) {
-      const roles = guild.roles.cache.filter(role => {
-        if (role.name === requiredRole) return role
-      })
-
-      roles.sort((a, b) => (a.members.size > b.members.size ? -1 : 1))
-      roles.delete([...roles.keys()][0])
-      roles.forEach(role => role.delete())
-    }
-  })
-
-  syncCustomColors(guild)
-
-  pushToRoleSortingQueue(guild.id)
-}
-
-export function balanceDisrupted(role) {
-  if (
-    requiredRoles.includes(role.name) &&
-    role.guild.roles.cache.filter(_role => _role.name === role.name).size !== 1
-  )
-    return true
-}
-
-async function announceColorChange(oldRole, newRole) {
-  const guild = oldRole.guild,
-    pauseColorNotifications = await getPauseColorNotifications(guild.id)
-
-  if (pauseColorNotifications) return
-
-  const announcementChannelId = await getAnnouncementChannel(guild.id)
-
-  if (!announcementChannelId) return
-
-  const announcementChannel = guild.channels.cache.get(announcementChannelId),
-    colorNotificationSquad = guild.roles.cache.find(
-      role => role.name === `-color notifications-`
-    ),
-    buttonRow = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`!unsubscribe: ${colorNotificationSquad.id}`)
-        .setLabel(`Unsubscribe from color notifications`)
-        .setStyle(ButtonStyle.Secondary)
-    ),
-    isRoleDeleted = guild.roles.cache.find(role => role.id === oldRole.id),
-    oldRoleName = oldRole.name.replaceAll(`~`, ``),
-    newRoleName = newRole?.name.replaceAll(`~`, ``)
-
-  let message = `${colorNotificationSquad} Hey guys! 😁\n`,
-    embed
-
-  if (!isRoleDeleted) {
-    message += `The **${oldRoleName}** color role has been removed from the server.`
-  } else if (newRole == null || oldRoleName === `new role`) {
-    message += `A new color role has been created - **${newRoleName}**.`
-
-    embed = new EmbedBuilder()
-      .setTitle(`Color Update`)
-      .addFields({
-        name: `──────────────────────────────`,
-        value: `${oldRole}`,
-      })
-      .setTimestamp()
-  } else if (
-    oldRoleName !== newRoleName &&
-    oldRole.hexColor !== newRole.hexColor
-  ) {
-    message += `The **${oldRoleName} (${oldRole.hexColor})** color role's name & hue has been changed to **${newRoleName} (${newRole.hexColor})**.`
-
-    embed = new EmbedBuilder()
-      .setTitle(`Color Update`)
-      .addFields({
-        name: `──────────────────────────────`,
-        value: `${newRole}`,
-      })
-      .setTimestamp()
-  } else if (oldRoleName !== newRoleName) {
-    message += `The **${oldRoleName}** color role's name has been changed to **${newRoleName}**.`
-
-    embed = new EmbedBuilder()
-      .setTitle(`Color Update`)
-      .addFields({
-        name: `──────────────────────────────`,
-        value: `${newRole}`,
-      })
-      .setTimestamp()
-  } else {
-    message += `The **${oldRoleName}** color role's hue has been changed from **${oldRole.hexColor}** to **${newRole.hexColor}**.`
-
-    embed = new EmbedBuilder()
-      .setTitle(`Color Update`)
-      .addFields({
-        name: `──────────────────────────────`,
-        value: `${newRole}`,
-      })
-      .setTimestamp()
-  }
-
-  message += `\nYou can view available colors and set your color by using the \`/color-list\` command.`
-
-  if (embed)
-    announcementChannel.send({
-      content: message,
-      embeds: [embed],
-      components: [buttonRow],
-    })
-  else
-    announcementChannel.send({
-      content: message,
-      components: [buttonRow],
-    })
-}
-
 export async function createRole(role) {
   const guild = role.guild,
     roles = guild.roles.cache,
@@ -332,56 +183,6 @@ export async function createRole(role) {
     if (_role.name === `new role` && _role.id !== role.id)
       await _role.delete().catch(error => console.log(`it don't exist bruh`))
   })
-
-  if (balanceDisrupted(role)) {
-    const roleName = role.name
-
-    role.delete()
-
-    const adminChannel = guild.channels.cache.get(
-      await getAdminChannel(guild.id)
-    )
-
-    if (adminChannel)
-      adminChannel.send(
-        `@here` +
-          `\nSomeone tried creating a duplicate of the \`${roleName}\` role, which I need to function 😡` +
-          `\n\nIt's okay, I forgive you guys 😇` +
-          `\nBut I did have to delete that new role...`
-      )
-    return
-  } else if (isColorRole(role.name)) {
-    announceColorChange(role)
-  } else if (isNotificationRole(role.name)) {
-    const relevantMembers = guild.members.cache
-      .filter(member => member.id !== getBot().user.id)
-      .map(member => member)
-
-    if (relevantMembers.length > 0) {
-      await addToBatchRoleQueue(role.id, {
-        addOrRemove: `add`,
-        members: relevantMembers,
-        role: role,
-      })
-
-      const totalQueuedMembers = getTotalBatchRoleQueueMembers()
-
-      if (totalQueuedMembers > 0) {
-        const adminChannelId = await getAdminChannel(guild.id),
-          adminChannel = adminChannelId
-            ? guild.channels.cache.get(adminChannelId)
-            : null
-
-        const alphaRunTime = getExpectedRunTime(totalQueuedMembers)
-
-        await adminChannel?.send(
-          `A new notification role, **${newRole.name}**, has been created 🔔` +
-            `\nThis role will automatically be added to ${relevantMembers.length} members in the server.` +
-            `\nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑`
-        )
-      }
-    }
-  }
 
   if (role.position < botRole.position && role.name !== `new role`) {
     setTimeout(() => pushToRoleSortingQueue(guild.id), roleSortPauseDuration)
@@ -393,109 +194,6 @@ export async function modifyRole(oldRole, newRole) {
     botRole = guild.roles.cache.find(
       role => role.tags?.botId === getBot().user.id
     )
-
-  if (
-    oldRole.name !== newRole.name &&
-    (balanceDisrupted(oldRole) || balanceDisrupted(newRole))
-  ) {
-    const roleName = newRole.name
-
-    newRole.setName(oldRole.name)
-
-    const adminChannel = getBot().channels.cache.get(
-      await getAdminChannel(guild.id)
-    )
-
-    if (adminChannel)
-      adminChannel.send(
-        `@here` +
-          `\nSomeone tried modifying or overwritting the \`${roleName}\` role which I need to function 😡` +
-          `\n\nIt's okay, I forgive you guys 😇` +
-          `\nBut I had to rename said role back to what it was.`
-      )
-  } else if (
-    (!oldRole.name.match(`^~.+~$`) && newRole.name.match(`^~.+~$`)) ||
-    (oldRole.name.match(`^~.+~$`) && !newRole.name.match(`^~.+~$`)) ||
-    (oldRole.name.match(`^~.+~$`) &&
-      newRole.name.match(`^~.+~$`) &&
-      oldRole.name !== newRole.name) ||
-    (oldRole.name.match(`^~.+~$`) &&
-      newRole.name.match(`^~.+~$`) &&
-      oldRole.color !== newRole.color)
-  ) {
-    await new Promise(resolve => setTimeout(resolve, roleSortPauseDuration))
-    announceColorChange(oldRole, newRole)
-  } else if (
-    !isNotificationRole(oldRole.name) &&
-    isNotificationRole(newRole.name)
-  ) {
-    const relevantMembers = guild.members.cache
-      .filter(
-        member =>
-          !member._roles.includes(newRole.id) && member.id !== getBot().user.id
-      )
-      .map(member => member)
-
-    if (relevantMembers.length > 0) {
-      await addToBatchRoleQueue(newRole.id, {
-        addOrRemove: `add`,
-        members: relevantMembers,
-        role: newRole,
-      })
-
-      const totalQueuedMembers = getTotalBatchRoleQueueMembers()
-
-      if (totalQueuedMembers > 0 && relevantMembers.length > 0) {
-        const adminChannelId = await getAdminChannel(guild.id),
-          adminChannel = adminChannelId
-            ? guild.channels.cache.get(adminChannelId)
-            : null
-
-        const alphaRunTime = getExpectedRunTime(totalQueuedMembers)
-
-        await adminChannel?.send(
-          `A role's name was changed from **${oldRole.name}** to **${newRole.name}**, and is therefore a notification role 🔔` +
-            `\nThis role will automatically be added to ${relevantMembers.length} members in the server.` +
-            `\nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑`
-        )
-      }
-    }
-  } else if (
-    isNotificationRole(oldRole.name) &&
-    !isNotificationRole(newRole.name)
-  ) {
-    const relevantMembers = guild.members.cache
-      .filter(
-        member =>
-          member._roles.includes(newRole.id) && member.id !== getBot().user.id
-      )
-      .map(member => member)
-
-    if (relevantMembers.length > 0) {
-      await addToBatchRoleQueue(newRole.id, {
-        addOrRemove: `remove`,
-        members: relevantMembers,
-        role: newRole,
-      })
-
-      const totalQueuedMembers = getTotalBatchRoleQueueMembers()
-
-      if (totalQueuedMembers > 0 && relevantMembers.length > 0) {
-        const adminChannelId = await getAdminChannel(guild.id),
-          adminChannel = adminChannelId
-            ? guild.channels.cache.get(adminChannelId)
-            : null
-
-        const alphaRunTime = getExpectedRunTime(totalQueuedMembers)
-
-        await adminChannel?.send(
-          `A notification role's name was changed from **${oldRole.name}** to **${newRole.name}**, and is therefore no longer a notification role 🔕` +
-            `\nThis role will automatically be removed from ${relevantMembers.length} members in the server.` +
-            `\nThere is currently a total of ${totalQueuedMembers} members in the batch role queue, it should take me around ${alphaRunTime} to complete this action 🕑`
-        )
-      }
-    }
-  }
 
   if (
     (oldRole.rawPosition !== newRole.rawPosition ||
@@ -524,35 +222,6 @@ export async function deleteRole(role) {
           `\nIf this was on purpose, great. If not, I can't restore it.` +
           `\nVIP functionality in this server will no longer work until you set the VIP role again using the \`/set-vip-role\` command.`
       )
-  }
-
-  if (balanceDisrupted(role)) {
-    const newRole = await guild.roles.create(role),
-      adminChannel = guild.channels.cache.get(await getAdminChannel(guild.id))
-
-    if (adminChannel)
-      adminChannel.send(
-        `@here` +
-          `\nSomeone tried deleting the \`@${newRole.name}\` role, which I need to function 😡` +
-          `\n\nIt's okay, I forgive you guys 😇` +
-          `\nI recreated the role... but you'll have to re-add it to any channel or member`
-      )
-
-    setTimeout(() => pushToRoleSortingQueue(guild.id), roleSortPauseDuration)
-  } else if (role.name.match(`^~.+~$`)) {
-    await new Promise(resolve => setTimeout(resolve, roleSortPauseDuration))
-    announceColorChange(role)
-  } else if (isNotificationRole(role.name)) {
-    batchRoleQueue.delete(role.id)
-
-    const adminChannelId = await getAdminChannel(guild.id),
-      adminChannel = adminChannelId
-        ? guild.channels.cache.get(adminChannelId)
-        : null
-
-    await adminChannel?.send(`
-      Just thought I'd let you guys know that a notification role, **${role.name}**, has been deleted 🔕
-    `)
   }
 }
 

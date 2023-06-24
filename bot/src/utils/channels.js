@@ -20,6 +20,7 @@ import {
   getAnnouncementChannel,
   getWelcomeChannel,
   getPauseChannelNotifications,
+  getChannelNotificationsRoleId,
 } from '../repositories/guilds.js'
 import {
   createChannelRecord,
@@ -231,12 +232,12 @@ export function checkIfChannelTypeIsThread(channelType) {
     alphaThreadChannelTypes = channelTypeKeys.filter(channelTypeKey =>
       channelTypeKey.match(`Thread`)
     ),
-    threadChannelTypes = alphaThreadChannelTypes.map(alphaThreadChannelType => ChannelType[alphaThreadChannelType])
+    threadChannelTypes = alphaThreadChannelTypes.map(
+      alphaThreadChannelType => ChannelType[alphaThreadChannelType]
+    )
 
-    
-  if(threadChannelTypes.includes(channelType)) return true
+  if (threadChannelTypes.includes(channelType)) return true
   else if (alphaThreadChannelTypes.includes(channelType)) return true
-  
 
   return false
 }
@@ -624,12 +625,7 @@ export async function removeMemberFromChannel(member, channel) {
 }
 
 export async function announceNewChannel(newChannel) {
-  const {
-      id: newChannelId,
-      name: newChannelName,
-      parentId: newChannelParentId,
-      guild,
-    } = newChannel,
+  const { parentId: newChannelParentId, guild } = newChannel,
     { id: guildId, channels, roles } = guild,
     pauseChannelNotifications = await getPauseChannelNotifications(guildId)
 
@@ -639,68 +635,41 @@ export async function announceNewChannel(newChannel) {
 
   if (!announcementChannelId) return
 
-  const welcomeChannelId = await getWelcomeChannel(guildId)
+  const channelType = checkType(newChannel),
+    isVoiceChannel = channelType.match('Voice')
 
-  if (
-    welcomeChannelId === newChannelId ||
-    [`rooms`, `unverified-rooms`].includes(newChannel.name)
-  )
-    return
+  if (isVoiceChannel) return
 
-  const channelType = await getChannelType(newChannelId)
+  const guildRolePermissions =
+      newChannel.permissionOverwrites.cache.get(guildId),
+    denyPermissions = guildRolePermissions?.deny.serialize()
 
-  if ([`category`, `hidden`, `private`, `voice`].includes(channelType)) return
+  if (!denyPermissions?.ViewChannel) {
+    const categoryName = await getCategoryName(newChannelParentId),
+      announcementChannel = channels.cache.get(announcementChannelId),
+      channelNotificationsRoleId = await getChannelNotificationsRoleId(guildId),
+      channelNotificationsRole = roles.cache.get(channelNotificationsRoleId)
 
-  const channelNotificationSquad = roles.cache.find(
-      role => role.name === `-channel notifications-`
-    ),
-    { id: channelNotificationRoleId } = channelNotificationSquad,
-    categoryName = await getCategoryName(newChannelParentId),
-    announcementChannel = channels.cache.get(announcementChannelId),
-    joinButtonRow = new ActionRowBuilder().addComponents(
+    const buttonRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`!join-channel: ${newChannelId}`)
-        .setLabel(`Join ${newChannelName}`)
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId(`!unsubscribe: ${channelNotificationRoleId}`)
-        .setLabel(`Unsubscribe from channel notifications`)
-        .setStyle(ButtonStyle.Secondary)
-    ),
-    leaveButtonRow = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`!leave-channel: ${newChannelName}`)
-        .setLabel(`Leave ${newChannelName}`)
-        .setStyle(ButtonStyle.Danger),
-      new ButtonBuilder()
-        .setCustomId(`!unsubscribe: ${channelNotificationRoleId}`)
-        .setLabel(`Unsubscribe from channel notifications`)
-        .setStyle(ButtonStyle.Secondary)
+        .setLabel(`channels & roles`)
+        .setStyle(ButtonStyle.Link)
+        .setURL(`https://discord.com/channels/${guild.id}/customize-community`)
     )
 
-  let channelTypeMessage,
-    buttonRow = joinButtonRow
-
-  switch (channelType) {
-    case `public`:
-      channelTypeMessage = `We've added a new ${channelType} channel`
-      buttonRow = leaveButtonRow
-      break
-    case `joinable`:
-      channelTypeMessage = `We've added a new ${channelType} channel`
-      break
-    default:
-      channelTypeMessage = `A channel has been archived`
-      buttonRow = leaveButtonRow
+    if (announcementChannel)
+      await queueApiCall({
+        apiCall: `send`,
+        djsObject: announcementChannel,
+        parameters: {
+          content:
+            `${channelNotificationsRole ? channelNotificationsRole : ''}` +
+            `\nA new channel has been created in the **${categoryName}** category ${newChannel} ← click here to view and join the channel 😁` +
+            `\nYou can also join/leave channels or manage these notifications by clicking the button below.`,
+          components: [buttonRow],
+        },
+      })
   }
-
-  if (announcementChannel)
-    announcementChannel.send({
-      content:
-        `${channelNotificationSquad}` +
-        `\n${channelTypeMessage}, **${newChannelName}**, in the **${categoryName}** category 😁`,
-      components: [buttonRow],
-    })
 }
 
 export function checkIfMemberIsPermissible(channel, member) {
@@ -748,8 +717,6 @@ export function checkIfMemberIsPermissible(channel, member) {
       numeric: true,
       sensitivity: 'base',
     })
-
-  // console.log(channel)
 
   if (relevantOverwrites.length === 0) {
     const guildOverwrite = channelOverwrites.get(guildId),

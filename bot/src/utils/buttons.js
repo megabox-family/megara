@@ -345,7 +345,7 @@ export function generateNotificationButtons(notificationRoles) {
     buttons.push(
       new ButtonBuilder()
         .setCustomId(`!unsubscribe: ${role.id}`)
-        .setLabel(`Unsubscribe from ${getNotificationRoleBasename(role.name)}`)
+        .setLabel(`unsubscribe from ${getNotificationRoleBasename(role.name)}`)
         .setStyle(ButtonStyle.Secondary)
     )
     counter++
@@ -430,6 +430,6 @@ export async function generateChannelButtons(mentionedChannels) {
 export function getRetractVoteButton(pollId) {
   return new ButtonBuilder()
     .setCustomId(`!retract-vote: ${pollId}`)
-    .setLabel(`Retract my vote`)
+    .setLabel(`retract my vote`)
     .setStyle(ButtonStyle.Danger)
 }

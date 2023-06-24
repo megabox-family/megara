@@ -117,15 +117,15 @@ export async function generatePollMessage(
       ),
     vote = new ButtonBuilder()
       .setCustomId(`!vote:`)
-      .setLabel(`Vote`)
+      .setLabel(`vote`)
       .setStyle(ButtonStyle.Success),
     reviewMyChoices = new ButtonBuilder()
       .setCustomId(`!review-ballot:`)
-      .setLabel(`Review my ballot`)
+      .setLabel(`review my ballot`)
       .setStyle(ButtonStyle.Primary),
     seeCurrentResults = new ButtonBuilder()
       .setCustomId(`!see-poll-results:`)
-      .setLabel(`See results`)
+      .setLabel(`see results`)
       .setStyle(ButtonStyle.Primary),
     firstRow = new ActionRowBuilder().addComponents(
       vote,
@@ -462,7 +462,7 @@ export async function printPollResults(channelId, messageId) {
 
   const reviewMyChoices = new ButtonBuilder()
       .setCustomId(`!review-ballot:`)
-      .setLabel(`Review my ballot`)
+      .setLabel(`review my ballot`)
       .setStyle(ButtonStyle.Primary),
     rankedChoiceButton = new ButtonBuilder()
       .setLabel(`What is ranked choice voting?`)
@@ -493,7 +493,7 @@ export async function printPollResults(channelId, messageId) {
     })
 
     const seeFinalResults = new ButtonBuilder()
-        .setLabel(`See final results`)
+        .setLabel(`see final results`)
         .setStyle(ButtonStyle.Link)
         .setURL(
           `https://discord.com/channels/${guild.id}/${channel.id}/${resultsMessage.id}`
@@ -576,7 +576,7 @@ export async function printPollResults(channelId, messageId) {
 
     const seeFullResults = new ButtonBuilder()
         .setCustomId(`!see-poll-results: ${message.id}`)
-        .setLabel(`See full results`)
+        .setLabel(`see full results`)
         .setStyle(ButtonStyle.Primary),
       firstRow = new ActionRowBuilder().addComponents(
         seeFullResults,
@@ -604,7 +604,7 @@ export async function printPollResults(channelId, messageId) {
   })
 
   const seeFinalResults = new ButtonBuilder()
-      .setLabel(`See final results`)
+      .setLabel(`see final results`)
       .setStyle(ButtonStyle.Link)
       .setURL(
         `https://discord.com/channels/${guild.id}/${channel.id}/${resultsMessage.id}`

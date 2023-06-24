@@ -45,7 +45,7 @@ export default async function (interaction) {
   const threadButton = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`!join-thread: ${thread.id}`)
-      .setLabel(`Join Thread`)
+      .setLabel(`join thread`)
       .setStyle(ButtonStyle.Success)
   )
 

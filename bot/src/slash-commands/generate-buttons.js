@@ -1,13 +1,8 @@
-import {
-  ApplicationCommandOptionType,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-} from 'discord.js'
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
 import { getServerSubscriptionButtonText } from '../repositories/guilds.js'
 import { queueApiCall } from '../api-queue.js'
 
-export const description = `Generate buttons for the channel list, color list, and the notification manager in a given channel.`
+export const description = `Generate buttons for Channels & Roles and Subscriptions in a given channel.`
 export const dmPermission = false,
   defaultMemberPermissions = `0`
 
@@ -17,19 +12,14 @@ export default async function (interaction) {
     djsObject: interaction,
   })
 
-  const { guild, channel } = interaction
+  const { guild } = interaction
 
   const buttons = [
-      new ButtonBuilder()
-        .setCustomId(`!channel-list:`)
-        .setLabel(`channel list`)
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(`!color-list:`)
-        .setLabel(`color list`)
-        .setStyle(ButtonStyle.Primary),
-    ],
-    row = new ActionRowBuilder().addComponents(buttons)
+    new ButtonBuilder()
+      .setLabel(`channels & roles`)
+      .setStyle(ButtonStyle.Link)
+      .setURL(`https://discord.com/channels/${guild.id}/customize-community`),
+  ]
 
   const serverSubscriptionButtonText = await getServerSubscriptionButtonText(
     guild.id
@@ -43,6 +33,8 @@ export default async function (interaction) {
         .setURL(`https://discord.com/channels/${guild.id}/role-subscriptions`)
     )
   }
+
+  const row = new ActionRowBuilder().addComponents(buttons)
 
   await queueApiCall({
     apiCall: `editReply`,

@@ -5,7 +5,7 @@ import {
   ButtonStyle,
   ChannelType,
 } from 'discord.js'
-import { checkIfVerified, getNicknameOrUsername } from '../utils/members.js'
+import { filterVerifiedUsers, getNicknameOrUsername } from '../utils/members.js'
 import { checkIfMemberIsPermissible } from '../utils/channels.js'
 import { queueApiCall } from '../api-queue.js'
 import { collator } from '../utils/general.js'
@@ -293,7 +293,7 @@ export default async function (interaction) {
     optionChannel = options.getChannel(`channel`),
     _channel = optionChannel ? optionChannel : channel
 
-  const verifiedMembers = memberArray.filter(member => checkIfVerified(member))
+  const verifiedMembers = await filterVerifiedUsers(guild.id, memberArray)
 
   if (verifiedMembers.length === 0) {
     await queueApiCall({
