@@ -1,30 +1,12 @@
-import {
-  ActionRowBuilder,
-  StringSelectMenuBuilder,
-  EmbedBuilder,
-} from '@discordjs/builders'
 import { cacheBot, getBot } from '../cache-bot.js'
 import { readdirSync, existsSync } from 'fs'
 import { basename, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { syncChannels } from './channels.js'
-import { syncVipMembers } from './members.js'
-import { syncRoles } from './roles.js'
-import { dynamicRooms } from './voice.js'
 import { pinMessage, unpinMessage } from './emoji.js'
 import { registerSlashCommands } from './slash-commands.js'
-import {
-  syncGuilds,
-  getCommandSymbol,
-  getVerificationChannel,
-  getLogChannel,
-  getNameGuidelines,
-} from '../repositories/guilds.js'
-import { removeActiveVoiceChannelId } from '../repositories/channels.js'
-import {
-  isNotificationRole,
-  getNotificationRoleBasename,
-} from './validation.js'
+import { syncGuilds, getLogChannel } from '../repositories/guilds.js'
+import { isNotificationRole } from './validation.js'
 import { registerContextCommands } from './context-commands.js'
 import { getCommands } from '../cache-commands.js'
 import {
@@ -183,15 +165,6 @@ export async function logErrorMessageToChannel(errorMessage, guild) {
   getBot().channels.cache.get(logChannelId).send(`Error: ${errorMessage}`)
 }
 
-export function removeVoiceChannelIfEmpty(voiceChannel) {
-  const currentMembers = voiceChannel?.members.size
-
-  if (!currentMembers)
-    voiceChannel.delete().then(() => {
-      removeActiveVoiceChannelId(voiceChannel.id)
-    })
-}
-
 function checkIfMessageHasChannelMentions(message) {
   const mentionedChannels = message.mentions.channels
 
@@ -299,10 +272,6 @@ export async function handleInteraction(interaction) {
 
     import(selectCommand.fullPath).then(module => module.default(interaction))
   }
-}
-
-export async function handleVoiceUpdate(oldState, newState) {
-  dynamicRooms(oldState, newState)
 }
 
 export function getIndividualPermissionSets(overwrite) {

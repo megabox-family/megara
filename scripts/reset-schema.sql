@@ -32,12 +32,8 @@ drop table if exists channels;
 create table channels (
   id text not null primary key,
   name text not null,
-  guild_id text not null,
-  category_id text, 
-  channel_type text not null,
-  position_override integer,
-  position integer,
-  active_voice_channel_id text
+  position_override int,
+  guild_id text not null
 );
 
 -- vip-user-overrides
@@ -149,5 +145,16 @@ create table movie_invites (
 drop table if exists voice;
 
 create table voice (
-
+  id text not null primary key,
+  name text not null,
+  base_name text not null,
+  dynamic boolean not null,
+  dynamic_number int,
+  temporary boolean not null,
+  always_active boolean not null,
+  is_private boolean not null,
+  guild_id text not null,
+  parent_text_channel_id text,
+  parent_thread_id text,
+  parent_voice_channel_id text
 );

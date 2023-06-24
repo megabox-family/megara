@@ -6,9 +6,7 @@ import {
   ApplicationCommandType,
 } from 'discord.js'
 import { isEqual } from 'lodash-es'
-import { directMessageError } from './error-logging.js'
-import { slashCommands, contextCommands } from './general.js'
-import { getListRoles } from './roles.js'
+import { slashCommands } from './general.js'
 import { getActiveWorld } from '../repositories/guilds.js'
 import { getPositionOverrides } from '../repositories/channels.js'
 import {
@@ -22,7 +20,10 @@ import {
 import { getBot } from '../cache-bot.js'
 import { cacheCommands } from '../cache-commands.js'
 import { queueApiCall } from '../api-queue.js'
-import { checkIfMemberIsPermissible } from './channels.js'
+import {
+  checkIfMemberIsPermissible,
+  formatPositionOverrides,
+} from './channels.js'
 
 export const defaultRecordsPerPage = 20,
   dimensions = [`overworld`, `nether`, `end`]
@@ -208,6 +209,7 @@ export async function getPages(recordsPerPage, groupBy, guild, filters) {
   switch (groupBy) {
     case `position-overrides`:
       query = await getPositionOverrides(guild.id)
+      query = formatPositionOverrides(guild, query)
       break
     case `coordinates-world`:
       query = await getCoordinatesByWorld(guild.id, filters)

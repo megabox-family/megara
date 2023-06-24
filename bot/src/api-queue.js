@@ -2,6 +2,7 @@ import { Collection } from 'discord.js'
 import { randomUUID } from 'crypto'
 
 const pauseDurations = {
+    setPositions: 2000,
     default: 100,
   },
   apiQueue = {},

@@ -1,8 +1,8 @@
 import { ApplicationCommandOptionType } from 'discord.js'
-import { pushToChannelSortingQueue } from '../utils/channels.js'
 import { pushToRoleSortingQueue } from '../utils/roles.js'
 import { setChannelSorting, setRoleSorting } from '../repositories/guilds.js'
 import { queueApiCall } from '../api-queue.js'
+import { pushToChannelSortingQueue } from '../utils/channels.js'
 
 export const description = `Enables or disables automatic sorting for channels and roles.`
 export const dmPermission = false,
