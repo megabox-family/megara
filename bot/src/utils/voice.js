@@ -312,7 +312,7 @@ export async function getLastAvailableActiveChannel(
   )
 
   const firstAvailableDynamicVoiceChannelRecord = voiceChannels.find(
-      (dynamicVoiceChild, index) => {
+      dynamicVoiceChild => {
         const channel = guild.channels.cache.get(dynamicVoiceChild.id)
 
         if (channel.members.size === 0) return true
