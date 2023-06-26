@@ -124,7 +124,7 @@ export async function getPositionOverride(channelId) {
 }
 
 export async function setPositionOverride(channelId, positionOverride) {
-  const channelRecords = await getDynamicVoiceChannelRecords(channelId)
+  const channelRecords = await getChannelAndChildrenRecords(channelId)
 
   channelRecords.forEach(async channelRecord => {
     await pgPool
@@ -324,7 +324,7 @@ export async function getDynamicVoiceChildrenRecords(parentVoiceChannelId) {
     })
 }
 
-export async function getDynamicVoiceChannelRecords(parentVoiceChannelId) {
+export async function getChannelAndChildrenRecords(parentVoiceChannelId) {
   return await pgPool
     .query(
       SQL`
