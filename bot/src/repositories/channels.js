@@ -124,20 +124,24 @@ export async function getPositionOverride(channelId) {
 }
 
 export async function setPositionOverride(channelId, positionOverride) {
-  return await pgPool
-    .query(
-      SQL`
+  const channelRecords = await getDynamicVoiceChannelRecords(channelId)
+
+  channelRecords.forEach(async channelRecord => {
+    await pgPool
+      .query(
+        SQL`
         update channels
         set 
           position_override = ${positionOverride}
-        where id = ${channelId}
+        where id = ${channelRecord.id}
         returning *;
       `
-    )
-    .then(res => camelize(res.rows))
-    .catch(error => {
-      console.log(error)
-    })
+      )
+      .then(res => camelize(res.rows))
+      .catch(error => {
+        console.log(error)
+      })
+  })
 }
 
 export async function getPositionOverrideRecords(guildId) {
@@ -204,12 +208,12 @@ export async function setCustomVoiceOptions(
       SQL`
       update channels
       set 
-        custom_function = ${voice},
+        custom_function = 'voice',
         dynamic = ${dynamic},
         dynamic_number = ${dynamicNumber},
         temporary = ${temporary},
         always_active = ${alwaysActive},
-        parent_text_channel_id = ${parentTextChannelId}
+        parent_text_channel_id = ${parentTextChannelId},
         parent_thread_id = ${parentThreadId},
         parent_voice_channel_id = ${parentVoiceChannelId},
         position_override = ${positionOverride}
