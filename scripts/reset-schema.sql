@@ -32,8 +32,17 @@ drop table if exists channels;
 create table channels (
   id text not null primary key,
   name text not null,
+  guild_id text not null,
+  alpha_type text not null,
   position_override int,
-  guild_id text not null
+  custom_function text,
+  dynamic boolean,
+  dynamic_number int,
+  temporary boolean,
+  always_active boolean,
+  parent_text_channel_id text,
+  parent_thread_id text,
+  parent_voice_channel_id text
 );
 
 -- vip-user-overrides
@@ -147,7 +156,6 @@ drop table if exists voice;
 create table voice (
   id text not null primary key,
   name text not null,
-  base_name text not null,
   dynamic boolean not null,
   dynamic_number int,
   temporary boolean not null,

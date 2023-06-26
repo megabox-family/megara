@@ -139,7 +139,7 @@ export async function syncVipMembers(guild) {
   }
 }
 
-async function handlePremiumRole(oldMember, newMember) {
+export async function handlePremiumRole(oldMember, newMember) {
   const guild = newMember.guild,
     wasPremium = oldMember.premiumSinceTimestamp,
     isPremium = newMember.premiumSinceTimestamp
@@ -182,7 +182,7 @@ async function handlePremiumRole(oldMember, newMember) {
   }
 }
 
-async function handleVipRole(oldMember, newMember) {
+export async function handleVipRole(oldMember, newMember) {
   const guild = newMember.guild,
     vipRoleId = await getVipRoleId(guild.id),
     vipRole = guild.roles.cache.get(vipRoleId)
@@ -252,17 +252,23 @@ async function handleVipRole(oldMember, newMember) {
 }
 
 export async function verifyNewMember(oldMember, newMember) {
-  if (oldMember?.pending === newMember?.pending) return
-
   const guild = newMember.guild,
-    verificationChannelId = await getVerificationChannel(guild.id),
-    verificationChannel = guild.channels.cache.get(verificationChannelId),
+    nameGuidelines = await getNameGuidelines(guild.id),
     undergoingVerificationRoleId = await getUndergoingVerificationRoleId(
       guild.id
-    ),
+    )
+
+  if (
+    !nameGuidelines ||
+    !undergoingVerificationRoleId ||
+    oldMember?.pending === newMember?.pending
+  )
+    return
+
+  const verificationChannelId = await getVerificationChannel(guild.id),
+    verificationChannel = guild.channels.cache.get(verificationChannelId),
     welcomeChannelId = await getWelcomeChannel(guild.id),
-    welcomeChannel = guild.channels.cache.get(welcomeChannelId),
-    nameGuidelines = await getNameGuidelines(guild.id)
+    welcomeChannel = guild.channels.cache.get(welcomeChannelId)
 
   if (nameGuidelines) {
     const setNameCommand = getCommandByName(`set-name`, guild.id),
@@ -292,7 +298,7 @@ export async function verifyNewMember(oldMember, newMember) {
   }
 }
 
-async function handlePremiumSub(oldMember, newMember) {
+export async function handlePremiumSub(oldMember, newMember) {
   const guild = newMember.guild,
     premiumRole = guild.roles.cache.find(
       role => role.name === `Premium Members` && role.tags?.integrationId
@@ -343,20 +349,6 @@ async function handlePremiumSub(oldMember, newMember) {
   }
 }
 
-export async function handleMemberUpdate(oldMember, newMember) {
-  const guild = newMember.guild,
-    nameGuidelines = await getNameGuidelines(guild.id),
-    undergoingVerificationRoleId = await getUndergoingVerificationRoleId(
-      guild.id
-    )
-
-  if (nameGuidelines && undergoingVerificationRoleId)
-    verifyNewMember(oldMember, newMember)
-  handlePremiumRole(oldMember, newMember)
-  handleVipRole(oldMember, newMember)
-  handlePremiumSub(oldMember, newMember)
-}
-
 export async function filterVerifiedUsers(guildId, members) {
   const undergoingVerificationRoleId = await getUndergoingVerificationRoleId(
     guildId
@@ -365,18 +357,6 @@ export async function filterVerifiedUsers(guildId, members) {
   return members.filter(
     member => !member._roles.includes(undergoingVerificationRoleId)
   )
-}
-
-export async function handleNewMember(guildMember) {
-  const guild = guildMember.guild
-
-  const undergoingVerificationRoleId = await getUndergoingVerificationRoleId(
-    guild.id
-  )
-
-  if (!undergoingVerificationRoleId) return
-
-  await guildMember.roles.add(undergoingVerificationRoleId)
 }
 
 export function getNicknameOrUsername(member, user) {

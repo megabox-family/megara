@@ -101,9 +101,9 @@ export function isPositiveNumber(string) {
 }
 
 export function getVoiceChannelBasename(channelName) {
-  return channelName.match(`.+(?=-\\d+$)`)?.[0]
-}
+  let basename = channelName.match(`.+(?=-\\d+$)`)?.[0]
 
-export function getDynamicVoiceChannelNumber(channelName) {
-  return channelName.match(`(?<=-)\\d+$`)?.[0]
+  basename = basename ? basename : channelName
+
+  return basename
 }

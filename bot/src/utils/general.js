@@ -4,7 +4,7 @@ import { cacheBot, getBot } from '../cache-bot.js'
 import { readdirSync, existsSync } from 'fs'
 import { basename, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { syncChannels } from './channels.js'
+import { getPositionOverrides, syncChannels } from './channels.js'
 import { pinMessage, unpinMessage } from './emoji.js'
 import { registerSlashCommands } from './slash-commands.js'
 import {
@@ -18,8 +18,10 @@ import { getCommands } from '../cache-commands.js'
 import { pollTimeoutMap, printPollResults } from './general-commands.js'
 import { getPollStartTime, getRunningPolls } from '../repositories/polls.js'
 import moment from 'moment/moment.js'
+import { syncRoles } from './roles.js'
+import { syncVipMembers } from './members.js'
 
-const relativePath = dirname(fileURLToPath(import.meta.url)),
+export const relativePath = dirname(fileURLToPath(import.meta.url)),
   srcPath = dirname(relativePath),
   slashCommandFolderName = `slash-commands`,
   slashCommandFiles = readdirSync(`${srcPath}/${slashCommandFolderName}`),
@@ -27,22 +29,21 @@ const relativePath = dirname(fileURLToPath(import.meta.url)),
   contextCommandFiles = readdirSync(`${srcPath}/${contextCommandFolderName}`),
   modalFolderName = `modal-commands`,
   modalCommandFiles = readdirSync(`${srcPath}/${modalFolderName}`),
+  selectFolderName = `select-commands`,
+  selectCommandFiles = readdirSync(`${srcPath}/${selectFolderName}`),
   modalCommands = modalCommandFiles.map(modalCommandFile => {
     return {
       baseName: basename(modalCommandFile, '.js'),
       fullPath: `${srcPath}/${modalFolderName}/${modalCommandFile}`,
     }
   }),
-  selectFolderName = `select-commands`,
-  selectCommandFiles = readdirSync(`${srcPath}/${selectFolderName}`),
   selectCommands = selectCommandFiles.map(selectCommandFile => {
     return {
       baseName: basename(selectCommandFile, '.js'),
       fullPath: `${srcPath}/${selectFolderName}/${selectCommandFile}`,
     }
-  })
-
-export const slashCommands = slashCommandFiles.map(slashCommandFile => {
+  }),
+  slashCommands = slashCommandFiles.map(slashCommandFile => {
     return {
       baseName: basename(slashCommandFile, '.js'),
       fullPath: `${srcPath}/${slashCommandFolderName}/${slashCommandFile}`,
@@ -59,17 +60,7 @@ export const slashCommands = slashCommandFiles.map(slashCommandFile => {
     sensitivity: 'base',
   })
 
-export async function deleteNewRoles(guild) {
-  const newRole = guild.roles.cache.find(role => role.name === `new role`)
-
-  if (!newRole) return
-
-  await newRole.delete().catch()
-
-  await deleteNewRoles(guild)
-}
-
-async function startPollTimers() {
+export async function startPollTimers() {
   const currentTime = moment().unix(),
     runningPolls = await getRunningPolls(currentTime)
 
@@ -84,55 +75,6 @@ async function startPollTimers() {
 
     pollTimeoutMap.set(id, timeoutId)
   })
-}
-
-export async function startup(bot) {
-  console.log(`Logged in as ${bot.user.tag}!`)
-  console.log(process.version)
-
-  cacheBot(bot)
-  await syncGuilds(bot.guilds.cache)
-
-  bot.guilds.cache.forEach(async guild => {
-    await deleteNewRoles(guild)
-    await syncChannels(guild)
-    // await syncRoles(guild)
-    // await syncVipMembers(guild)
-  })
-
-  await registerSlashCommands(bot)
-  await registerContextCommands(bot)
-
-  const commands = getCommands()
-
-  // console.log(commands)
-
-  if (commands) {
-    bot.application?.commands.set(commands)
-  }
-
-  await startPollTimers()
-
-  // const guild = bot.guilds.cache.get(`1100538270263291904`),
-  //   channel = guild.channels.cache.get(`1121600665790205975`)
-
-  // const parentPermissionOverwrites =
-  //   parentTextChannel.permissionOverwrites.cache
-
-  // parentPermissionOverwrites.forEach(permissionOverwrite => {
-  //   const allowPermissions = permissionOverwrite.allow.serialize(),
-  //     denyPermissions = permissionOverwrite.deny.serialize()
-
-  //   console.log(denyPermissions)
-  // })
-
-  //check that deny "view channel" permission is set to false
-
-  // console.log(
-  //   channel.permissionOverwrites.cache
-  //     .get('1100538270263291904')
-  //     .deny.serialize()
-  // )
 }
 
 export async function logMessageToChannel(message) {
@@ -171,7 +113,7 @@ export async function logErrorMessageToChannel(errorMessage, guild) {
   getBot().channels.cache.get(logChannelId).send(`Error: ${errorMessage}`)
 }
 
-function getNotificationRoles(message) {
+export function getNotificationRoles(message) {
   const mentionedRoles = message.mentions.roles
 
   if (mentionedRoles.size === 0) return
@@ -182,110 +124,6 @@ function getNotificationRoles(message) {
     )
 
   if (notificationRoles.size > 0) return notificationRoles
-}
-
-export async function handleMessage(message) {
-  const { guild } = message
-  if (!message?.guild) return
-
-  let pollResults = false
-
-  if (message.author.id === message.client.user.id) {
-    const isPollReply = await getPollStartTime(message.reference?.messageId)
-
-    if (isPollReply) pollResults = true
-  }
-
-  if (
-    message.author.id === message.client.user.id &&
-    message?.interaction?.commandName !== `poll` &&
-    !pollResults
-  )
-    return
-
-  const notificationRoles = getNotificationRoles(message)
-
-  if (!notificationRoles) return
-
-  const channelNotificationsRoleId = await getChannelNotificationsRoleId(
-      guild.id
-    ),
-    hasChannelNotificationRole = notificationRoles.has(
-      channelNotificationsRoleId
-    )
-
-  if (notificationRoles) {
-    const buttonRow = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setLabel(
-          hasChannelNotificationRole
-            ? `channels & roles`
-            : `manage notifications`
-        )
-        .setStyle(ButtonStyle.Link)
-        .setURL(`https://discord.com/channels/${guild.id}/customize-community`)
-    )
-
-    const parameters = {
-      components: [buttonRow],
-    }
-
-    if (hasChannelNotificationRole)
-      parameters.content = `You can join/leave channels or manage these notifications by clicking the button below.`
-
-    await queueApiCall({
-      apiCall: `reply`,
-      djsObject: message,
-      parameters,
-    })
-  }
-}
-
-export async function handleInteraction(interaction) {
-  if (interaction.isButton()) {
-    const buttonFunctionPath = `${srcPath}/button-commands/${
-      interaction.customId.match(`(?!!).+(?=:\\s|:$)`)[0]
-    }.js`
-
-    if (existsSync(buttonFunctionPath))
-      await import(buttonFunctionPath).then(module =>
-        module.default(interaction)
-      )
-
-    interaction.update({}).catch(error => {
-      if (
-        ![
-          `The reply to this interaction has already been sent or deferred.`,
-          `Interaction has already been acknowledged.`,
-        ].includes(error.message)
-      )
-        console.log(error.message)
-    })
-  } else if (interaction.isChatInputCommand()) {
-    const slashCommand = slashCommands.find(
-      slashCommand => slashCommand.baseName === interaction.commandName
-    )
-
-    import(slashCommand.fullPath).then(module => module.default(interaction))
-  } else if (interaction.isModalSubmit()) {
-    const modalCommand = modalCommands.find(
-      modalCommand => modalCommand.baseName === interaction.customId
-    )
-
-    import(modalCommand.fullPath).then(module => module.default(interaction))
-  } else if (interaction.isMessageContextMenuCommand()) {
-    const contextCommand = contextCommands.find(
-      contextCommand => contextCommand.baseName === interaction.commandName
-    )
-
-    import(contextCommand.fullPath).then(module => module.default(interaction))
-  } else if (interaction.isStringSelectMenu()) {
-    const selectCommand = selectCommands.find(
-      selectCommand => selectCommand.baseName === interaction.customId
-    )
-
-    import(selectCommand.fullPath).then(module => module.default(interaction))
-  }
 }
 
 export function getIndividualPermissionSets(overwrite) {

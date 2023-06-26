@@ -1,21 +1,23 @@
 import { Client, GatewayIntentBits, Partials } from 'discord.js'
 import config from '../config.js'
 import {
-  startup,
-  handleMessage,
-  handleInteraction,
-  handleReactionAdd,
-  handleReactionRemove,
-} from './utils/general.js'
-import { handleNewMember, handleMemberUpdate } from './utils/members.js'
+  handleGuildCreate,
+  handleGuildDelete,
+  handleGuildUpdate,
+} from './handlers/guilds.js'
 import {
-  handleCreateChannel,
-  handleModifyChannel,
-  handleDeleteChannel,
-} from './utils/channels.js'
-import { createRole, modifyRole, deleteRole } from './utils/roles.js'
-import { createGuild, modifyGuild, deleteGuild } from './repositories/guilds.js'
-import { handleVoiceUpdate } from './utils/voice.js'
+  handleChannelCreate,
+  handleChannelDelete,
+  handleChannelUpdate,
+} from './handlers/channels.js'
+import { handleRoleCreate, handleRoleUpdate } from './handlers/roles.js'
+import { handleMemberAdd, handleMemberUpdate } from './handlers/members.js'
+import {
+  handleInteractionCreate,
+  handleMessageCreate,
+  handleVoiceStatusUpdate,
+  startup,
+} from './handlers/general.js'
 
 const bot = new Client({
   partials: [Partials.Channel, Partials.Message, Partials.Reaction],
@@ -35,22 +37,19 @@ const bot = new Client({
 bot.login(config.botToken)
 
 bot.on('ready', startup)
-bot.on('guildCreate', createGuild)
-bot.on('guildUpdate', modifyGuild)
-bot.on('guildDelete', deleteGuild)
-bot.on('guildMemberAdd', handleNewMember)
+bot.on('guildCreate', handleGuildCreate)
+bot.on('guildUpdate', handleGuildUpdate)
+bot.on('guildDelete', handleGuildDelete)
+bot.on('channelCreate', handleChannelCreate)
+bot.on('channelUpdate', handleChannelUpdate)
+bot.on('channelDelete', handleChannelDelete)
+bot.on('roleCreate', handleRoleCreate)
+bot.on('roleUpdate', handleRoleUpdate)
+bot.on('guildMemberAdd', handleMemberAdd)
 bot.on('guildMemberUpdate', handleMemberUpdate)
-bot.on('channelCreate', handleCreateChannel)
-bot.on('channelUpdate', handleModifyChannel)
-bot.on('channelDelete', handleDeleteChannel)
-bot.on('roleCreate', createRole)
-bot.on('roleUpdate', modifyRole)
-bot.on('roleDelete', deleteRole)
-bot.on('messageCreate', handleMessage)
-bot.on('interactionCreate', handleInteraction)
-bot.on('voiceStateUpdate', handleVoiceUpdate)
-// bot.on('messageReactionAdd', handleReactionAdd)
-// bot.on('messageReactionRemove', handleReactionRemove)
+bot.on('messageCreate', handleMessageCreate)
+bot.on('interactionCreate', handleInteractionCreate)
+bot.on('voiceStateUpdate', handleVoiceStatusUpdate)
 
 bot.on('rateLimit', rateLimitData => {
   console.log(rateLimitData)

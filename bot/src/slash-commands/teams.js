@@ -1,6 +1,6 @@
 import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js'
-import { getAllVoiceChannelIds } from '../repositories/channels.js'
 import { extractElement } from '../utils/general.js'
+import { checkIfChannelIsSuggestedType } from '../utils/channels.js'
 import { queueApiCall } from '../api-queue.js'
 
 export const description = `Creates a sepcificed number of randomized teams composed of people in the voice channel you're in.`
@@ -49,9 +49,8 @@ const teamsNames = [
 
 export default async function (interaction) {
   const { guild, options } = interaction,
-    voiceChannelIds = await getAllVoiceChannelIds(guild.id),
-    voiceChannels = voiceChannelIds.map(voiceChannelId =>
-      guild.channels.cache.get(voiceChannelId)
+    voiceChannels = guild.channels.cache.filter(channel =>
+      checkIfChannelIsSuggestedType(channel, `voice`)
     ),
     voiceChannelMemberNames = voiceChannels
       .find(voiceChannel => voiceChannel.members.get(interaction.member.id))

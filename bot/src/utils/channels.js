@@ -6,52 +6,31 @@ import {
   OverwriteType,
   Collection,
   PermissionsBitField,
-  PermissionOverwrites,
 } from 'discord.js'
 import { getBot } from '../cache-bot.js'
-import { comparePermissions } from '../utils/general.js'
+import { collator } from '../utils/general.js'
 import {
-  getAdminChannel,
-  getFunctionChannels,
   getChannelSorting,
-  setAdminChannel,
-  setLogChannel,
-  setAnnouncementChannel,
-  setVerificationChannel,
-  setWelcomeChannel,
   getAnnouncementChannel,
   getWelcomeChannel,
   getPauseChannelNotifications,
   getChannelNotificationsRoleId,
 } from '../repositories/guilds.js'
 import {
-  createChannelRecord,
-  updateChannelRecord,
+  setChannelRecordName,
   deleteChannelRecord,
   getChannelsByGuild,
-  getAlphabeticalCategories,
-  getAlphabeticalChannelsByCategory,
-  getChannelType,
-  getRoomChannelId,
-  getUnverifiedRoomChannelId,
-  getCategoryName,
   getPositionOverride,
+  getPositionOverrideRecords,
+  getVoiceChannelParentId,
+  removeCustomVoiceOptionsByParentId,
+  createChannelRecord,
 } from '../repositories/channels.js'
-import { getChannelBasename } from './voice.js'
 import { queueApiCall } from '../api-queue.js'
 import { isPositiveNumber } from './validation.js'
-import { deleteVoiceRecord, getVoiceRecordById } from '../repositories/voice.js'
 
-const setChannelFunction = {
-    adminChannel: setAdminChannel,
-    logChannel: setLogChannel,
-    announcementChannel: setAnnouncementChannel,
-    verificationChannel: setVerificationChannel,
-    welcomeChannel: setWelcomeChannel,
-  },
-  channelSortingQueue = []
+const channelSortingQueue = []
 
-// Check this
 async function emptyChannelSortingQueue() {
   if (channelSortingQueue.length === 0) return
 
@@ -74,156 +53,75 @@ export function pushToChannelSortingQueue(guildId) {
   }
 }
 
-export async function sortChannels(guildId) {
+export function createPositionArray(categoryBuckets) {
+  const positions = []
+
+  categoryBuckets.forEach((categoryBucket, index) => {
+    const { children } = categoryBucket
+
+    positions.push({
+      name: categoryBucket.name,
+      channel: categoryBucket.id,
+      position: index,
+    })
+
+    children.forEach((child, jndex) =>
+      positions.push({
+        name: child.name,
+        channel: child.id,
+        position: jndex,
+      })
+    )
+  })
+
+  return positions
+}
+
+export async function sortChannels(guildId, bypassComparison = false) {
   if (!(await getChannelSorting(guildId))) return
 
   const guild = getBot().guilds.cache.get(guildId),
-    channels = guild.channels.cache.filter(
-      channel =>
-        ![ChannelType.PublicThread, ChannelType.PrivateThread].includes(
-          channel.type
-        )
-    ),
-    alphabeticalCategories = await getAlphabeticalCategories(guildId),
-    alphabeticalBuckets = [alphabeticalCategories],
-    finalChannelArr = [],
-    createAlphabeticalBucket = alphabeticalCategories.map(async category =>
-      alphabeticalBuckets.push(
-        await getAlphabeticalChannelsByCategory(category.id)
+    newCategoryBuckets = await getCategoryBuckets(guild),
+    newChannelPositions = createPositionArray(newCategoryBuckets)
+
+  if (bypassComparison) {
+    console.log(`sorted channels`)
+
+    await queueApiCall({
+      apiCall: `setPositions`,
+      djsObject: guild.channels,
+      parameters: newChannelPositions,
+    })
+
+    return
+  }
+
+  const currentCategoryBuckets = await getCategoryBuckets(guild, false),
+    currentChannelPositions = createPositionArray(currentCategoryBuckets),
+    comparableCurrentPositions = newChannelPositions.map(newChannelPosition => {
+      return currentChannelPositions.find(
+        currentChannelPositions =>
+          currentChannelPositions.channel === newChannelPosition.channel
       )
-    )
+    })
 
-  await Promise.all(createAlphabeticalBucket)
-
-  // console.log(alphabeticalBuckets)
-
-  const createFinalChannelArr = alphabeticalBuckets.map(
-    async alphabeticalBucket => {
-      const channelsWithPositionOverrides = {},
-        orderedChannels = [],
-        channelsWithPositiveOverrides = [],
-        channelsWithNegativeOverrides = [],
-        voiceChannelsWithPositionOverrides = {},
-        orderedVoiceChannels = [],
-        voiceChannelsWithPositiveOverrides = [],
-        voiceChannelsWithNegativeOverrides = [],
-        createPositionOverrideArrays = alphabeticalBucket.map(async channel => {
-          const positionOverride = await getPositionOverride(channel.id)
-
-          if (positionOverride) {
-            if (channel.channelType === `GuildVoice`)
-              voiceChannelsWithPositionOverrides[channel.id] = positionOverride
-            else channelsWithPositionOverrides[channel.id] = positionOverride
-          }
-        })
-
-      await Promise.all(createPositionOverrideArrays)
-
-      alphabeticalBucket.forEach(channel => {
-        if (channelsWithPositionOverrides.hasOwnProperty(channel.id)) {
-          if (channelsWithPositionOverrides[channel.id] > 0)
-            channelsWithPositiveOverrides.push({
-              id: channel.id,
-              positionOverride: channelsWithPositionOverrides[channel.id],
-            })
-          else
-            channelsWithNegativeOverrides.push({
-              id: channel.id,
-              positionOverride: channelsWithPositionOverrides[channel.id],
-            })
-        } else if (
-          voiceChannelsWithPositionOverrides.hasOwnProperty(channel.id)
-        ) {
-          if (voiceChannelsWithPositionOverrides[channel.id] > 0)
-            voiceChannelsWithPositiveOverrides.push({
-              id: channel.id,
-              positionOverride: voiceChannelsWithPositionOverrides[channel.id],
-            })
-          else
-            voiceChannelsWithNegativeOverrides.push({
-              id: channel.id,
-              positionOverride: voiceChannelsWithPositionOverrides[channel.id],
-            })
-        } else if (channel.channelType === `GuildVoice`)
-          orderedVoiceChannels.push(channel.id)
-        else orderedChannels.push(channel.id)
-      })
-
-      channelsWithPositiveOverrides.sort((a, b) =>
-        a.positionOverride > b.positionOverride ? -1 : 1
-      )
-
-      channelsWithNegativeOverrides.sort((a, b) =>
-        a.positionOverride < b.positionOverride ? -1 : 1
-      )
-
-      channelsWithPositiveOverrides.forEach(categoriesWithPositiveOverride =>
-        orderedChannels.unshift(categoriesWithPositiveOverride.id)
-      )
-
-      channelsWithNegativeOverrides.forEach(categoriesWithNegativeOverride =>
-        orderedChannels.push(categoriesWithNegativeOverride.id)
-      )
-
-      voiceChannelsWithPositiveOverrides.sort((a, b) =>
-        a.positionOverride > b.positionOverride ? -1 : 1
-      )
-
-      voiceChannelsWithNegativeOverrides.sort((a, b) =>
-        a.positionOverride < b.positionOverride ? -1 : 1
-      )
-
-      voiceChannelsWithPositiveOverrides.forEach(
-        categoriesWithPositiveOverride =>
-          orderedVoiceChannels.unshift(categoriesWithPositiveOverride.id)
-      )
-
-      voiceChannelsWithNegativeOverrides.forEach(
-        categoriesWithNegativeOverride =>
-          orderedVoiceChannels.push(categoriesWithNegativeOverride.id)
-      )
-
-      orderedChannels.forEach((channelId, index) =>
-        finalChannelArr.push({ channel: channelId, position: index })
-      )
-
-      orderedVoiceChannels.forEach((channelId, index) =>
-        finalChannelArr.push({ channel: channelId, position: index })
-      )
-    }
-  )
-
-  await Promise.all(createFinalChannelArr)
-
-  const currentChannelPosition = finalChannelArr.map(channel => {
-    const _channel = channels.get(channel.channel)
-
-    if (!_channel)
-      console.log(
-        `This channel is deleted but we're trying to sort it: ${channel.channel}`
-      )
-
-    return {
-      name: _channel?.name,
-      channel: _channel?.id,
-      position: _channel?.rawPosition,
-    }
-  })
+  // console.log(newChannelPositions, currentChannelPositions)
 
   if (
-    JSON.stringify(finalChannelArr) !== JSON.stringify(currentChannelPosition)
+    JSON.stringify(newChannelPositions) !==
+    JSON.stringify(comparableCurrentPositions)
   ) {
     console.log(`sorted channels`)
 
     await queueApiCall({
       apiCall: `setPositions`,
       djsObject: guild.channels,
-      parameters: finalChannelArr,
+      parameters: newChannelPositions,
     })
   }
 }
 
-export function checkIfChannelIsSuggestedType(channel, type) {
+export function getAlphaChannelType(channel) {
   const channelTypeKeys = Object.keys(ChannelType).filter(
     channelTypeKey => !isPositiveNumber(channelTypeKey)
   )
@@ -232,82 +130,13 @@ export function checkIfChannelIsSuggestedType(channel, type) {
     channelTypeKey => ChannelType[channelTypeKey] === channel.type
   )
 
-  return alphaChannelType?.match(type)
+  return alphaChannelType
 }
 
-export async function handleCreateChannel(channel) {
-  const channelIsThread = checkIfChannelIsSuggestedType(channel, `Thread`)
+export function checkIfChannelIsSuggestedType(channel, alphaType) {
+  const alphaChannelType = getAlphaChannelType(channel)
 
-  if (channelIsThread) return
-
-  await createChannelRecord(channel)
-
-  announceNewChannel(channel)
-}
-
-export async function handleModifyChannel(oldChannel, newChannel) {
-  const channelIsThread = checkIfChannelIsSuggestedType(oldChannel, `Thread`),
-    { guild } = newChannel
-
-  if (channelIsThread) return
-
-  if (
-    oldChannel.name !== newChannel.name ||
-    oldChannel.parentId !== newChannel.parentId ||
-    oldChannel.rawPosition !== newChannel.rawPosition ||
-    oldChannel.position !== newChannel.position
-  ) {
-    pushToChannelSortingQueue(guild.id)
-  }
-
-  if (oldChannel.name !== newChannel.name) {
-    await updateChannelRecord(newChannel)
-  }
-}
-
-export async function handleDeleteChannel(channel) {
-  const { id: channelId, guild } = channel
-
-  if (await getVoiceRecordById(channelId)) {
-    await deleteVoiceRecord(channelId)
-  }
-
-  const functionChannels = await getFunctionChannels(guild.id)
-
-  Object.keys(functionChannels).forEach(key => {
-    const channelName = key.match(`^[a-z]+`)[0]
-
-    if (channelId === functionChannels[key]) {
-      setChannelFunction[key](guild.id, null)
-
-      if (key === `adminChannel`) {
-        const owner = guild.members.cache.get(guild.ownerId)
-
-        queueApiCall({
-          apiCall: `send`,
-          djsObject: owner,
-          parameters:
-            `You're receiving this message because you are the owner of the ${guild.name} server.` +
-            `\nThe channel that was set as the admin channel was deleted at some point 🤔` +
-            `\nTo receive important notifications from me in the server this needs to be set again.`,
-        })
-      } else {
-        const adminChannel = guild.channels.cache.get(
-          functionChannels.adminChannel
-        )
-
-        queueApiCall({
-          apiCall: `send`,
-          djsObject: adminChannel,
-          parameters:
-            `The channel that was set as the ${channelName} channel was deleted at some point 🤔` +
-            `\nYou'll need to set this channel function again to gain its functionality.`,
-        })
-      }
-    }
-  })
-
-  await deleteChannelRecord(channelId)
+  return alphaChannelType?.toLowerCase()?.match(alphaType.toLowerCase())
 }
 
 export async function syncChannels(guild) {
@@ -315,18 +144,14 @@ export async function syncChannels(guild) {
     liveChannelIds = []
 
   channels.forEach(channel => {
-    if (
-      ![ChannelType.PublicThread, ChannelType.PrivateThread].includes(
-        channel.type
-      )
-    )
+    // checkIfChannel
+    if (!checkIfChannelIsSuggestedType(channel, `thread`))
       liveChannelIds.push(channel.id)
   })
 
   const channelTable = await getChannelsByGuild(guild.id),
     tabledChannelIds = channelTable.map(row => row.id),
-    allIds = [...new Set([...liveChannelIds, ...tabledChannelIds])],
-    channelsToAnnounce = []
+    allIds = [...new Set([...liveChannelIds, ...tabledChannelIds])]
 
   let positionHasChanged = false
 
@@ -337,15 +162,20 @@ export async function syncChannels(guild) {
       if (liveChannelIds.includes(id) && !tabledChannelIds.includes(id)) {
         positionHasChanged = true
 
-        const channelId = await createChannel(channel, true)
-        if (channelId) channelsToAnnounce.push(channelId)
+        await createChannelRecord(channel)
       } else if (
         !liveChannelIds.includes(id) &&
         tabledChannelIds.includes(id)
       ) {
         positionHasChanged = true
 
-        deleteChannelRecord({ id: id }, true)
+        const voiceChannelParentId = await getVoiceChannelParentId(id)
+
+        if (voiceChannelParentId) {
+          await removeCustomVoiceOptionsByParentId(voiceChannelParentId)
+        }
+
+        await deleteChannelRecord(id)
       } else {
         const record = channelTable.find(row => {
             return row.id === id
@@ -354,144 +184,18 @@ export async function syncChannels(guild) {
 
         if (
           record.positionOverride !== livePositionalOverride ||
-          record.positionHasChanged !== channel.position
+          record.positionHasChanged !== channel.rawPosition
         )
           positionHasChanged = true
 
-        const channelId = await modifyChannel(record, channel, true)
-
-        if (channelId) channelsToAnnounce.push(channelId)
+        if (record.name !== channel.name) {
+          await setChannelRecordName(channel)
+        }
       }
     })
   )
 
   if (positionHasChanged) pushToChannelSortingQueue(guild.id)
-
-  if (channelsToAnnounce.length >= 5) {
-    const adminChannelId = await getAdminChannel(guild.id),
-      adminChannel = guild.channels.cache.get(adminChannelId)
-
-    await queueApiCall({
-      apiCall: `send`,
-      djsObject: adminChannel,
-      parameters: `Potential oopsie detected. More than five channels were marked for announcement:
-      ${channelsToAnnounce.join(', ')}`,
-    })
-  } else {
-    channelsToAnnounce.forEach(channelToAnnounce => {
-      announceNewChannel(channelToAnnounce)
-    })
-  }
-}
-
-export async function addMemberToDynamicChannels(
-  member,
-  permissions,
-  parentChannelName
-) {
-  const guild = member.guild,
-    channels = guild.channels.cache,
-    dynamicVoiceChannels = channels.filter(
-      channel =>
-        getChannelBasename(channel.name) === parentChannelName &&
-        channel.type === ChannelType.GuildVoice
-    )
-
-  for (const [voiceChannelId, voiceChannel] of dynamicVoiceChannels) {
-    await new Promise(resolution => setTimeout(resolution, 5000))
-
-    if (voiceChannel)
-      await voiceChannel.permissionOverwrites
-        .create(member, permissions)
-        .catch(error =>
-          console.log(
-            `I was unable to add a member to a dynamic voice channel, it was probably deleted as I was adding them:\n${error}`
-          )
-        )
-  }
-}
-
-export async function CheckIfMemberNeedsToBeAdded(
-  member,
-  channelId,
-  temporary = false
-) {
-  if (!channelId) return
-
-  const guild = member.guild,
-    welcomeChannelId = await getWelcomeChannel(guild.id),
-    roomChannelId = await getRoomChannelId(guild.id),
-    unverifiedRoomId = await getUnverifiedRoomChannelId(guild.id)
-
-  if ([welcomeChannelId, roomChannelId, unverifiedRoomId].includes(channelId))
-    return
-
-  const channel = guild.channels.cache.get(channelId)
-
-  if (!channel) return `not added`
-
-  const channelType = await getChannelType(channel.id)
-
-  if (channelType === `hidden`) return
-
-  const userOverwrite = channel.permissionOverwrites.cache.find(
-      permissionOverwrite => permissionOverwrite.id === member.id
-    ),
-    comparedPermissions = comparePermissions(userOverwrite),
-    allowPermissions = userOverwrite?.allow.serialize()
-
-  if (channelType === `archived`) {
-    const archivedPermissions = {
-      ViewChannel: true,
-      SendMessages: false,
-      SendMessagesInThreads: false,
-      CreatePrivateThreads: false,
-      CreatePublicThreads: false,
-    }
-
-    if (!userOverwrite)
-      return { action: `create`, permissions: archivedPermissions }
-    else if (
-      !comparedPermissions.ViewChannel ||
-      comparedPermissions.SendMessages ||
-      comparedPermissions.SendMessagesInThreads ||
-      comparedPermissions.CreatePrivateThreads ||
-      comparedPermissions.CreatePublicThreads
-    )
-      return { action: `edit`, permissions: archivedPermissions }
-  } else if (channelType === `joinable`) {
-    const joinablePermissions = temporary
-      ? { ViewChannel: true, SendMessages: true }
-      : { ViewChannel: true, SendMessages: null }
-
-    if (!userOverwrite)
-      return { action: `create`, permissions: joinablePermissions }
-    else if (!comparedPermissions.ViewChannel || allowPermissions.SendMessages)
-      return { action: `edit`, permissions: joinablePermissions }
-  } else if (channelType === `public`) {
-    if (temporary) {
-      if (userOverwrite && comparedPermissions?.ViewChannel === false)
-        return {
-          action: `edit`,
-          permissions: {
-            ViewChannel: true,
-            SendMessages: true,
-          },
-        }
-    } else {
-      if (userOverwrite) {
-        return { action: `delete` }
-      }
-    }
-  } else if (channelType === `private`) {
-    const privatePermissions = { ViewChannel: true }
-
-    if (!userOverwrite || !comparedPermissions.ViewChannel) {
-      return { action: `create`, permissions: privatePermissions }
-    }
-  }
-
-  return `already added`
 }
 
 export async function addMemberToChannel(member, channelId) {
@@ -514,32 +218,6 @@ export async function addMemberToChannel(member, channelId) {
   })
 
   return true
-}
-
-export async function removeMemberFromDynamicChannels(
-  member,
-  parentChannelName
-) {
-  const guild = member.guild,
-    channels = guild.channels.cache,
-    dynamicVoiceChannels = channels.filter(
-      channel =>
-        getChannelBasename(channel.name) === parentChannelName &&
-        channel.type === ChannelType.GuildVoice
-    )
-
-  for (const [voiceChannelId, voiceChannel] of dynamicVoiceChannels) {
-    await new Promise(resolution => setTimeout(resolution, 5000))
-
-    if (voiceChannel)
-      await voiceChannel.permissionOverwrites
-        .delete(member)
-        .catch(error =>
-          console.log(
-            `I was unable to remove a member from a dynamic voice channel, it was probably deleted as I was removing them:\n${error}`
-          )
-        )
-  }
 }
 
 export async function checkIfMemberneedsToBeRemoved(member, channel) {
@@ -587,8 +265,7 @@ export async function announceNewChannel(newChannel) {
 
   if (!announcementChannelId) return
 
-  const channelType = checkType(newChannel),
-    isVoiceChannel = channelType.match('Voice')
+  const isVoiceChannel = checkIfChannelIsSuggestedType(newChannel, `voice`)
 
   if (isVoiceChannel) return
 
@@ -597,7 +274,7 @@ export async function announceNewChannel(newChannel) {
     denyPermissions = guildRolePermissions?.deny.serialize()
 
   if (!denyPermissions?.ViewChannel) {
-    const categoryName = await getCategoryName(newChannelParentId),
+    const categoryName = guild.channels.cache.get(newChannelParentId)?.name,
       announcementChannel = channels.cache.get(announcementChannelId),
       channelNotificationsRoleId = await getChannelNotificationsRoleId(guildId),
       channelNotificationsRole = roles.cache.get(channelNotificationsRoleId)
@@ -775,35 +452,143 @@ export function convertSerialzedPermissionsToPermissionsBitfield(
   return permissionsBitField
 }
 
-export function formatPositionOverrides(guild, positionOverrideRecords) {
-  const positionOverrideObject = {}
+export function getPositionOverrideSort(positionOverride) {
+  let positionOverrideSort
+
+  if (positionOverride === undefined) {
+    positionOverrideSort = 10000
+  } else if (positionOverride > 0) positionOverrideSort = positionOverride
+  else {
+    const invertedOverride = positionOverride * -1
+
+    positionOverrideSort = 100000 - invertedOverride
+  }
+
+  return positionOverrideSort
+}
+
+export async function getCategoryBuckets(
+  guild,
+  sortByOverrides = true,
+  filterForOverrides = false
+) {
+  const positionOverrideRecords = await getPositionOverrideRecords(guild.id),
+    positionOverrideObject = {}
 
   positionOverrideRecords.forEach(
     record => (positionOverrideObject[record.id] = record.positionOverride)
   )
 
-  const guildCategories = guild.channels.cache.filter(channel => {
-      channel.type === ChannelType.GuildCategory
-    }),
-    categoryBuckets = guildCategories.map(category => {
-      const children = guild.channels.cache.filter(
-          channel => channel.parentId === category.id
-        ),
-        childrenBucket = children.map(child => {
-          return {
-            id: child.id,
-            name: child.name,
-            positionOverride: positionOverrideObject[child.id],
-          }
-        })
+  const guildCategories = guild.channels.cache.filter(
+    channel => channel.type === ChannelType.GuildCategory
+  )
 
-      return {
-        id: category.id,
-        name: category.name,
-        positionOverride: positionOverrideObject[category.id],
-        children: childrenBucket,
+  // construct category buckets
+  let categoryBuckets = guildCategories.map(category => {
+    const positionOverride = positionOverrideObject[category.id],
+      sort = getPositionOverrideSort(positionOverride),
+      children = guild.channels.cache.filter(
+        channel => channel.parentId === category.id
+      ),
+      childrenBucket = children.map(child => {
+        const childPositionOverride = positionOverrideObject[child.id],
+          childSort = getPositionOverrideSort(childPositionOverride)
+
+        return {
+          id: child.id,
+          name: child.name,
+          rawPosition: child.rawPosition,
+          positionOverride: childPositionOverride,
+          customSort: childSort,
+        }
+      })
+
+    childrenBucket.sort((a, b) => {
+      if (a.sort === b.sort) return collator.compare(a.name, b.name)
+      else return collator.compare(a.sort, b.sort)
+    })
+
+    return {
+      id: category.id,
+      name: category.name,
+      rawPosition: category.rawPosition,
+      positionOverride: positionOverride,
+      customSort: sort,
+      children: childrenBucket,
+    }
+  })
+
+  // filter to only categories/channels that have position overrides
+  if (filterForOverrides)
+    categoryBuckets = categoryBuckets.filter(categoryBucket => {
+      const categoryHasPositionOverride =
+          categoryBucket?.positionOverride !== undefined,
+        childrenWithOverrides = categoryBucket.children.filter(
+          child => child?.positionOverride !== undefined
+        )
+
+      if (categoryHasPositionOverride || childrenWithOverrides.length > 0) {
+        categoryBucket.children = childrenWithOverrides
+
+        return true
       }
     })
 
-  console.log(categoryBuckets)
+  //sort buckets by position override and then name
+  if (sortByOverrides) {
+    for (const categoryBucket of categoryBuckets) {
+      categoryBucket.children.sort((a, b) => {
+        if (a.customSort === b.customSort)
+          return collator.compare(a.name, b.name)
+        else return collator.compare(a.customSort, b.customSort)
+      })
+    }
+
+    categoryBuckets.sort((a, b) => {
+      if (a.customSort === b.customSort) return collator.compare(a.name, b.name)
+      else return collator.compare(a.customSort, b.customSort)
+    })
+  } else {
+    for (const categoryBucket of categoryBuckets) {
+      categoryBucket.children.sort((a, b) =>
+        collator.compare(a.rawPosition, b.rawPosition)
+      )
+    }
+
+    categoryBuckets.sort((a, b) =>
+      collator.compare(a.rawPosition, b.rawPosition)
+    )
+  }
+
+  return categoryBuckets
+}
+
+export async function getPositionOverrides(guild) {
+  const categoryBuckets = await getCategoryBuckets(guild, true, true),
+    positionOverrides = [],
+    channelPositionOverrides = []
+
+  categoryBuckets.forEach(categoryBucket => {
+    positionOverrides.push({
+      group: `categories`,
+      values: `<#${categoryBucket.id}>: ${categoryBucket.positionOverride}`,
+    })
+  })
+
+  categoryBuckets.forEach(categoryBucket => {
+    const { children } = categoryBucket
+
+    if (children?.length > 0) {
+      children.forEach(child => {
+        channelPositionOverrides.push({
+          group: `<#${categoryBucket.id}>`,
+          values: `<#${child.id}> : ${child.positionOverride}`,
+        })
+      })
+    }
+  })
+
+  positionOverrides.push(...channelPositionOverrides)
+
+  return positionOverrides
 }

@@ -8,6 +8,7 @@ import {
   checkIfMemberIsPermissible,
   checkIfChannelIsSuggestedType,
   convertSerialzedPermissionsToPermissionsBitfield,
+  sortChannels,
 } from './channels.js'
 import {
   getActiveVoiceCategoryId,
@@ -15,66 +16,14 @@ import {
   setActiveVoiceCategoryId,
 } from '../repositories/guilds.js'
 import {
-  checkIfVoiceChannelIsRelated,
-  createVoiceRecord,
-  deleteVoiceRecord,
+  setCustomVoiceOptions,
+  getDynamicVoiceChannelRecords,
   getDynamicVoiceChildrenRecords,
-  getVoiceRecordById,
-} from '../repositories/voice.js'
+  getChannelRecordById,
+} from '../repositories/channels.js'
 import { queueApiCall } from '../api-queue.js'
-
-export function getChannelBasename(voiceChannelName) {
-  if (!voiceChannelName) return
-
-  return voiceChannelName.match(`.+(?=-[0-9]+$)`)?.[0]
-}
-
-export function getChannelNumber(voiceChannelName) {
-  if (!voiceChannelName) return
-
-  return voiceChannelName.match(`(?<=-)[0-9]+$`)?.[0]
-}
-
-export async function deactivateOrDeleteVoiceChannel(voiceChannel) {
-  const { guild } = voiceChannel
-
-  voiceChannel = guild.channels.cache.get(voiceChannel.id)
-
-  if (!voiceChannel) return
-
-  const inactiveVoiceCategoryId = await getInactiveVoiceCategoryId(guild.id),
-    inactiveVoiceCategory = guild.channels.cache.get(inactiveVoiceCategoryId)
-
-  if (!inactiveVoiceCategory) return
-  if (voiceChannel.parentId === inactiveVoiceCategory.id) return
-  if (voiceChannel.members.size > 0) return
-
-  const voiceRecord = await getVoiceRecordById(voiceChannel.id),
-    { temporary, alwaysActive, dynamic, dynamicNumber, parentVoiceChannelId } =
-      voiceRecord
-
-  if (temporary === null) return
-
-  if (alwaysActive) {
-    if (dynamicNumber === 1) return
-  }
-
-  if (temporary) {
-    await deleteVoiceRecord(voiceChannel.id)
-
-    await queueApiCall({
-      apiCall: `delete`,
-      djsObject: voiceChannel,
-    })
-  } else {
-    await queueApiCall({
-      apiCall: `setParent`,
-      djsObject: voiceChannel,
-      parameters: [inactiveVoiceCategoryId, { lockPermissions: true }],
-      multipleParameters: true,
-    })
-  }
-}
+import { collator } from './general.js'
+import { getVoiceChannelBasename } from './validation.js'
 
 export async function createVoiceCommandChannel(
   name,
@@ -115,7 +64,7 @@ export async function createVoiceCommandChannel(
     }
   })
 
-  const voiceRecord = await getVoiceRecordById(existingChannel?.id)
+  const voiceRecord = await getChannelRecordById(existingChannel?.id)
 
   existingChannel = voiceRecord ? existingChannel : null
 
@@ -137,7 +86,10 @@ export async function createVoiceCommandChannel(
         djsObject: existingChannel,
         parameters: [activeVoiceCategoryId, { lockPermissions: true }],
         multipleParameters: true,
-      })
+      }).then(
+        event => setTimeout(sortChannels.bind(null, guild.id, true)),
+        1000
+      )
 
     const channelInUse = existingChannel.members.size > 0
 
@@ -269,14 +221,14 @@ export async function createVoiceCommandChannel(
     },
   })
 
-  await createVoiceRecord(
-    newVoiceChannel.id,
-    newVoiceChannel.name,
+  setTimeout(sortChannels.bind(null, guild.id, true), 1000)
+
+  await setCustomVoiceOptions(
+    newVoiceChannel,
     dynamic,
+    1,
     temporary,
     alwaysActive,
-    isPrivate,
-    guild.id,
     parentTextChannel?.id,
     parentThread?.id,
     parentVoiceChannel?.id
@@ -302,18 +254,127 @@ export async function activateVoiceChannel(voiceChannel) {
       djsObject: voiceChannel,
       parameters: [activeVoiceCategoryId, { lockPermissions: true }],
       multipleParameters: true,
-    })
+    }).then(event => setTimeout(sortChannels.bind(null, guild.id, true)), 1000)
+}
+
+export async function getFirstAvailableDynamicVoiceChannel(
+  guild,
+  parentVoiceChannelId
+) {
+  const dynamicVoiceChannels = await getDynamicVoiceChannelRecords(
+      parentVoiceChannelId
+    ),
+    firstAvailableDynamicVoiceChannelRecord = dynamicVoiceChannels.find(
+      (dynamicVoiceChild, index) => {
+        const channel = guild.channels.cache.get(dynamicVoiceChild.id),
+          relativeIndex = index + 1
+
+        if (
+          channel.members.size === 0 &&
+          dynamicVoiceChild.dynamicNumber === relativeIndex
+        )
+          return true
+      }
+    ),
+    firstAvailableDynamicVoiceChannel = guild.channels.cache.get(
+      firstAvailableDynamicVoiceChannelRecord?.id
+    )
+
+  return firstAvailableDynamicVoiceChannel
+}
+
+export async function getLastAvailableActiveDynamicVoiceChannel(
+  guild,
+  parentVoiceChannelId
+) {
+  let dynamicVoiceChannels = await getDynamicVoiceChannelRecords(
+    parentVoiceChannelId
+  )
+
+  const activeVoiceCategoryId = await getActiveVoiceCategoryId(guild.id)
+
+  if (!activeVoiceCategoryId) return
+
+  dynamicVoiceChannels = dynamicVoiceChannels.filter(dynamicVoiceChannel => {
+    const channel = guild.channels.cache.get(dynamicVoiceChannel.id)
+
+    return channel.parentId === activeVoiceCategoryId
+  })
+
+  dynamicVoiceChannels.sort((a, b) =>
+    collator.compare(b.dynamicNumber, a.dynamicNumber)
+  )
+
+  const firstAvailableDynamicVoiceChannelRecord = dynamicVoiceChannels.find(
+      (dynamicVoiceChild, index) => {
+        const channel = guild.channels.cache.get(dynamicVoiceChild.id)
+
+        if (channel.members.size === 0) return true
+      }
+    ),
+    firstAvailableDynamicVoiceChannel = guild.channels.cache.get(
+      firstAvailableDynamicVoiceChannelRecord?.id
+    )
+
+  return firstAvailableDynamicVoiceChannel
+}
+
+export async function getFirstAvailableDynamicNumber(parentVoiceChannelId) {
+  const dynamicVoiceChannels = await getDynamicVoiceChannelRecords(
+    parentVoiceChannelId
+  )
+
+  if (!dynamicVoiceChannels) return 2
+
+  let firstAvailableDynamicNumber
+
+  for (const [index, dynamicVoiceChild] of dynamicVoiceChannels.entries()) {
+    const relativeIndex = index + 1
+
+    if (dynamicVoiceChild.dynamicNumber !== relativeIndex) {
+      firstAvailableDynamicNumber = relativeIndex
+
+      break
+    }
+  }
+
+  return firstAvailableDynamicNumber
+    ? firstAvailableDynamicNumber
+    : dynamicVoiceChannels.length + 1
+}
+
+export async function getCountOfAvailableVoiceChannels(
+  guild,
+  parentVoiceChannelId
+) {
+  const dynamicVoiceChannels = await getDynamicVoiceChannelRecords(
+    parentVoiceChannelId
+  )
+
+  let availableChannels = 0
+
+  for (const channelRecord of dynamicVoiceChannels) {
+    const activeVoiceCategoryId = await getActiveVoiceCategoryId(guild.id),
+      channel = guild.channels.cache.get(channelRecord.id)
+
+    if (
+      channel.parentId === activeVoiceCategoryId &&
+      channel.members.size === 0
+    )
+      availableChannels++
+  }
+
+  return availableChannels
 }
 
 export async function createOrActivateDynamicChannel(voiceChannel) {
   if (!voiceChannel || voiceChannel?.members?.size === 0) return
 
-  const voiceRecord = await getVoiceRecordById(voiceChannel.id)
+  const voiceRecord = await getChannelRecordById(voiceChannel.id)
 
   if (!voiceRecord) return
 
   const {
-    baseName,
     dynamic,
     dynamicNumber,
     temporary,
@@ -335,30 +396,31 @@ export async function createOrActivateDynamicChannel(voiceChannel) {
   const _parentVoiceChannelId = parentVoiceChannelId
       ? parentVoiceChannelId
       : voiceChannel.id,
-    newDynamicNumber = dynamicNumber + 1,
-    newVoiceChannelName = `${baseName}-${newDynamicNumber}`,
-    existingVoiceChannel = guild.channels.cache.find(
-      channel => channel.name === newVoiceChannelName
-    ),
-    existingVoiceIsRelated = await checkIfVoiceChannelIsRelated(
-      existingVoiceChannel?.id,
-      _parentVoiceChannelId
-    )
+    firstAvailableDynamicVoiceChannel =
+      await getFirstAvailableDynamicVoiceChannel(guild, _parentVoiceChannelId)
 
-  if (existingVoiceIsRelated) {
-    if (existingVoiceChannel?.parentId !== activeVoiceCategoryId) {
+  if (firstAvailableDynamicVoiceChannel) {
+    if (firstAvailableDynamicVoiceChannel?.parentId !== activeVoiceCategoryId) {
       await queueApiCall({
         apiCall: `setParent`,
-        djsObject: existingVoiceChannel,
+        djsObject: firstAvailableDynamicVoiceChannel,
         parameters: [activeVoiceCategoryId, { lockPermissions: true }],
         multipleParameters: true,
-      })
+      }).then(
+        event => setTimeout(sortChannels.bind(null, guild.id, true)),
+        1000
+      )
     }
 
     return
   }
 
-  const permissionOverwrites = voiceChannel.permissionOverwrites.cache,
+  const firstAvailableDynamicNumber = await getFirstAvailableDynamicNumber(
+      _parentVoiceChannelId
+    ),
+    basename = getVoiceChannelBasename(voiceChannel.name),
+    newVoiceChannelName = `${basename}-${firstAvailableDynamicNumber}`,
+    permissionOverwrites = voiceChannel.permissionOverwrites.cache,
     newVoiceChannel = await queueApiCall({
       apiCall: `create`,
       djsObject: activeVoiceCategory.children,
@@ -370,24 +432,84 @@ export async function createOrActivateDynamicChannel(voiceChannel) {
       },
     })
 
-  await createVoiceRecord(
-    newVoiceChannel.id,
-    newVoiceChannel.name,
+  setTimeout(sortChannels.bind(null, guild.id, true), 1000)
+
+  await setCustomVoiceOptions(
+    newVoiceChannel,
     dynamic,
+    firstAvailableDynamicNumber,
     temporary,
     alwaysActive,
-    isPrivate,
-    guild.id,
     parentTextChannelId,
     parentThreadId,
     _parentVoiceChannelId
   )
 }
 
+export async function deactivateOrDeleteVoiceChannel(voiceChannel) {
+  const { guild } = voiceChannel
+
+  voiceChannel = guild.channels.cache.get(voiceChannel.id)
+
+  if (!voiceChannel) return
+
+  const inactiveVoiceCategoryId = await getInactiveVoiceCategoryId(guild.id),
+    inactiveVoiceCategory = guild.channels.cache.get(inactiveVoiceCategoryId)
+
+  if (!inactiveVoiceCategory) return
+
+  const voiceRecord = await getChannelRecordById(voiceChannel.id)
+
+  if (!voiceRecord) return
+
+  const _parentVoiceChannelId = voiceRecord.parentVoiceChannelId
+      ? voiceRecord.parentVoiceChannelId
+      : voiceChannel.id,
+    relevantDynamicVoiceChannel =
+      await getLastAvailableActiveDynamicVoiceChannel(
+        guild,
+        _parentVoiceChannelId
+      )
+
+  if (!relevantDynamicVoiceChannel) return
+
+  const relevantVoiceRecord = await getChannelRecordById(
+      relevantDynamicVoiceChannel?.id
+    ),
+    { temporary, alwaysActive, dynamicNumber } = relevantVoiceRecord
+
+  if (temporary === null) return
+
+  if (alwaysActive) {
+    if (dynamicNumber === 1) return
+  }
+
+  const countOfAvailableVoiceChannels = await getCountOfAvailableVoiceChannels(
+    guild,
+    _parentVoiceChannelId
+  )
+
+  if (countOfAvailableVoiceChannels === 1 && dynamicNumber !== 1) return
+
+  if (temporary) {
+    await queueApiCall({
+      apiCall: `delete`,
+      djsObject: relevantDynamicVoiceChannel,
+    })
+  } else {
+    await queueApiCall({
+      apiCall: `setParent`,
+      djsObject: relevantDynamicVoiceChannel,
+      parameters: [inactiveVoiceCategoryId, { lockPermissions: true }],
+      multipleParameters: true,
+    }).then(event => setTimeout(sortChannels.bind(null, guild.id, true)), 1000)
+  }
+}
+
 export async function deactivateOrDeleteDynamicVoiceChannels(voiceChannel) {
   if (!voiceChannel || voiceChannel?.members?.size > 0) return
 
-  const voiceRecord = await getVoiceRecordById(voiceChannel.id)
+  const voiceRecord = await getChannelRecordById(voiceChannel.id)
 
   if (!voiceRecord) return
 
@@ -396,8 +518,11 @@ export async function deactivateOrDeleteDynamicVoiceChannels(voiceChannel) {
   if (!dynamic) return
 
   const { guild } = voiceChannel,
-    activeVoiceCategoryId = await getActiveVoiceCategoryId(guild.id),
-    _voiceChannelParentId = voiceChannelParentId
+    activeVoiceCategoryId = await getActiveVoiceCategoryId(guild.id)
+
+  if (!activeVoiceCategoryId) return
+
+  const _voiceChannelParentId = voiceChannelParentId
       ? voiceChannelParentId
       : voiceChannel.id,
     parentVoiceChannel =
@@ -406,11 +531,14 @@ export async function deactivateOrDeleteDynamicVoiceChannels(voiceChannel) {
         : guild.channels.cache.get(_voiceChannelParentId),
     dynamicVoiceChildrenRecords = await getDynamicVoiceChildrenRecords(
       _voiceChannelParentId
-    ),
-    dynamicVoiceChannels = dynamicVoiceChildrenRecords.map(
-      dynamicVoiceChildrenRecord =>
-        guild.channels.cache.get(dynamicVoiceChildrenRecord.id)
     )
+
+  if (!dynamicVoiceChildrenRecords) return
+
+  const dynamicVoiceChannels = dynamicVoiceChildrenRecords.map(
+    dynamicVoiceChildrenRecord =>
+      guild.channels.cache.get(dynamicVoiceChildrenRecord.id)
+  )
 
   dynamicVoiceChannels.push(parentVoiceChannel)
 
@@ -420,18 +548,9 @@ export async function deactivateOrDeleteDynamicVoiceChannels(voiceChannel) {
       voiceChannel.parentId === activeVoiceCategoryId
   )
 
+  relevantVoiceChannels.sort((a, b) => collator.compare(b.name, a.name))
+
   for (const relevantVoiceChannel of relevantVoiceChannels) {
     await deactivateOrDeleteVoiceChannel(relevantVoiceChannel)
   }
-}
-
-export async function handleVoiceUpdate(oldState, newState) {
-  const { guild } = newState,
-    channelId = oldState.channelId ? oldState.channelId : newState.channelId,
-    voiceChannel = guild.channels.cache.get(channelId)
-
-  await activateVoiceChannel(voiceChannel)
-  await deactivateOrDeleteVoiceChannel(voiceChannel)
-  await deactivateOrDeleteDynamicVoiceChannels(voiceChannel)
-  await createOrActivateDynamicChannel(voiceChannel)
 }

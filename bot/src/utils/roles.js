@@ -7,6 +7,7 @@ import {
   getVipRoleId,
   setVipRoleId,
 } from '../repositories/guilds.js'
+import { queueApiCall } from '../api-queue.js'
 
 const validator = { isColorRole, isNotificationRole }
 
@@ -174,57 +175,6 @@ export async function syncCustomColors(guild) {
   }
 }
 
-export async function createRole(role) {
-  const guild = role.guild,
-    roles = guild.roles.cache,
-    botRole = roles.find(role => role.tags?.botId === getBot().user.id)
-
-  roles.forEach(async _role => {
-    if (_role.name === `new role` && _role.id !== role.id)
-      await _role.delete().catch(error => console.log(`it don't exist bruh`))
-  })
-
-  if (role.position < botRole.position && role.name !== `new role`) {
-    setTimeout(() => pushToRoleSortingQueue(guild.id), roleSortPauseDuration)
-  }
-}
-
-export async function modifyRole(oldRole, newRole) {
-  const guild = newRole.guild,
-    botRole = guild.roles.cache.find(
-      role => role.tags?.botId === getBot().user.id
-    )
-
-  if (
-    (oldRole.rawPosition !== newRole.rawPosition ||
-      oldRole.name !== newRole.name) &&
-    newRole.position < botRole.position
-  ) {
-    setTimeout(() => pushToRoleSortingQueue(guild.id), roleSortPauseDuration)
-  }
-}
-
-export async function deleteRole(role) {
-  const guild = role.guild,
-    vipRoleId = await getVipRoleId(guild.id)
-
-  if (role.id === vipRoleId) {
-    await setVipRoleId(guild.id, null)
-
-    const adminChannelId = await getAdminChannel(guild.id),
-      adminChannel = adminChannelId
-        ? guild.channels.cache.get(adminChannelId)
-        : null
-
-    if (adminChannel)
-      adminChannel.send(
-        `The VIP role for this server was just deleted 😬` +
-          `\nIf this was on purpose, great. If not, I can't restore it.` +
-          `\nVIP functionality in this server will no longer work until you set the VIP role again using the \`/set-vip-role\` command.`
-      )
-  }
-}
-
 export async function batchAddOrRemoveRole(members, role, addOrRemove) {
   if (!role) return
 
@@ -319,37 +269,29 @@ export async function batchRemoveRole(members, role) {
   return true
 }
 
-export function getListRoles(guild, type) {
-  const collator = new Intl.Collator(undefined, {
-    numeric: true,
-    sensitivity: 'base',
-  })
-
-  let formattedRoles, validationFunction
-
-  switch (type) {
-    case `colors`:
-      validationFunction = `isColorRole`
-      break
-    case `notifications`:
-      validationFunction = `isNotificationRole`
-  }
-
-  formattedRoles = guild.roles.cache
-    .filter(role => validator[validationFunction](role.name))
-    .map(role => {
-      return { group: `roles`, values: `<@&${role.id}>`, name: role.name }
-    })
-
-  formattedRoles.sort((a, b) => collator.compare(a.name, b.name))
-
-  formattedRoles.forEach(
-    (record, index) => (record.values = `${index + 1}. ${record.values}`)
-  )
-
-  return formattedRoles
-}
-
 export function getRoleByName(roles, roleName) {
   return roles.find(role => role.name === roleName)
+}
+
+export async function syncRoles(guild) {
+  await syncCustomColors(guild)
+
+  guild.roles.cache.forEach(async role => {
+    if (role.name === `new role`) {
+      await queueApiCall({
+        apiCall: `delete`,
+        djsObject: role,
+      })
+    }
+  })
+}
+
+export async function deleteNewRoles(guild) {
+  const newRole = guild.roles.cache.find(role => role.name === `new role`)
+
+  if (!newRole) return
+
+  await newRole.delete().catch()
+
+  await deleteNewRoles(guild)
 }

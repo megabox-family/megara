@@ -1,9 +1,8 @@
-import { ChannelType } from 'discord.js'
 import { getBot } from '../cache-bot.js'
 import { getButtonContext } from '../utils/validation.js'
-import { getChannelBasename } from '../utils/voice.js'
 import { queueApiCall } from '../api-queue.js'
 import { checkIfMemberIsPermissible } from '../utils/channels.js'
+import { getDynamicVoiceChildrenRecords } from '../repositories/channels.js'
 
 export default async function (interaction) {
   const { _guild, user, customId } = interaction,
@@ -60,17 +59,16 @@ export default async function (interaction) {
   messageObject.content = `You've been added to ${voiceChannel} ← click here to jump to it 😊`
 
   if (isMemberPermissible !== true) {
-    const channelBaseName = getChannelBasename(voiceChannel.name),
-      otherVoiceChannels = guild.channels.cache.filter(
-        _channel =>
-          getChannelBasename(_channel.name) === channelBaseName &&
-          _channel.id !== voiceChannel.id &&
-          _channel.type === ChannelType.GuildVoice
+    const relatedChannelRecords = await getDynamicVoiceChildrenRecords(
+        voiceChannel.id
       ),
-      voicePermissons = {
-        ViewChannel: true,
-        Connect: true,
-      }
+      relatedVoiceChannels = relatedChannelRecords.map(record =>
+        guild.channels.cache.get(record.id)
+      )
+    voicePermissons = {
+      ViewChannel: true,
+      Connect: true,
+    }
 
     await queueApiCall({
       apiCall: `create`,
@@ -78,13 +76,14 @@ export default async function (interaction) {
       parameters: [member, voicePermissons],
       multipleParameters: true,
     })
+
     await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,
       parameters: messageObject,
     })
 
-    otherVoiceChannels.forEach(_voiceChannel =>
+    relatedVoiceChannels.forEach(_voiceChannel =>
       queueApiCall({
         apiCall: `create`,
         djsObject: _voiceChannel.permissionOverwrites,

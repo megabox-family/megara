@@ -4,7 +4,7 @@ import {
   createVoiceCommandChannel,
   deactivateOrDeleteVoiceChannel,
 } from '../utils/voice.js'
-import { getVoiceRecordById } from '../repositories/voice.js'
+import { getChannelRecordById } from '../repositories/channels.js'
 import { queueApiCall } from '../api-queue.js'
 import {
   getActiveVoiceCategoryId,
@@ -102,7 +102,7 @@ export default async function (interaction) {
     ephemeral = options.getBoolean(`ephemeral`)
 
   if (!name) {
-    const dynamicVoiceRecord = await getVoiceRecordById(channelId)
+    const dynamicVoiceRecord = await getChannelRecordById(channelId)
 
     if (dynamicVoiceRecord) {
       await queueApiCall({

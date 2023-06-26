@@ -1,16 +1,21 @@
 import pgPool from '../pg-pool.js'
 import camelize from 'camelize'
 import SQL from 'sql-template-strings'
-import { getWelcomeChannel } from './guilds.js'
+import {
+  getAlphaChannelType,
+  pushToChannelSortingQueue,
+} from '../utils/channels.js'
 
-export async function createChannelRecord(channel, positionOverride = null) {
-  const { id, name, guild } = channel
+// ----------------------- standard shiz ----------------------- //
+export async function createChannelRecord(channel) {
+  const { id, name, guild } = channel,
+    alphaChannelType = getAlphaChannelType(channel)
 
   return await pgPool
     .query(
       SQL`
-        insert into channels (id, name, guild_id, position_override)
-        values(${id}, ${name}, ${guild.id}, ${positionOverride});
+        insert into channels (id, name, guild_id, alpha_type)
+        values(${id}, ${name}, ${guild.id}, ${alphaChannelType});
       `
     )
     .catch(error => {
@@ -18,7 +23,34 @@ export async function createChannelRecord(channel, positionOverride = null) {
     })
 }
 
-export async function updateChannelRecord(channel) {
+export async function checkIfChannelRecordExists(channelId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 1
+        from channels
+        where id = ${channelId};
+      `
+    )
+    .then(res => camelize(res.rows?.[0]))
+}
+
+export async function getChannelRecordById(channelId) {
+  return await pgPool
+    .query(
+      SQL`
+        select *
+        from channels 
+        where id = ${channelId}
+      `
+    )
+    .then(res => camelize(res.rows[0]))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function setChannelRecordName(channel) {
   return await pgPool
     .query(
       SQL`
@@ -54,49 +86,9 @@ export async function getChannelsByGuild(guildId) {
   return await pgPool
     .query(
       SQL`
-          select *
-          from channels
-          where guild_id = ${guildId};
-        `
-    )
-    .then(res => camelize(res.rows))
-}
-
-export async function getCategoryName(categoryId) {
-  return await pgPool
-    .query(`select name from channels where id = $1;`, [categoryId])
-    .then(res => (res.rows[0] ? camelize(res.rows[0]).name : undefined))
-}
-
-// sort channels chaos hell of the devil
-export async function getAlphabeticalCategories(guildId) {
-  return await pgPool
-    .query(
-      SQL`
-        select 
-          id,
-          channel_type
-        from channels 
-        where category_id is null and 
-          guild_id = ${guildId} 
-        order by name
-      `
-    )
-    .then(res => camelize(res.rows))
-}
-
-// sort channels chaos hell of the devil
-export async function getAlphabeticalChannelsByCategory(categoryId) {
-  return await pgPool
-    .query(
-      SQL`
-        select 
-          name,
-          id,
-          channel_type
-        from channels 
-        where category_id = ${categoryId}
-        order by name
+        select *
+        from channels
+        where guild_id = ${guildId};
       `
     )
     .then(res => camelize(res.rows))
@@ -106,10 +98,10 @@ export async function deleteAllGuildChannels(guildId) {
   return await pgPool
     .query(
       SQL`
-      delete from channels 
-      where guild_id = ${guildId}
-      returning *;
-    `
+        delete from channels 
+        where guild_id = ${guildId}
+        returning *;
+      `
     )
     .then(res => camelize(res.rows))
     .catch(error => {
@@ -117,82 +109,7 @@ export async function deleteAllGuildChannels(guildId) {
     })
 }
 
-// GBYE
-export async function getChannelType(channelId) {
-  return await pgPool
-    .query(
-      SQL`
-    select 
-      channel_type
-    from channels 
-    where id = ${channelId};
-  `
-    )
-    .then(res => (res.rows[0] ? res.rows[0].channel_type : undefined))
-}
-
-export async function getAllVoiceChannelIds(guildId) {
-  const query = await pgPool
-    .query(
-      SQL`
-        select 
-          id
-        from channels 
-        where guild_id = ${guildId} and
-        channel_type = 'voice';
-      `
-    )
-    .then(res => (res.rows[0] ? camelize(res.rows) : undefined))
-
-  return query.map(record => record.id)
-}
-
-export async function getAllTextChannelNames(guildId) {
-  const query = await pgPool
-    .query(
-      SQL`
-        select 
-          name
-        from channels 
-        where guild_id = ${guildId} and
-          channel_type in ('joinable', 'private', 'public')
-      `
-    )
-    .then(res => (res.rows[0] ? camelize(res.rows) : undefined))
-
-  return query.map(record => record.name)
-}
-
-export async function getRoomChannelId(guildId) {
-  return await pgPool
-    .query(
-      SQL`
-        select
-          id
-        from channels
-        where guild_id = ${guildId} and
-          name = 'rooms' and
-          channel_type not in ('voice', 'category', 'archived', 'hidden')
-      `
-    )
-    .then(res => (res.rows[0] ? res.rows[0].id : undefined))
-}
-
-export async function getUnverifiedRoomChannelId(guildId) {
-  return await pgPool
-    .query(
-      SQL`
-        select
-          id
-        from channels
-        where guild_id = ${guildId} and
-          name = 'unverified-rooms' and
-          channel_type not in ('voice', 'category', 'archived', 'hidden')
-      `
-    )
-    .then(res => (res.rows[0] ? res.rows[0].id : undefined))
-}
-
+// ----------------------- position overrides ----------------------- //
 export async function getPositionOverride(channelId) {
   return await pgPool
     .query(
@@ -203,7 +120,7 @@ export async function getPositionOverride(channelId) {
         where id = ${channelId}
       `
     )
-    .then(res => (res.rows[0] ? res.rows[0].position_override : undefined))
+    .then(res => res.rows[0]?.position_override)
 }
 
 export async function setPositionOverride(channelId, positionOverride) {
@@ -223,7 +140,7 @@ export async function setPositionOverride(channelId, positionOverride) {
     })
 }
 
-export async function getPositionOverrides(guildId) {
+export async function getPositionOverrideRecords(guildId) {
   let query = await pgPool
     .query(
       SQL`
@@ -231,7 +148,7 @@ export async function getPositionOverrides(guildId) {
           id,
           position_override
         from channels
-        where guild_id = ${guildId}
+        where guild_id = ${guildId} and
          position_override is not null
       `
     )
@@ -241,4 +158,193 @@ export async function getPositionOverrides(guildId) {
     })
 
   return query
+}
+
+export async function getChannelCustomFunction(channelId) {
+  return await pgPool
+    .query(
+      SQL`
+        select
+          custom_functon
+        from channels
+        where id = ${channelId}
+      `
+    )
+    .then(res => res.rows[0]?.custom_functon)
+}
+
+// ----------------------- voice ----------------------- //
+export async function setCustomVoiceOptions(
+  channel,
+  dynamic,
+  dynamicNumber,
+  temporary,
+  alwaysActive,
+  parentTextChannelId,
+  parentThreadId,
+  parentVoiceChannelId
+) {
+  const { id, guild } = channel
+
+  let positionOverride = null,
+    channelRecord
+
+  if (parentVoiceChannelId) {
+    positionOverride = await getPositionOverride(parentVoiceChannelId)
+  }
+
+  while (!channelRecord) {
+    channelRecord = await getChannelRecordById(id)
+
+    await new Promise(resolution => setTimeout(resolution, 500))
+  }
+
+  const query = await pgPool
+    .query(
+      SQL`
+      update channels
+      set 
+        custom_function = ${voice},
+        dynamic = ${dynamic},
+        dynamic_number = ${dynamicNumber},
+        temporary = ${temporary},
+        always_active = ${alwaysActive},
+        parent_text_channel_id = ${parentTextChannelId}
+        parent_thread_id = ${parentThreadId},
+        parent_voice_channel_id = ${parentVoiceChannelId},
+        position_override = ${positionOverride}
+      where id = ${id}
+      returning *;
+    `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+
+  if (positionOverride) pushToChannelSortingQueue(guild.id)
+}
+
+export async function removeCustomVoiceOptions(channelId) {
+  return await pgPool
+    .query(
+      SQL`
+      update channels
+      set 
+        custom_function = ${null},
+        dynamic = ${null},
+        dynamic_number = ${null},
+        temporary = ${null},
+        always_active = ${null},
+        parent_text_channel_id = ${null},
+        parent_thread_id = ${null},
+        parent_voice_channel_id = ${null}
+      where id = ${channelId}
+      returning *;
+    `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function removeCustomVoiceOptionsByParentId(parentVoiceChannelId) {
+  return await pgPool
+    .query(
+      SQL`
+        update channels
+        set 
+          custom_function = ${null},
+          dynamic = ${null},
+          dynamic_number = ${null},
+          temporary = ${null},
+          always_active = ${null},
+          parent_text_channel_id = ${null},
+          parent_thread_id = ${null},
+          parent_voice_channel_id = ${null}
+        where parent_voice_channel_id = ${parentVoiceChannelId}
+        returning *;
+      `
+    )
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function getVoiceTemporaryStatus(channelId) {
+  return await pgPool
+    .query(
+      SQL`
+      select 
+        temporary
+      from channels 
+      where id = ${channelId}
+    `
+    )
+    .then(res => camelize(res.rows[0]?.temporary))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function getVoiceDynamicStatus(channelId) {
+  return await pgPool
+    .query(
+      SQL`
+      select 
+        dynamic
+      from channels 
+      where id = ${channelId}
+    `
+    )
+    .then(res => camelize(res.rows[0]?.dynamic))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function getDynamicVoiceChildrenRecords(parentVoiceChannelId) {
+  return await pgPool
+    .query(
+      SQL`
+        select *
+        from channels 
+        where parent_voice_channel_id = ${parentVoiceChannelId}
+        order by name
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function getDynamicVoiceChannelRecords(parentVoiceChannelId) {
+  return await pgPool
+    .query(
+      SQL`
+        select *
+        from channels 
+        where id = ${parentVoiceChannelId} or parent_voice_channel_id = ${parentVoiceChannelId}
+        order by name
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function getVoiceChannelParentId(channelId) {
+  return await pgPool
+    .query(
+      SQL`
+        select
+          parent_voice_channel_id
+        from channels
+        where id = ${channelId}
+      `
+    )
+    .then(res => res.rows[0]?.parent_voice_channel_id)
 }

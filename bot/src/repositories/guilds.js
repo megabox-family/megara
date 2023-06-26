@@ -1,15 +1,9 @@
 import pgPool from '../pg-pool.js'
 import camelize from 'camelize'
 import SQL from 'sql-template-strings'
-import { deleteNewRoles } from '../utils/general.js'
-import { syncChannels } from '../utils/channels.js'
 import { deleteAllGuildChannels } from './channels.js'
 
-export async function createGuild(guild, syncBool = false) {
-  await deleteNewRoles(guild)
-
-  if (!syncBool) await syncChannels(guild)
-
+export async function createGuild(guild) {
   pgPool
     .query(
       SQL`
@@ -23,12 +17,7 @@ export async function createGuild(guild, syncBool = false) {
     })
 }
 
-export async function modifyGuild(oldGuild, newGuild) {
-  let guild
-
-  if (newGuild) guild = newGuild
-  else guild = oldGuild
-
+export async function modifyGuild(guild) {
   return await pgPool
     .query(
       SQL`
@@ -45,14 +34,7 @@ export async function modifyGuild(oldGuild, newGuild) {
     })
 }
 
-export async function deleteGuild(guild) {
-  let guildId
-
-  if (guild?.id) guildId = guild.id
-  else guildId = guild
-
-  await deleteAllGuildChannels(guildId)
-
+export async function deleteGuild(guildId) {
   return await pgPool
     .query(
       SQL`
@@ -88,24 +70,26 @@ export async function syncGuilds(guilds) {
         tabledGuildIds = rows.map(row => row.id),
         allGuildIds = [...new Set([...liveGuildIds, ...tabledGuildIds])]
 
-      allGuildIds.forEach(guildId => {
+      allGuildIds.forEach(async guildId => {
         const guild = guilds.get(guildId)
 
         if (
           liveGuildIds.includes(guildId) &&
           !tabledGuildIds.includes(guildId)
         ) {
-          createGuild(guild, true)
+          await deleteNewRoles(guild)
+          await createGuild(guild, true)
         } else if (
           !liveGuildIds.includes(guildId) &&
           tabledGuildIds.includes(guildId)
         ) {
-          deleteGuild(guildId)
+          await deleteGuild(guild.id)
+          await deleteAllGuildChannels(guild.id)
         } else {
           const guildRecord = rows.find(row => row.id === guildId)
 
           if (guild.name !== guildRecord.name) {
-            modifyGuild(guild)
+            await modifyGuild(guild)
           }
         }
       })
