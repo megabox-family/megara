@@ -1,7 +1,7 @@
 export default async function (bot) {
   const guild = bot.guilds.cache.get(`1100538270263291904`)
 
-  console.log(guild)
+  // console.log(guild)
 
   //   activeVoiceCategory = bot.channels.cache.get(`1100552765228458034`),
   //   inactiveVoiceCategory = bot.channels.cache.get(`1100552826280742993`),

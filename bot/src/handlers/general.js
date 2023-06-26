@@ -30,8 +30,8 @@ import { registerContextCommands } from '../utils/context-commands.js'
 import test from '../utils/test.js'
 
 export async function startup(bot) {
-  console.log(`Logged in as ${bot.user.tag}!`)
-  console.log(process.version)
+  console.log(`logged in as ${bot.user.tag} 😈`)
+  console.log(`nodejs version - ${process.version}`)
 
   cacheBot(bot)
   await syncGuilds(bot.guilds.cache)
