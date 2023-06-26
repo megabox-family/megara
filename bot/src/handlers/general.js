@@ -170,5 +170,5 @@ export async function handleVoiceStatusUpdate(oldState, newState) {
   await activateVoiceChannel(voiceChannel)
   await createOrActivateDynamicChannel(voiceChannel)
   await deactivateOrDeleteVoiceChannel(voiceChannel)
-  await deactivateOrDeleteDynamicVoiceChannels(voiceChannel)
+  // await deactivateOrDeleteDynamicVoiceChannels(voiceChannel)
 }
