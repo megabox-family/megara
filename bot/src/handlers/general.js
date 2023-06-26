@@ -164,7 +164,7 @@ export async function handleInteractionCreate(interaction) {
 
 export async function handleVoiceStatusUpdate(oldState, newState) {
   const { guild } = newState,
-    channelId = oldState.channelId ? oldState.channelId : newState.channelId,
+    channelId = newState.channelId ? newState.channelId : oldState.channelId,
     voiceChannel = guild.channels.cache.get(channelId)
 
   await activateVoiceChannel(voiceChannel)

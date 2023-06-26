@@ -240,6 +240,8 @@ export async function createVoiceCommandChannel(
 export async function activateVoiceChannel(voiceChannel) {
   if (!voiceChannel) return
 
+  console.log(voiceChannel.name)
+
   if (voiceChannel.members.size === 0) return
 
   const { guild } = voiceChannel,
