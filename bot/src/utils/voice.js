@@ -490,6 +490,7 @@ export async function deactivateOrDeleteVoiceChannel(voiceChannel) {
   )
 
   if (countOfAvailableVoiceChannels === 1 && dynamicNumber !== 1) return
+  if (relevantDynamicVoiceChannel.members.size > 0) return
 
   if (temporary) {
     await queueApiCall({
