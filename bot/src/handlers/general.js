@@ -23,7 +23,7 @@ import {
   deactivateOrDeleteVoiceChannel,
 } from '../utils/voice.js'
 import { deleteNewRoles, syncRoles } from '../utils/roles.js'
-import { syncChannels } from '../utils/channels.js'
+import { sortChannels, syncChannels } from '../utils/channels.js'
 import { syncVipMembers } from '../utils/members.js'
 import { registerSlashCommands } from '../utils/slash-commands.js'
 import { registerContextCommands } from '../utils/context-commands.js'
@@ -165,10 +165,16 @@ export async function handleInteractionCreate(interaction) {
 export async function handleVoiceStatusUpdate(oldState, newState) {
   const { guild } = newState,
     channelId = newState.channelId ? newState.channelId : oldState.channelId,
-    voiceChannel = guild.channels.cache.get(channelId)
+    voiceChannel = guild.channels.cache.get(channelId),
+    positionBooleanArray = []
 
-  await activateVoiceChannel(voiceChannel)
-  await createOrActivateDynamicChannel(voiceChannel)
-  await deactivateOrDeleteVoiceChannel(voiceChannel)
-  await deactivateOrDeleteFirstDynamicVoiceChannel(voiceChannel)
+  positionBooleanArray.push(await activateVoiceChannel(voiceChannel))
+  positionBooleanArray.push(await createOrActivateDynamicChannel(voiceChannel))
+  positionBooleanArray.push(await deactivateOrDeleteVoiceChannel(voiceChannel))
+  positionBooleanArray.push(
+    await deactivateOrDeleteFirstDynamicVoiceChannel(voiceChannel)
+  )
+
+  if (positionBooleanArray.find(boolean => boolean))
+    sortChannels(guild.id, true)
 }
