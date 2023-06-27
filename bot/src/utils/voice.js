@@ -526,8 +526,11 @@ export async function deactivateOrDeleteVoiceChannel(voiceChannel) {
 
 export async function deactivateOrDeleteFirstDynamicVoiceChannel(voiceChannel) {
   const { guild } = voiceChannel,
-    channelRecord = await getChannelRecordById(voiceChannel.id),
-    { dynamic, alwaysActive } = channelRecord || {}
+    channelRecord = await getChannelRecordById(voiceChannel.id)
+
+  if (!channelRecord) return
+
+  const { dynamic, alwaysActive } = channelRecord
 
   if (!dynamic || alwaysActive) return
 
