@@ -28,6 +28,7 @@ import { syncVipMembers } from '../utils/members.js'
 import { registerSlashCommands } from '../utils/slash-commands.js'
 import { registerContextCommands } from '../utils/context-commands.js'
 import test from '../utils/test.js'
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
 
 export async function startup(bot) {
   console.log(`logged in as ${bot.user.tag} 😈`)
