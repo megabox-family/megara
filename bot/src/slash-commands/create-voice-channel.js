@@ -1,17 +1,21 @@
-import { ApplicationCommandOptionType } from 'discord.js'
+import {
+  ActionRowBuilder,
+  ApplicationCommandOptionType,
+  ButtonBuilder,
+  ButtonStyle,
+} from 'discord.js'
 import { checkIfChannelIsSuggestedType } from '../utils/channels.js'
 import {
   createVoiceCommandChannel,
   deactivateOrDeleteVoiceChannel,
 } from '../utils/voice.js'
-import {
-  checkIfCustomFunctionIsVoice,
-  getChannelRecordById,
-} from '../repositories/channels.js'
+import { checkIfCustomFunctionIsVoice } from '../repositories/channels.js'
 import { queueApiCall } from '../api-queue.js'
 import {
   getActiveVoiceCategoryId,
   getInactiveVoiceCategoryId,
+  getServerSubscriptionButtonText,
+  getVipRoleId,
   setActiveVoiceCategoryId,
   setInactiveVoiceCategoryId,
 } from '../repositories/guilds.js'
@@ -103,6 +107,56 @@ export default async function (interaction) {
     alwaysActive = options.getBoolean(`always-active`),
     isPrivate = options.getBoolean(`private`),
     ephemeral = options.getBoolean(`ephemeral`)
+
+  if (isPrivate) {
+    const vipRoleId = await getVipRoleId(guild.id),
+      vipRole = guild.roles.cache.get(vipRoleId)
+
+    if (!vipRole) {
+      await queueApiCall({
+        apiCall: `reply`,
+        djsObject: interaction,
+        parameters: {
+          content:
+            'Something is misconfigured regarding private voice channels, please contact and administrator 🤔',
+          ephemeral: true,
+        },
+      })
+    }
+
+    const memberIsVip = member._roles.includes(vipRoleId)
+
+    if (!memberIsVip) {
+      const parameters = { ephemeral: true }
+
+      const serverSubscriptionButtonText =
+        await getServerSubscriptionButtonText(guild.id)
+
+      if (serverSubscriptionButtonText) {
+        const buttonRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setLabel(serverSubscriptionButtonText)
+            .setStyle(ButtonStyle.Link)
+            .setURL(
+              `https://discord.com/channels/${guild.id}/role-subscriptions`
+            )
+        )
+
+        parameters.components = [buttonRow]
+        parameters.content = `The 'private' parameter can only be set if you're a ${vipRole}, click the button below to learn more 👊`
+      } else {
+        parameters.content = `The 'private' parameter can only be set if you're a ${vipRole} 🤔`
+      }
+
+      await queueApiCall({
+        apiCall: `reply`,
+        djsObject: interaction,
+        parameters: parameters,
+      })
+
+      return
+    }
+  }
 
   if (!name) {
     const dynamicVoiceRecord = await checkIfCustomFunctionIsVoice(channelId)
