@@ -1,3 +1,4 @@
+import { ChannelType } from 'discord.js'
 import {
   createChannelRecord,
   deleteChannelRecord,
@@ -16,9 +17,12 @@ export async function handleChannelCreate(channel) {
   if (channelIsThread) return
 
   await createChannelRecord(channel)
-  await announceNewChannel(channel)
 
-  const { guild } = channel
+  const { guild } = channel,
+    announcementTypes = [ChannelType.GuildForum, ChannelType.GuildText]
+
+  if (announcementTypes.includes(channel.type))
+    await announceNewChannel(channel)
 
   pushToChannelSortingQueue(guild.id)
 }
