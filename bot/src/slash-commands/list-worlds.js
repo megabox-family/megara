@@ -44,7 +44,7 @@ export default async function (interaction) {
     return
   }
 
-  const title = `micecraft worlds`
+  const title = `minecraft worlds`
 
   const messageContents = await generateListMessage(pages, title)
 

@@ -116,7 +116,7 @@ export default async function (interaction) {
     },
     pages = await getPages(recordsPerPage, groupBy, guild, filters)
 
-  if (pages.length === 0) {
+  if (!pages || !pages.length) {
     await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,

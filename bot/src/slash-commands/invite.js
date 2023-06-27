@@ -260,6 +260,10 @@ async function handleTextChannel(channel, verifiedMembers, member) {
         apiCall: `send`,
         djsObject: member,
         parameters: message,
+      }).catch(err => {
+        if (err.code === 50007) {
+          console.log('Someone tried to invite Megara...')
+        }
       })
     })
   )
