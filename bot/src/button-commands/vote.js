@@ -9,17 +9,24 @@ import { getRetractVoteButton } from '../utils/buttons.js'
 import { buildVoterEmbed } from '../utils/embeds.js'
 import { getPollSelectPicker } from '../utils/general-commands.js'
 import { getNicknameOrUsername } from '../utils/members.js'
+import { queueApiCall } from '../api-queue.js'
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const message = interaction.message,
     endTime = await getPollEndTime(message.id),
     currentTime = moment().unix()
 
   if (endTime <= currentTime) {
-    await interaction.editReply({
-      content: `This poll ended on <t:${endTime}:F> 🤔`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `This poll ended on <t:${endTime}:F> 🤔`,
     })
 
     return
@@ -36,10 +43,14 @@ export default async function (interaction) {
       retractButton = getRetractVoteButton(message.id),
       firstRow = new ActionRowBuilder().addComponents(retractButton)
 
-    await interaction.editReply({
-      content: `You've already voted 🤔`,
-      embeds: [voterEmbed],
-      components: [firstRow],
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: {
+        content: `You've already voted 🤔`,
+        embeds: [voterEmbed],
+        components: [firstRow],
+      },
     })
 
     return
@@ -48,7 +59,11 @@ export default async function (interaction) {
   const selectPicker = await getPollSelectPicker(message.id),
     firstRow = new ActionRowBuilder().addComponents(selectPicker)
 
-  await interaction.editReply({
-    components: [firstRow],
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: {
+      components: [firstRow],
+    },
   })
 }

@@ -1,5 +1,6 @@
 import { ApplicationCommandOptionType } from 'discord.js'
 import { roleSortPauseDuration } from '../utils/roles.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Allows you to change your name's display color using a hexcode.`
 export const dmPermission = false,
@@ -14,15 +15,21 @@ export const dmPermission = false,
   ]
 
 async function clearOtherColorRoles(member) {
-  const currentColorRoles = []
+  const { roles } = member,
+    currentColorRoles = []
 
-  member.roles.cache.forEach(role => {
+  roles.cache.forEach(role => {
     if (role.name.match(`^~.+~$`)) {
       currentColorRoles.push(role)
     }
   })
 
-  if (currentColorRoles.length > 0) await member.roles.remove(currentColorRoles)
+  if (currentColorRoles.length > 0)
+    await queueApiCall({
+      apiCall: `remove`,
+      djsObject: roles,
+      parameters: currentColorRoles,
+    })
 }
 
 function vaidateColorHexCode(colorHexCode) {
@@ -30,13 +37,17 @@ function vaidateColorHexCode(colorHexCode) {
 }
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
-  const guild = interaction.guild,
-    options = interaction.options,
+  const { guild, member, options } = interaction,
+    { roles: guildRoles } = guild,
+    { roles: memberRoles } = member,
     _colorHexCode = options.getString(`color-hex-code`),
-    member = interaction.member,
-    existingUserColor = guild.roles.cache.find(
+    existingUserColor = guildRoles.cache.find(
       role => role.name === `<${member.id}>`
     )
 
@@ -45,7 +56,11 @@ export default async function (interaction) {
 
     if (existingUserColor) await existingUserColor.delete()
 
-    await interaction.editReply(`Your custom color has been cleared 🧼`)
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `Your custom color has been cleared 🧼`,
+    })
 
     return
   }
@@ -56,8 +71,10 @@ export default async function (interaction) {
     isHexCode = vaidateColorHexCode(colorHexCode)
 
   if (!isHexCode) {
-    await interaction.editReply({
-      content: `Invlaid input, input must be a color hex code (ex: \`#4fa3ab\`, \`4fa3ab\`) 🤔`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `You provided an invalid hex code (ex: \`#4fa3ab\`, \`4fa3ab\`) 🤔`,
     })
 
     return
@@ -66,22 +83,34 @@ export default async function (interaction) {
   await clearOtherColorRoles(member)
 
   if (existingUserColor) {
-    await existingUserColor.edit({
-      color: colorHexCode,
+    await queueApiCall({
+      apiCall: `edit`,
+      djsObject: existingUserColor,
+      parameters: { color: colorHexCode },
     })
   } else {
-    const userColorRole = await guild.roles.create({
-      name: `<${member.id}>`,
-      color: colorHexCode,
+    const userColorRole = await queueApiCall({
+      apiCall: `create`,
+      djsObject: guildRoles,
+      parameters: {
+        name: `<${member.id}>`,
+        color: colorHexCode,
+      },
     })
 
-    await member.roles.add(userColorRole)
+    await queueApiCall({
+      apiCall: `add`,
+      djsObject: memberRoles,
+      parameters: userColorRole,
+    })
   }
 
   const seconds = roleSortPauseDuration / 1000
 
-  await interaction.editReply({
-    content:
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters:
       `Your custom color has been set 😁` +
       `\nThough, it may take up to ${seconds} seconds to apply 🕑`,
   })

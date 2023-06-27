@@ -16,6 +16,7 @@ import {
   validateTagArray,
   validateTimeStamp,
 } from '../utils/validation.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Allows you to run a poll with various options.`
 export const dmPermission = false,
@@ -81,9 +82,13 @@ export default async function (interaction) {
     pollDuration = options.getString(`poll-duration`)
 
   if (!validateTimeStamp(pollDuration)) {
-    await interaction.reply({
-      content: `You provided an invalid timestamp 😤`,
-      ephemeral: true,
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: interaction,
+      parameters: {
+        content: `You provided an invalid timestamp 😤`,
+        ephemeral: true,
+      },
     })
 
     return
@@ -98,16 +103,24 @@ export default async function (interaction) {
   valueArray = valueArray?.map(value => value.trim())
 
   if (valueArray.length < 2) {
-    await interaction.reply({
-      content: `You must provide a comma delimited list with 2 or more values 🤔`,
-      ephemeral: true,
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: interaction,
+      parameters: {
+        content: `You must provide a comma delimited list with 2 or more values 🤔`,
+        ephemeral: true,
+      },
     })
 
     return
   } else if (valueArray.length > 25) {
-    await interaction.reply({
-      content: `You can only provide up to 25 options for a poll and you provided ${valueArray.length} 😤`,
-      ephemeral: true,
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: interaction,
+      parameters: {
+        content: `You can only provide up to 25 options for a poll and you provided ${valueArray.length} 😤`,
+        ephemeral: true,
+      },
     })
 
     return
@@ -136,10 +149,14 @@ export default async function (interaction) {
         .setURL(`https://www.youtube.com/watch?v=oHRPMJmzBBw`)
     )
 
-    await interaction.reply({
-      content: `You enabled ranked choice voting but only allowed people to select one choice 🤔`,
-      components: [button],
-      ephemeral: true,
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: interaction,
+      parameters: {
+        content: `You enabled ranked choice voting but only allowed people to select one choice 🤔`,
+        components: [button],
+        ephemeral: true,
+      },
     })
 
     return
@@ -156,9 +173,13 @@ export default async function (interaction) {
   const goodTags = tagArray ? validateTagArray(tagArray) : true
 
   if (!goodTags) {
-    await interaction.reply({
-      content: `You provided an invalid tag 🤔`,
-      ephemeral: true,
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: interaction,
+      parameters: {
+        content: `You provided an invalid tag 🤔`,
+        ephemeral: true,
+      },
     })
 
     return

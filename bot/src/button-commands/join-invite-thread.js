@@ -2,46 +2,80 @@ import { getBot } from '../cache-bot.js'
 import { getButtonContext } from '../utils/validation.js'
 import { addMemberToChannel } from '../utils/channels.js'
 import { getThreadById, unarchiveThread } from '../utils/threads.js'
+import { queueApiCall } from '../api-queue.js'
+import { ChannelType } from 'discord.js'
 
 export default async function (interaction) {
-  await interaction.deferReply()
+  const { _guild, user, customId } = interaction,
+    isDm = _guild ? false : true,
+    messageObject = {}
 
-  const context = JSON.parse(getButtonContext(interaction.customId)),
-    channel = getBot().channels.cache.get(context.channel),
+  if (isDm) {
+    await queueApiCall({
+      apiCall: `deferUpdate`,
+      djsObject: interaction,
+    })
+
+    messageObject.components = []
+  } else {
+    await queueApiCall({
+      apiCall: `deferReply`,
+      djsObject: interaction,
+      parameters: { ephemeral: true },
+    })
+  }
+
+  const { channelId, threadId } = JSON.parse(getButtonContext(customId)),
+    channel = getBot().channels.cache.get(channelId),
     guild = channel.guild
 
   if (!channel) {
-    await interaction.editReply({
-      content: `The channel housing the thread you're tyring to join no longer exists within the ${guild} server 😬`,
+    messageObject.content = `The channel housing the thread you're tyring to join no longer exists 😬`
+
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: messageObject,
     })
 
     return
   }
 
-  const threadId = context.thread,
-    thread = await getThreadById(channel, threadId)
+  const thread = await getThreadById(channel, threadId),
+    { type, members } = thread
 
   if (!thread) {
-    await interaction.editReply({
-      content: `The thread you tried joining no longer exits in the ${channel} channel within the ${guild} server 😬`,
+    messageObject.content = `The thread you tried joining no longer exits 😬`
+
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: messageObject,
     })
 
     return
   }
 
-  const member = guild.members.cache.get(interaction.user.id)
+  const member = guild.members.cache.get(user.id)
 
   await addMemberToChannel(member, channel.id)
-  await unarchiveThread(thread)
 
-  if (!thread.members.cache.get(member.id))
-    await thread.members
-      .add(member.id)
-      .catch(error =>
-        console.log(`Unable to add user to thread, see error below:\n${error}`)
-      )
+  if (type === ChannelType.PrivateThread) {
+    await unarchiveThread(thread)
 
-  await interaction.editReply({
-    content: `You've been added to **${thread}** ← click here to jump to it 😊`,
+    if (!members.cache.get(member.id))
+      await queueApiCall({
+        apiCall: `add`,
+        djsObject: members,
+        parameters: member.id,
+      })
+  }
+
+  messageObject.content = `You've been granted access to **${thread}** ← click here to jump to it 😊`
+
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: messageObject,
   })
 }

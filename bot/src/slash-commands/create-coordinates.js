@@ -5,6 +5,7 @@ import {
   getCoordinatesId,
   createCoordinates,
 } from '../repositories/coordinates.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Allows you to record the coordinates of a location in Minecraft.`
 export const dmPermission = false,
@@ -52,7 +53,11 @@ export const dmPermission = false,
   ]
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
     member = interaction.member,
@@ -61,8 +66,10 @@ export default async function (interaction) {
     existingWorldId = await getWorldId(worldName, guild.id)
 
   if (!existingWorldId) {
-    await interaction.editReply({
-      content: `A world named **${worldName}** doesn't exist, use the \`/list-worlds\` command to get a valid list of worlds.`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `A world named **${worldName}** doesn't exist, use the \`/list-worlds\` command to get a valid list of worlds.`,
     })
 
     return
@@ -71,8 +78,10 @@ export default async function (interaction) {
     characterLimit = 36
 
   if (coordinatesName.length > characterLimit) {
-    await interaction.editReply({
-      content: `Coordinate names must be under ${characterLimit} characters, please try again (pro tip: hit ctrl-z).`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `Coordinate names must be under ${characterLimit} characters, please try again (pro tip: hit ctrl-z).`,
     })
 
     return
@@ -85,8 +94,10 @@ export default async function (interaction) {
   )
 
   if (existingCoordinatesId) {
-    await interaction.editReply({
-      content: `Coordinates named **${coordinatesName}** already exist for your user in **${worldName}**, one user cannot have multiple coordinates with the same name in the same world. 🤨`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `Coordinates named **${coordinatesName}** already exist for your user in **${worldName}**, one user cannot have multiple coordinates with the same name in the same world. 🤨`,
     })
 
     return
@@ -107,7 +118,9 @@ export default async function (interaction) {
     dimension,
   ])
 
-  await interaction.editReply({
-    content: `The **${coordinatesName}** coordinates in **${worldName}** have been created for your user 🧭`,
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: `The **${coordinatesName}** coordinates in **${worldName}** have been created for your user 🧭`,
   })
 }

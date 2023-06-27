@@ -1,10 +1,15 @@
+import { queueApiCall } from '../api-queue.js'
 import {
   setVipAssignMessage,
   getVipAssignMessage,
 } from '../repositories/guilds.js'
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
     fields = interaction.fields,
@@ -14,7 +19,9 @@ export default async function (interaction) {
 
   const vipAssignMessage = await getVipAssignMessage(guild.id)
 
-  await interaction.editReply({
-    content: `You've set **${guild}'s** vip assign message to the below: \n>>> ${vipAssignMessage}`,
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: `You've set **${guild}'s** vip assign message to the below: \n>>> ${vipAssignMessage}`,
   })
 }

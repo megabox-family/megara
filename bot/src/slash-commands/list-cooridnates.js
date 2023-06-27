@@ -10,6 +10,7 @@ import {
   getCoordinatesUserId,
 } from '../repositories/coordinates.js'
 import { createList } from '../repositories/lists.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Shows you all the Minecraft coordinates within various groups.`
 export const dmPermission = false,
@@ -59,7 +60,11 @@ export const dmPermission = false,
   ]
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
     member = interaction.member,
@@ -73,9 +78,10 @@ export default async function (interaction) {
     const worldId = await getWorldId(_worldFilter, guild.id)
 
     if (!worldId) {
-      await interaction.editReply({
-        content: `A world named ${_worldFilter} doesn't exist, use the \`/list-worlds\` command to get a valid lis of worlds.`,
-        ephemeral: true,
+      await queueApiCall({
+        apiCall: `editReply`,
+        djsObject: interaction,
+        parameters: `A world named ${_worldFilter} doesn't exist, use the \`/list-worlds\` command to get a valid lis of worlds.`,
       })
 
       return
@@ -88,9 +94,10 @@ export default async function (interaction) {
     const userId = await getCoordinatesUserId(member.id)
 
     if (!userId) {
-      await interaction.editReply({
-        content: `There are no coordinates for your user in **${guild.name}**.`,
-        ephemeral: true,
+      await queueApiCall({
+        apiCall: `editReply`,
+        djsObject: interaction,
+        parameters: `There are no coordinates for your user in **${guild.name}**.`,
       })
 
       return
@@ -109,10 +116,11 @@ export default async function (interaction) {
     },
     pages = await getPages(recordsPerPage, groupBy, guild, filters)
 
-  if (pages.length === 0) {
-    await interaction.editReply({
-      content: `The are no Minecraft coordinates with this criteria in **${guild.name}** 🤔`,
-      ephemeral: true,
+  if (!pages || !pages.length) {
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `The are no Minecraft coordinates with this criteria in **${guild.name}** 🤔`,
     })
 
     return
@@ -122,9 +130,11 @@ export default async function (interaction) {
     description = `group by: ${_groupBy} \nkey: 🟢 = overworld, 🔴 = nether, 🟣 = end \nfilters: world = ${worldFilter}, dimension = ${dimensionFilter}, user = ${userFilter}`,
     messageContents = await generateListMessage(pages, title, description)
 
-  await interaction.editReply(messageContents)
-
-  const message = await interaction.fetchReply()
+  const message = await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: messageContents,
+  })
 
   createList(
     message.id,

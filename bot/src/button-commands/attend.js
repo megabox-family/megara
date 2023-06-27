@@ -9,6 +9,7 @@ import {
   extractAttendees,
   getButtonContext,
 } from '../utils/validation.js'
+import { queueApiCall } from '../api-queue.js'
 
 function formatAttendees(attendeeArrays) {
   const attendeeArray = attendeeArrays[0],
@@ -33,13 +34,20 @@ export default async function (interaction) {
     attending = true
 
   if (!embed) {
-    interaction.reply({
-      content: `There was a problem recording your attendence 😬`,
-      ephemeral: true,
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: interaction,
+      parameters: {
+        content: `There was a problem recording your attendence 😬`,
+        ephemeral: true,
+      },
     })
   }
 
-  await interaction.deferUpdate()
+  await queueApiCall({
+    apiCall: `deferUpdate`,
+    djsObject: interaction,
+  })
 
   while (true) {
     const { fields } = embed,
@@ -135,8 +143,22 @@ export default async function (interaction) {
     }
   }
 
-  await interaction.editReply({ embeds: [newEmbed] })
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: { embeds: [newEmbed] },
+  })
 
-  if (attending) await thread?.members?.add(userId)
-  else await thread?.members?.remove(userId)
+  if (attending)
+    await queueApiCall({
+      apiCall: `add`,
+      djsObject: thread?.members,
+      parameters: userId,
+    })
+  else
+    await queueApiCall({
+      apiCall: `remove`,
+      djsObject: thread?.members,
+      parameters: userId,
+    })
 }

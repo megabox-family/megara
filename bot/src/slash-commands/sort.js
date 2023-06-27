@@ -1,7 +1,8 @@
 import { ApplicationCommandOptionType } from 'discord.js'
-import { pushToChannelSortingQueue } from '../utils/channels.js'
 import { pushToRoleSortingQueue } from '../utils/roles.js'
 import { setChannelSorting, setRoleSorting } from '../repositories/guilds.js'
+import { queueApiCall } from '../api-queue.js'
+import { pushToChannelSortingQueue } from '../utils/channels.js'
 
 export const description = `Enables or disables automatic sorting for channels and roles.`
 export const dmPermission = false,
@@ -26,7 +27,11 @@ export const dmPermission = false,
   ]
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
     options = interaction.options,
@@ -46,11 +51,15 @@ export default async function (interaction) {
       pushToChannelSortingQueue(guild.id)
     else pushToRoleSortingQueue(guild.id)
 
-    await interaction.editReply({
-      content: `${formatedSortingType} sorting has been enabled, watch em sort! 🤩`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `${formatedSortingType} sorting has been enabled, watch em sort! 🤩`,
     })
   } else
-    await interaction.editReply({
-      content: `${formatedSortingType} sorting has been disabled, have fun sorting them yourself 😜`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `${formatedSortingType} sorting has been disabled, have fun sorting them yourself 😜`,
     })
 }

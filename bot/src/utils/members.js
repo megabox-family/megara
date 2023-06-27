@@ -1,10 +1,8 @@
-import { ChannelType } from 'discord.js'
-import { addToBatchRoleQueue, getRoleByName } from './roles.js'
+import { addToBatchRoleQueue } from './roles.js'
 import {
   getAdminChannel,
   getVipRoleId,
   setVipRoleId,
-  getVerificationChannel,
   getWelcomeChannel,
   getNameGuidelines,
   getVipAssignMessage,
@@ -16,7 +14,7 @@ import {
 } from '../repositories/vip-user-overrides.js'
 import { getTotalBatchRoleQueueMembers } from './roles.js'
 import { getCommandByName } from './slash-commands.js'
-import { directMessageError } from '../utils/error-logging.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const pauseDuation = 5
 
@@ -83,7 +81,7 @@ export async function syncVipMembers(guild) {
       : null
 
   if (!vipRole) {
-    await setVipRoleId(null, guild.id)
+    await setVipRoleId(guild.id, null)
 
     if (adminChannel) {
       adminChannel.send(
@@ -139,7 +137,7 @@ export async function syncVipMembers(guild) {
   }
 }
 
-async function handlePremiumRole(oldMember, newMember) {
+export async function handlePremiumRole(oldMember, newMember) {
   const guild = newMember.guild,
     wasPremium = oldMember.premiumSinceTimestamp,
     isPremium = newMember.premiumSinceTimestamp
@@ -153,7 +151,7 @@ async function handlePremiumRole(oldMember, newMember) {
   const vipRole = guild.roles.cache.get(vipRoleId)
 
   if (!vipRole) {
-    await setVipRoleId(null, guild.Id)
+    await setVipRoleId(guild.id, null)
 
     const adminChannelId = await getAdminChannel(guild.id),
       adminChannel = adminChannelId
@@ -182,7 +180,7 @@ async function handlePremiumRole(oldMember, newMember) {
   }
 }
 
-async function handleVipRole(oldMember, newMember) {
+export async function handleVipRole(oldMember, newMember) {
   const guild = newMember.guild,
     vipRoleId = await getVipRoleId(guild.id),
     vipRole = guild.roles.cache.get(vipRoleId)
@@ -202,103 +200,56 @@ async function handleVipRole(oldMember, newMember) {
 
   if (!wasVip && isVip) {
     if (vipMemberArray.includes(newMember)) {
-      const vipAssignMessage = await getVipAssignMessage(guild.id),
-        additonalMessage =
-          `Here's a message from **${guild}** with additional information:` +
-          `\n>>> ${vipAssignMessage}`
+      const vipAssignMessage = await getVipAssignMessage(guild.id)
 
-      newMember
-        ?.send(
-          `
-          Congratulations, you've been attributed the vip role in the **${guild}** server! 🎉\
-          ${additonalMessage}
-        `
-        )
-        .catch(error => directMessageError(error, newMember))
+      await queueApiCall({
+        apiCall: `send`,
+        djsObject: newMember,
+        parameters:
+          `Congratulations, you've been attributed the vip role (**@${vipRole?.name}**) in the **${guild}** server! 🎉` +
+          `\n\nHere's a message from **${guild}** with additional information:` +
+          `\n>>> ${vipAssignMessage}`,
+      })
 
       return
     }
 
     newMember.roles.remove(vipRoleId)
 
-    if (adminChannel)
-      adminChannel.send(
+    await queueApiCall({
+      apiCall: `send`,
+      djsObject: adminChannel,
+      parameters:
         `Somone tried giving ${oldMember} the VIP role but they do not qualify for VIP status, it has automatically been removed 🤔` +
-          `\nIf you'd like to give a member who does not typically qualify for VIP status the VIP role, please use the \`/vip-user-override\` command.`
-      )
+        `\nIf you'd like to give a member who does not typically qualify for VIP status the VIP role, please use the \`/vip-user-override\` command.`,
+    })
   } else {
     if (!vipMemberArray.includes(newMember)) {
-      const vipRemoveMessage = await getVipRemoveMessage(guild.id),
-        additonalMessage =
-          `\nHere's a message from **${guild}** with additional information:` +
-          `\n>>> ${vipRemoveMessage}`
+      const vipRemoveMessage = await getVipRemoveMessage(guild.id)
 
-      newMember
-        ?.send(
-          `
-          You're no longer a vip member in the **${guild}** server. 😢\
-          ${additonalMessage}
-        `
-        )
-        .catch(error => directMessageError(error, newMember))
+      await queueApiCall({
+        apiCall: `send`,
+        djsObject: newMember,
+        parameters:
+          `You're no longer a vip member in the **${guild}** server. 😢` +
+          `\n\nHere's a message from **${guild}** with additional information:` +
+          `\n>>> ${vipRemoveMessage}`,
+      })
 
       return
     }
 
-    if (adminChannel)
-      adminChannel.send(
-        `Somone tried removing the VIP role from ${oldMember} but they still qualify for VIP status, it has been automatically re-added 🤔`
-      )
+    await queueApiCall({
+      apiCall: `send`,
+      djsObject: adminChannel,
+      parameters: `Somone tried removing the VIP role from ${oldMember} but they still qualify for VIP status, it has been automatically re-added 🤔`,
+    })
 
     newMember.roles.add(vipRoleId)
   }
 }
 
-export async function verifyNewMember(oldMember, newMember) {
-  if (oldMember?.pending === newMember?.pending) return
-
-  const guild = newMember.guild,
-    verificationChannelId = await getVerificationChannel(guild.id),
-    verificationChannel = guild.channels.cache.get(verificationChannelId),
-    undergoingVerificationRole = guild.roles.cache.find(
-      role => role.name === `undergoing verification`
-    ),
-    verifiedRole = guild.roles.cache.find(role => role.name === `verified`),
-    welcomeChannelId = await getWelcomeChannel(guild.id),
-    welcomeChannel = guild.channels.cache.get(welcomeChannelId),
-    nameGuidelines = await getNameGuidelines(guild.id)
-
-  if (nameGuidelines) {
-    const setNameCommand = getCommandByName(`set-name`, guild.id),
-      { name: commandName, id: commandId } = setNameCommand
-
-    await verificationChannel?.send(
-      `↓` +
-        `\n__**[Step 2/2]**__ ${newMember} you need to set your nickname, here are **${guild}'s** nickname guidelines:` +
-        `\n> ${nameGuidelines}` +
-        `\n\nTo change your nickname click here → </${commandName}:${commandId}>, then type your nickname into the "name" text box below and hit enter.`
-    )
-
-    newMember.roles.add(undergoingVerificationRole.id)
-  } else {
-    if (welcomeChannel)
-      await verificationChannel?.send(
-        `↓` +
-          `Thanks for accepting our rules ${newMember}!` +
-          `\n\nYou're good to go now, but I'd recommend checking out our ${welcomeChannel} for more details 👍`
-      )
-    else
-      await verificationChannel?.send(
-        `↓` +
-          `Thanks for accepting our rules ${newMember}!` +
-          `\n\nYou're good to go now, **${guild}** doesn't have a welcome channel so I'd just take a look around 👀`
-      )
-
-    newMember.roles.add(verifiedRole.id)
-  }
-}
-
-async function handlePremiumSub(oldMember, newMember) {
+export async function handlePremiumSub(oldMember, newMember) {
   const guild = newMember.guild,
     premiumRole = guild.roles.cache.find(
       role => role.name === `Premium Members` && role.tags?.integrationId
@@ -321,7 +272,7 @@ async function handlePremiumSub(oldMember, newMember) {
   const vipRole = guild.roles.cache.get(vipRoleId)
 
   if (!vipRole) {
-    await setVipRoleId(null, guild.Id)
+    await setVipRoleId(guild.id, null)
 
     const adminChannelId = await getAdminChannel(guild.id),
       adminChannel = adminChannelId
@@ -347,56 +298,6 @@ async function handlePremiumSub(oldMember, newMember) {
 
     if (memberHasVipRole) newMember.roles.remove(vipRole)
   }
-}
-
-export async function handleMemberUpdate(oldMember, newMember) {
-  verifyNewMember(oldMember, newMember)
-  handlePremiumRole(oldMember, newMember)
-  handleVipRole(oldMember, newMember)
-  handlePremiumSub(oldMember, newMember)
-}
-
-export function CheckIfVerificationLevelIsMismatched(member, _channel) {
-  const guild = member.guild,
-    channelId = [ChannelType.PublicThread, ChannelType.PrivateThread].includes(
-      _channel.type
-    )
-      ? _channel.parentId
-      : null,
-    channel = channelId ? guild.channels.cache.get(channelId) : _channel,
-    guildRoles = guild.roles.cache,
-    verifiedRole = getRoleByName(guildRoles, `verified`),
-    memberVerificationLevel = member._roles.includes(verifiedRole.id)
-      ? `verified`
-      : `unverified`,
-    everyoneRole = getRoleByName(guildRoles, `@everyone`),
-    channelEveryoneOverwrite = channel.permissionOverwrites.cache.get(
-      everyoneRole.id
-    ),
-    everyoneAllowPermissions = channelEveryoneOverwrite.allow.serialize(),
-    everyoneDenyPermissions = channelEveryoneOverwrite.deny.serialize(),
-    everyoneRolePermissions = everyoneRole.permissions.serialize(),
-    isUnverified =
-      !everyoneAllowPermissions.ViewChannel &&
-      !everyoneDenyPermissions.ViewChannel
-        ? everyoneRolePermissions.ViewChannel
-        : everyoneAllowPermissions.ViewChannel
-
-  if (memberVerificationLevel === `unverified` && !isUnverified) return true
-  else return false
-}
-
-export async function handleNewMember(guildMember) {
-  const guild = guildMember.guild,
-    verificationChannelId = await getVerificationChannel(guild.id),
-    verificationChannel = guild.channels.cache.get(verificationChannelId),
-    nameGuidelines = await getNameGuidelines(guild.id),
-    stepText = nameGuidelines ? `__**[Step 1/2]**__ ` : ``
-
-  verificationChannel?.send(
-    `Hey ${guildMember}, welcome to **${guild.name}** 👋` +
-      `\n\n${stepText}Before we can continue, I'm gonna need you to press the "Complete" button below (→ on mobile).`
-  )
 }
 
 export function getNicknameOrUsername(member, user) {

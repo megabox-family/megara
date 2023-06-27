@@ -5,6 +5,7 @@ import {
   generateListMessage,
 } from '../utils/slash-commands.js'
 import { createList } from '../repositories/lists.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Shows you all the Minecraft worlds within this Discord server.`
 export const dmPermission = false,
@@ -21,30 +22,37 @@ export const dmPermission = false,
   ]
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
-  const guild = interaction.guild,
-    options = interaction.options,
+  const { guild, options } = interaction,
     _recordsPerPage = options.getInteger(`records-per-page`),
     recordsPerPage = _recordsPerPage ? _recordsPerPage : defaultRecordsPerPage,
     group = `worlds-world`,
     pages = await getPages(recordsPerPage, group, guild)
 
   if (pages.length === 0) {
-    await interaction.editReply({
-      content: `The are no Minecraft worlds in **${guild.name}** to list 🤔`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `There are no Minecraft worlds in **${guild.name}** to list 🤔`,
     })
 
     return
   }
 
-  const title = `Minecraft Worlds`
+  const title = `minecraft worlds`
 
   const messageContents = await generateListMessage(pages, title)
 
-  await interaction.editReply(messageContents)
+  const message = await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: messageContents,
+  })
 
-  const message = await interaction.fetchReply()
-
-  createList(message.id, title, null, pages, recordsPerPage, group)
+  await createList(message.id, title, null, pages, recordsPerPage, group)
 }

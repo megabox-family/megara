@@ -5,16 +5,25 @@ import { getPollEndTime } from '../repositories/polls.js'
 import { getRetractVoteButton } from '../utils/buttons.js'
 import { buildVoterEmbed } from '../utils/embeds.js'
 import { getNicknameOrUsername } from '../utils/members.js'
+import { queueApiCall } from '../api-queue.js'
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const user = interaction.user,
     message = interaction.message,
     choices = await getVoterChoices(user.id, message.id)
 
   if (!choices) {
-    interaction.editReply(`You haven't voted in this poll 🤔`)
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `You haven't voted in this poll 🤔`,
+    })
 
     return
   }
@@ -28,9 +37,13 @@ export default async function (interaction) {
     firstRow = new ActionRowBuilder().addComponents(retractButton),
     components = endTime > currentTime ? [firstRow] : []
 
-  await interaction.editReply({
-    content: `Here's your ballot 📄`,
-    embeds: [voterEmbed],
-    components: components,
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: {
+      content: `Here's your ballot 📄`,
+      embeds: [voterEmbed],
+      components: components,
+    },
   })
 }

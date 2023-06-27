@@ -1,13 +1,9 @@
-import { ButtonStyle } from 'discord.js'
-import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ChannelType,
-  ApplicationCommandOptionType,
-} from 'discord.js'
+import { ChannelType, ApplicationCommandOptionType } from 'discord.js'
+import { capitalCase } from 'change-case'
 import { getThreadByName } from '../utils/threads.js'
+import { queueApiCall } from '../api-queue.js'
 
-export const description = `Generates a joinable private thread in relation to an episode in a series to hide spoilers.`
+export const description = `Generates a forum thread in relation to an episode in a series.`
 export const dmPermission = false,
   defaultMemberPermissions = `0`,
   options = [
@@ -32,60 +28,65 @@ export default async function (interaction) {
     options = interaction.options,
     seasonNumber = options.getInteger(`season-number`),
     episodeNumber = options.getInteger(`episode-number`),
-    premiumTier = guild.premiumTier,
     channel = interaction.channel,
-    threadName = `${channel.name} S${seasonNumber} E${episodeNumber}`,
-    existingThread = await getThreadByName(channel, threadName)
+    parentForum = guild.channels.cache.get(channel.parentId),
+    threadName = `${capitalCase(
+      parentForum.name
+    )} S${seasonNumber} E${episodeNumber}`
 
-  if (existingThread) {
-    const episodeButton = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`!join-thread: ${existingThread.id}`)
-        .setLabel(`Join Thread`)
-        .setStyle(ButtonStyle.Success)
-    )
-
-    await interaction.reply({
-      content: `The thread for **${threadName}** already exists, click the join button below to join it.`,
-      components: [episodeButton],
-      ephemeral: true,
+  if (parentForum.type !== ChannelType.GuildForum) {
+    return await queueApiCall({
+      apiCall: `reply`,
+      djsObject: interaction,
+      parameters: {
+        content:
+          'Sorry, this command can only be used in forum channels :face_holding_back_tears:',
+        ephemeral: true,
+      },
     })
-
-    return
   }
 
-  await interaction.deferReply()
+  const episodeTag = parentForum.availableTags?.find(
+      tag => tag.name === 'episode'
+    ),
+    existingThread = await getThreadByName(parentForum, threadName)
 
-  let thread, threadType
-
-  if (premiumTier < 2) threadType = ChannelType.PublicThread
-  else threadType = ChannelType.PrivateThread
-
-  thread = await channel.threads
-    .create({
-      name: threadName,
-      autoArchiveDuration: 10080,
-      type: threadType,
-      reason: 'Needed a thread for an episode in a show',
+  if (existingThread) {
+    return await queueApiCall({
+      apiCall: `reply`,
+      djsObject: interaction,
+      parameters: {
+        content: `The thread for **${threadName}** already exists, here it is → ${existingThread}`,
+        ephemeral: true,
+      },
     })
-    .catch(error =>
-      console.log(
-        `I was unable to create a ${threadType} thread, see error below:\n${error}`
-      )
-    )
+  }
 
-  const episodeButton = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`!join-thread: ${thread.id}`)
-      .setLabel(`Join Thread`)
-      .setStyle(ButtonStyle.Success)
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+  })
+
+  const thread = await queueApiCall({
+    apiCall: `create`,
+    djsObject: parentForum.threads,
+    parameters: {
+      name: threadName,
+      type: ChannelType.PublicThread,
+      reason: 'Needed a thread for an episode in a show',
+      message: `Discussion for ${capitalCase(
+        parentForum.name
+      )} Season ${seasonNumber} Episode ${episodeNumber}`,
+      autoArchiveDuration: 10080,
+      appliedTags: episodeTag ? [episodeTag] : [],
+    },
+  }).catch(error =>
+    console.log(`I was unable to create the thread, see error below:\n${error}`)
   )
 
-  // interaction.deferReply()
-  // interaction.deleteReply()
-
-  await interaction.editReply({
-    content: `A new thread for **${threadName}** has been created, press the button below to join the thread (**spoiler warning**):`,
-    components: [episodeButton],
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: `A new thread for **${threadName}** has been created, click here to join → ${thread} **(spoiler warning)**`,
   })
 }

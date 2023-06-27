@@ -9,9 +9,14 @@ import { getPollEndTime } from '../repositories/polls.js'
 import { getRetractVoteButton } from '../utils/buttons.js'
 import { buildVoterEmbed } from '../utils/embeds.js'
 import { getNicknameOrUsername } from '../utils/members.js'
+import { queueApiCall } from '../api-queue.js'
 
 export default async function (interaction) {
-  await interaction.deferUpdate({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferUpdate`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const message = interaction.message,
     pollMessageId = message.reference?.messageId,
@@ -20,17 +25,23 @@ export default async function (interaction) {
     endTime = await getPollEndTime(pollMessageId)
 
   if (!endTime) {
-    await interaction.reply(
-      `We're no longer storing the data for this poll, sorry for the inconvenience 😬`
-    )
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `We're no longer storing the data for this poll, sorry for the inconvenience 😬`,
+    })
 
     return
   }
 
   if (endTime < moment().unix()) {
-    await interaction.editReply({
-      content: `This poll ended on <t:${endTime}:F> 🤔`,
-      components: [],
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: {
+        content: `This poll ended on <t:${endTime}:F> 🤔`,
+        components: [],
+      },
     })
 
     return
@@ -49,10 +60,14 @@ export default async function (interaction) {
   if (userHasVoted) {
     const firstRow = new ActionRowBuilder().addComponents(retractButton)
 
-    await interaction.editReply({
-      content: `You've already voted 🤔`,
-      embeds: [voterEmbed],
-      components: [firstRow],
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: {
+        content: `You've already voted 🤔`,
+        embeds: [voterEmbed],
+        components: [firstRow],
+      },
     })
 
     return
@@ -60,9 +75,13 @@ export default async function (interaction) {
 
   await createPollData(user.id, pollMessageId, JSON.stringify(choices))
 
-  await interaction.editReply({
-    content: `Your vote has been recorded, here's your ballot 📄`,
-    embeds: [voterEmbed],
-    components: [firstRow],
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: {
+      content: `Your vote has been recorded, here's your ballot 📄`,
+      embeds: [voterEmbed],
+      components: [firstRow],
+    },
   })
 }

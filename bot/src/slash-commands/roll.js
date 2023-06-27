@@ -1,6 +1,7 @@
 import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js'
 import { formatNumber } from '../utils/general.js'
 import { getNicknameOrUsername } from '../utils/members.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Lets you roll dice and returns the result.`
 export const dmPermission = true,
@@ -31,7 +32,7 @@ export const dmPermission = true,
   ]
 
 export default async function (interaction) {
-  const { options, member, user } = interaction
+  const { id: interactionId, options, member, user } = interaction
 
   let numberOfDice = options.getInteger(`number-of-dice`),
     numberOfSides = options.getInteger(`number-of-sides`)
@@ -43,7 +44,11 @@ export default async function (interaction) {
 
   makePrivate = makePrivate === null ? false : true
 
-  await interaction.deferReply({ ephemeral: makePrivate })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: makePrivate },
+  })
 
   let total = 0
   let rolls = []
@@ -83,5 +88,9 @@ export default async function (interaction) {
     messageObject.embeds = [embed]
   }
 
-  await interaction.editReply(messageObject)
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: messageObject,
+  })
 }

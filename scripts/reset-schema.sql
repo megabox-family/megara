@@ -1,47 +1,46 @@
 --guilds
 drop table if exists guilds;
 
-drop type if exists command_symbol;
-
-create type command_symbol as enum ('!', '$', '%', '^', '&', '(', ')', '-', '+', '=', '{', '}', '[', ']', '?', ',', '.');
-
 create table guilds (
   id text not null primary key,
   guild_name text not null,
-  command_symbol command_symbol default '!',
   channel_sorting boolean not null default false,
   role_sorting boolean not null default false,
   rules text,
   name_guidelines text,
   admin_channel text,
-  log_channel text,
   announcement_channel text,
-  verification_channel text,
   welcome_channel text,
   active_world text,
-  vip_role text
+  pause_channel_notifications boolean not null,
+  vip_assign_message text,
+  vip_remove_message text,
+  server_subscription_button_text text,
+  active_voice_category_id text,
+  inactive_voice_category_id text
+  vip_role_id text,
+  admin_role_id text,
+  channel_notifications_role_id text
 );
 
 
 --channels
 drop table if exists channels;
 
-drop type if exists channel_type;
-drop type if exists command_level;
-
-create type channel_type as enum('archived', 'category', 'hidden', 'joinable', 'private', 'public', 'voice');
-create type command_level as enum('admin', 'unrestricted', 'cinema', 'restricted', 'prohibited');
-
 create table channels (
   id text not null primary key,
   name text not null,
   guild_id text not null,
-  category_id text, 
-  channel_type channel_type,
-  command_level command_level,
-  position_override integer,
-  position integer,
-  active_voice_channel_id text
+  alpha_type text not null,
+  position_override int,
+  custom_function text,
+  dynamic boolean,
+  dynamic_number int,
+  temporary boolean,
+  always_active boolean,
+  parent_text_channel_id text,
+  parent_thread_id text,
+  parent_voice_channel_id text
 );
 
 -- vip-user-overrides
@@ -148,4 +147,20 @@ drop table if exists movie_invites;
 create table movie_invites (
   id text not null primary key,
   last_updated bigint not null
+);
+
+drop table if exists voice;
+
+create table voice (
+  id text not null primary key,
+  name text not null,
+  dynamic boolean not null,
+  dynamic_number int,
+  temporary boolean not null,
+  always_active boolean not null,
+  is_private boolean not null,
+  guild_id text not null,
+  parent_text_channel_id text,
+  parent_thread_id text,
+  parent_voice_channel_id text
 );

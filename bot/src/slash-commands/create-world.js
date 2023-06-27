@@ -1,5 +1,6 @@
 import { ApplicationCommandOptionType } from 'discord.js'
 import { getWorldId, createWorld } from '../repositories/coordinates.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Allows you to create a world record in the worlds table for Minecraft.`
 export const dmPermission = false,
@@ -14,7 +15,11 @@ export const dmPermission = false,
   ]
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
     member = interaction.member,
@@ -22,8 +27,10 @@ export default async function (interaction) {
     worldName = options.getString(`world-name`).toLowerCase()
 
   if (worldName.length > 40) {
-    await interaction.editReply({
-      content: `World names must be under 40 characters, please try again (pro tip: hit ctrl-z).`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `World names must be under 40 characters, please try again (pro tip: hit ctrl-z).`,
     })
 
     return
@@ -32,8 +39,10 @@ export default async function (interaction) {
   const existingWorldId = await getWorldId(worldName, guild.id)
 
   if (existingWorldId) {
-    await interaction.editReply({
-      content: `A world named **${worldName}** already exists in **${guild.name}**, you cannot create multiple worlds with the same name 🤨`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `A world named **${worldName}** already exists in **${guild.name}**, you cannot create multiple worlds with the same name 🤨`,
     })
 
     return
@@ -41,7 +50,9 @@ export default async function (interaction) {
 
   await createWorld(worldName, guild.id)
 
-  await interaction.editReply({
-    content: `A world with name **${worldName}** has been created 🌎`,
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: `A world with name **${worldName}** has been created 🌎`,
   })
 }

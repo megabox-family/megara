@@ -5,6 +5,7 @@ import {
   removeUserFromVipOverrides,
 } from '../repositories/vip-user-overrides.js'
 import { getVipRoleId, setVipRoleId } from '../repositories/guilds.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Allows you to manually attribute the contributor role regardless of premium or nitro status.`
 export const dmPermission = false,
@@ -21,22 +22,28 @@ export const dmPermission = false,
       ],
     },
     {
-      name: `user-id`,
-      description: `The id of the user you'd like to add or remove from the override list.`,
-      type: ApplicationCommandOptionType.String,
+      name: `user`,
+      description: `The user you'd like to add or remove from the override list.`,
+      type: ApplicationCommandOptionType.User,
       required: true,
     },
   ]
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
-  const guild = interaction.guild,
+  const { guild, options } = interaction,
     vipRoleId = await getVipRoleId(guild.id)
 
   if (!vipRoleId) {
-    await interaction.editReply({
-      content: `There is no VIP role set for this server, please set the VIP role using the \`/set-vip-role\` command before using the \`/vip-user-override\` command 🤔`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `There is no VIP role set for this server, please set the VIP role using the \`/set-vip-role\` command before using the \`/vip-user-override\` command 🤔`,
     })
 
     return
@@ -45,10 +52,12 @@ export default async function (interaction) {
   const vipRole = guild.roles.cache.get(vipRoleId)
 
   if (!vipRole) {
-    await setVipRoleId(null, guild.id)
+    await setVipRoleId(guild.id, null)
 
-    await interaction.editReply({
-      content:
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters:
         `The ID for the VIP role exists for this guild, but the role no longer exists. 🤔` +
         `\nBecause of this, the VIP role ID for this server has been removed.` +
         `\nPlease set a new VIP role using \`/set-vip-role\` before using \`/vip-user-override\`.`,
@@ -57,26 +66,19 @@ export default async function (interaction) {
     return
   }
 
-  const options = interaction.options,
-    addOrRemove = options.getString(`add-or-remove`),
-    vipUserId = options.getString(`user-id`),
-    vipMember = guild.members.cache.get(vipUserId)
-
-  if (!vipMember) {
-    await interaction.editReply({
-      content: `You provided an invalid user id, please try again.`,
-    })
-
-    return
-  }
-
-  const userVipOverrideId = await getVipOverriedId(vipUserId, guild.id),
+  const addOrRemove = options.getString(`add-or-remove`),
+    vipUser = options.getUser(`user`),
+    { id: vipUserId } = vipUser,
+    vipMember = guild.members.cache.get(vipUserId),
+    userVipOverrideId = await getVipOverriedId(vipUserId, guild.id),
     memberHasVipRole = vipMember._roles.includes(vipRole.id)
 
   if (addOrRemove === `add`) {
     if (userVipOverrideId) {
-      await interaction.editReply({
-        content: `${vipMember} is already in the VIP override list 🤔`,
+      await queueApiCall({
+        apiCall: `editReply`,
+        djsObject: interaction,
+        parameters: `${vipMember} is already in the VIP override list 🤔`,
       })
 
       return
@@ -86,14 +88,17 @@ export default async function (interaction) {
 
     if (!memberHasVipRole) await vipMember.roles.add(vipRole)
 
-    await interaction.editReply({
-      content: `${vipMember} has been added to the VIP User Overrides list and attributed the ${vipRole} role 😁`,
-      ephemeral: true,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `${vipMember} has been added to the VIP User Overrides list and attributed the ${vipRole} role 😁`,
     })
   } else {
     if (!userVipOverrideId) {
-      await interaction.editReply({
-        content: `${vipMember} isn't in the VIP User Overrides list 🤔`,
+      await queueApiCall({
+        apiCall: `editReply`,
+        djsObject: interaction,
+        parameters: `${vipMember} isn't in the VIP User Overrides list 🤔`,
       })
 
       return
@@ -104,8 +109,10 @@ export default async function (interaction) {
     const memberHasPremiumRole = vipMember.premiumSinceTimestamp
 
     if (memberHasPremiumRole) {
-      await interaction.editReply({
-        content: `${vipMember} has been removed to the VIP User Overrides list but will retain the ${vipRole} role as they are currently a booster or premium subscriber 👍`,
+      await queueApiCall({
+        apiCall: `editReply`,
+        djsObject: interaction,
+        parameters: `${vipMember} has been removed to the VIP User Overrides list but will retain the ${vipRole} role as they are currently a booster or premium subscriber 👍`,
       })
 
       return
@@ -113,8 +120,10 @@ export default async function (interaction) {
 
     if (memberHasVipRole) await vipMember.roles.remove(vipRole)
 
-    await interaction.editReply({
-      content: `${vipMember} has been removed to the VIP User Overrides list and the ${vipRole} role has been removed from their user 👋`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `${vipMember} has been removed to the VIP User Overrides list and the ${vipRole} role has been removed from their user 👋`,
     })
   }
 }

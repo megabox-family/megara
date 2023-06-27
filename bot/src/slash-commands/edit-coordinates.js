@@ -1,10 +1,11 @@
-import { ApplicationCommandOptionType } from 'discord.js'
+import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js'
 import { dimensions } from '../utils/slash-commands.js'
 import {
   getWorldId,
   getCoordinates,
   editCoordinates,
 } from '../repositories/coordinates.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Allows you to edit the coordinates of a location in Minecraft.`
 export const dmPermission = false,
@@ -64,7 +65,11 @@ export const dmPermission = false,
   ]
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
     member = interaction.member,
@@ -73,8 +78,10 @@ export default async function (interaction) {
     existingWorldId = await getWorldId(worldName, guild.id)
 
   if (!existingWorldId) {
-    await interaction.editReply({
-      content: `A world named **${worldName}** doesn't exist, use the \`/list-worlds\` command to get a valid list of worlds.`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `A world named **${worldName}** doesn't exist, use the \`/list-worlds\` command to get a valid list of worlds.`,
     })
 
     return
@@ -87,8 +94,10 @@ export default async function (interaction) {
     )
 
   if (!existingCoordinates?.id) {
-    await interaction.editReply({
-      content: `Coordinates named **${coordinatesName}** don't exist in **${worldName}** for your user, and this is not the field that you put a coordinates new name in 🤔`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `Coordinates named **${coordinatesName}** don't exist in **${worldName}** for your user, and this is not the field that you put a coordinates new name in 🤔`,
     })
 
     return
@@ -103,8 +112,10 @@ export default async function (interaction) {
     newExistingWorldId = await getWorldId(newWorldName, guild.id)
 
     if (!newExistingWorldId) {
-      await interaction.editReply({
-        content: `A world named **${newWorldName}** doesn't exist. Therefore, you can't change a coordinate to it. Use the \`/list-worlds\` command to get a valid list of worlds.`,
+      await queueApiCall({
+        apiCall: `editReply`,
+        djsObject: interaction,
+        parameters: `A world named **${newWorldName}** doesn't exist. Therefore, you can't change a coordinate to it. Use the \`/list-worlds\` command to get a valid list of worlds.`,
       })
 
       return
@@ -133,8 +144,10 @@ export default async function (interaction) {
     )
 
   if (allValuesAreNull) {
-    await interaction.editReply({
-      content: `You need to change at least one property of the original coordinates to edit them 🤔`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `You need to change at least one property of the original coordinates to edit them 🤔`,
     })
 
     return
@@ -147,25 +160,36 @@ export default async function (interaction) {
 
   await editCoordinates(newCoordinates)
 
-  await interaction.editReply({
-    content:
-      `The **${existingCoordinates.name}** coordinates in **${newWorldName}** have been edited for your user 📝` +
-      `\nOld:` +
-      `\n\`\`\`` +
-      `world-name: ${worldName},` +
-      `\ndimension: ${existingCoordinates.dimension},` +
-      `\ncoordinates-name: ${coordinatesName},` +
-      `\nx: ${existingCoordinates.x},` +
-      `\ny: ${existingCoordinates.y},` +
-      `\nz: ${existingCoordinates.z},` +
-      `\n\`\`\`` +
-      `\nNew:` +
-      `\n\`\`\`world-name: ${newWorldName},` +
-      `\ndimension: ${newCoordinates.dimension},` +
-      `\ncoordinates-name: ${newCoordinates.name},` +
-      `\nx: ${newCoordinates.x},` +
-      `\ny: ${newCoordinates.y},` +
-      `\nz: ${newCoordinates.z},` +
-      `\n\`\`\``,
+  const embed = new EmbedBuilder()
+    .setColor(`#0099ff`)
+    .setTitle(`edit coordinates 📝`)
+    .addFields(
+      {
+        name: `old coordinates data`,
+        value:
+          `world-name: ${worldName}` +
+          `\ndimension: ${existingCoordinates.dimension}` +
+          `\ncoordinates-name: ${existingCoordinates.name}` +
+          `\nx: ${existingCoordinates.x}` +
+          `\ny: ${existingCoordinates.y}` +
+          `\nz: ${existingCoordinates.z}`,
+      },
+      {
+        name: `new coordinates data`,
+        value:
+          `world-name: ${newWorldName}` +
+          `\ndimension: ${newCoordinates.dimension}` +
+          `\ncoordinates-name: ${newCoordinates.name}` +
+          `\nx: ${newCoordinates.x}` +
+          `\ny: ${newCoordinates.y}` +
+          `\nz: ${newCoordinates.z}`,
+      }
+    )
+    .setTimestamp()
+
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: { embeds: [embed] },
   })
 }

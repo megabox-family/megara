@@ -5,159 +5,302 @@ import {
   ButtonStyle,
   ChannelType,
 } from 'discord.js'
-import { directMessageError } from '../utils/error-logging.js'
-import { CheckIfVerificationLevelIsMismatched } from '../utils/members.js'
-import { CheckIfMemberNeedsToBeAdded } from '../utils/channels.js'
-import { getIdForJoinableChannel } from '../repositories/channels.js'
-import { handleVoiceChannel } from '../utils/slash-commands.js'
+import { getNicknameOrUsername } from '../utils/members.js'
+import { checkIfMemberIsPermissible } from '../utils/channels.js'
+import { queueApiCall } from '../api-queue.js'
+import { collator } from '../utils/general.js'
 
-export const description = `Allows you to invite an existing member to the channel you use this command in.`
+const {
+  AnnouncementThread,
+  GuildAnnouncement,
+  GuildForum,
+  GuildStageVoice,
+  GuildText,
+  GuildVoice,
+  PrivateThread,
+  PublicThread,
+} = ChannelType
+
+export const description = `Allows you to invite members to the channel in-which you use this command.`
 export const dmPermission = false,
   defaultMemberPermissions = `0`,
   options = [
     {
-      name: `username-and-tag-or-id`,
-      description: `The username & tag or id of the member. Examples: Zedd#4752, 360140791936712704`,
-      type: ApplicationCommandOptionType.String,
+      name: `member`,
+      description: `The member you would like to invite.`,
+      type: ApplicationCommandOptionType.User,
       required: true,
+      autocomplete: true,
+    },
+    {
+      name: `member-2`,
+      description: `Another member you would like to invite.`,
+      type: ApplicationCommandOptionType.User,
+      required: false,
+      autocomplete: true,
+    },
+    {
+      name: `member-3`,
+      description: `Another member you would like to invite.`,
+      type: ApplicationCommandOptionType.User,
+      required: false,
+      autocomplete: true,
+    },
+    {
+      name: `member-4`,
+      description: `Another member you would like to invite.`,
+      type: ApplicationCommandOptionType.User,
+      required: false,
+      autocomplete: true,
+    },
+    {
+      name: `member-5`,
+      description: `Another member you would like to invite.`,
+      type: ApplicationCommandOptionType.User,
+      required: false,
+      autocomplete: true,
+    },
+    {
+      name: `member-6`,
+      description: `Another member you would like to invite.`,
+      type: ApplicationCommandOptionType.User,
+      required: false,
+      autocomplete: true,
+    },
+    {
+      name: `channel`,
+      description: `The channel you want to invite the member to (defaults to the channel /invite is used in).`,
+      type: ApplicationCommandOptionType.Channel,
+      required: false,
+      autocomplete: true,
+      channelTypes: [
+        AnnouncementThread,
+        GuildAnnouncement,
+        GuildForum,
+        GuildStageVoice,
+        GuildText,
+        GuildVoice,
+        PrivateThread,
+        PublicThread,
+      ],
     },
   ]
 
-export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+function generateConfirmationMessage(members, channel) {
+  const memberNameArray = members
+      .map(member => getNicknameOrUsername(member, member.user))
+      .sort((a, b) => collator.compare(a, b)),
+    memberDisplayString = memberNameArray.join(`\n- `)
 
-  const { guild, member, options, channel } = interaction,
-    invitedUsername = options.getString(`username-and-tag-or-id`)
+  const confirmationMessage =
+    members.length === 1
+      ? `**${memberNameArray[0]}** has been invited to ${channel} 🙌`
+      : `Below is a list of members I was able to invite to ${channel} 🙌` +
+        `\n- ${memberDisplayString}`
 
-  let invitedMember = guild.members.cache.find(member => {
-    const user = member.user,
-      username = user.username,
-      tag = user.discriminator
+  return confirmationMessage
+}
 
-    if (`${username}#${tag}` === invitedUsername) return true
+async function handleVoiceChannel(channel, invitedMembers, member) {
+  const { guild, name: channelName } = channel,
+    joinChannelButton = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`!join-voice-channel: ${channel.id}`)
+        .setLabel(`join ${channelName}`)
+        .setStyle(ButtonStyle.Primary)
+    ),
+    inviteMessageArray = invitedMembers.map(invitedMember => {
+      const memberIsPermissible = checkIfMemberIsPermissible(
+          channel,
+          invitedMember
+        ),
+        returnObject = { member: invitedMember }
+
+      if (memberIsPermissible === true) {
+        returnObject.message = `${member} has invited you to ${channel} ← click here to jump to it 😊`
+      } else {
+        returnObject.message = {
+          content:
+            `${member} from **${guild}** has invited you to the **#${channelName}** voice channel 🙌` +
+            `\n\nHowever, you don't currently have access. Press the button below to gain access.`,
+          components: [joinChannelButton],
+        }
+      }
+
+      return returnObject
+    })
+
+  await Promise.all(
+    inviteMessageArray?.map(async inviteMessage => {
+      const { member, message } = inviteMessage
+
+      await queueApiCall({
+        apiCall: `send`,
+        djsObject: member,
+        parameters: message,
+      })
+    })
+  )
+}
+
+async function handleThread(channel, invitedMembers, member) {
+  const thread = channel,
+    { id, guild, name, parentId, members } = thread
+
+  const parentChannel = guild.channels.cache.get(parentId),
+    inviteMessageArray = invitedMembers.map(invitedMember => {
+      const memberIsPermissibleInParent = checkIfMemberIsPermissible(
+          parentChannel,
+          invitedMember
+        ),
+        returnObject = { member: invitedMember },
+        memberIsPermissibleInThread =
+          members.cache.get(invitedMember?.id) ||
+          (memberIsPermissibleInParent &&
+            thread.type === ChannelType.PublicThread)
+
+      if (memberIsPermissibleInThread)
+        returnObject.message = `${member} has invited you to view ${thread} ← click here to jump to it 😊`
+      else {
+        const joinThreadButton = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId(
+                `!join-invite-thread: ${JSON.stringify({
+                  channelId: parentChannel.id,
+                  threadId: id,
+                })}`
+              )
+              .setLabel(`join ${name}`)
+              .setStyle(ButtonStyle.Primary)
+          ),
+          category = guild.channels.cache.get(parentChannel.parentId),
+          categoryContext = category
+            ? ` in the **${category.name}** category`
+            : ``
+
+        returnObject.message = {
+          content:
+            `${member} from **${guild}** has invited you to the **#${name}** thread within the **#${parentChannel.name}** channel${categoryContext} 🙌` +
+            `\nIf you're interested in joining, click the button below:`,
+          components: [joinThreadButton],
+        }
+      }
+
+      return returnObject
+    })
+
+  await Promise.all(
+    inviteMessageArray?.map(async inviteMessage => {
+      const { member, message } = inviteMessage
+
+      await queueApiCall({
+        apiCall: `send`,
+        djsObject: member,
+        parameters: message,
+      })
+    })
+  )
+}
+
+async function handleTextChannel(channel, members, member) {
+  const { id, guild, name, parentId } = channel
+
+  const inviteMessageArray = members.map(invitedMember => {
+    const memberIsPermissible = checkIfMemberIsPermissible(
+        channel,
+        invitedMember
+      ),
+      returnObject = { member: invitedMember }
+
+    if (memberIsPermissible)
+      returnObject.message = `${member} has invited you to view ${channel} ← click here to jump to it 😊`
+    else {
+      const joinChannelButton = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`!join-channel: ${id}`)
+            .setLabel(`join ${name}`)
+            .setStyle(ButtonStyle.Primary)
+        ),
+        category = guild.channels.cache.get(parentId),
+        categoryContext = category
+          ? ` in the **${category.name}** category`
+          : ``
+
+      returnObject.message = {
+        content:
+          `${member} from **${guild}** has invited you to **#${name}**${categoryContext} 🙌` +
+          `\nIf you're interested in joining, click the button below:`,
+        components: [joinChannelButton],
+      }
+    }
+
+    return returnObject
   })
 
-  if (!invitedMember) {
-    invitedMember = guild.members.cache.get(invitedUsername)
-  }
+  await Promise.all(
+    inviteMessageArray?.map(async inviteMessage => {
+      const { member, message } = inviteMessage
 
-  if (!invitedMember) {
-    await interaction.editReply({
-      content: `You provided an invalid username & tag or id, keep in mind that this invite feature only works for users who are *already in the server* 🤔`,
+      await queueApiCall({
+        apiCall: `send`,
+        djsObject: member,
+        parameters: message,
+      }).catch(err => {
+        if (err.code === 50007) {
+          console.log('Someone tried to invite Megara...')
+        }
+      })
     })
+  )
+}
 
-    return
+export default async function (interaction) {
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
+
+  const { guild, member, options, channel } = interaction,
+    invitedMember1 = options.getUser(`member`),
+    invitedMember2 = options.getUser(`member-2`),
+    invitedMember3 = options.getUser(`member-3`),
+    invitedMember4 = options.getUser(`member-4`),
+    invitedMember5 = options.getUser(`member-5`),
+    invitedMember6 = options.getUser(`member-6`),
+    invitedMembers = [
+      invitedMember1,
+      invitedMember2,
+      invitedMember3,
+      invitedMember4,
+      invitedMember5,
+      invitedMember6,
+    ]
+      .filter(user => user)
+      .map(user => guild.members.cache.get(user?.id)),
+    optionChannel = options.getChannel(`channel`),
+    _channel = optionChannel ? optionChannel : channel
+
+  const { type } = _channel
+
+  if (type === ChannelType.GuildVoice) {
+    await handleVoiceChannel(_channel, invitedMembers, member)
+  } else if (
+    [ChannelType.PublicThread, ChannelType.PrivateThread].includes(type)
+  ) {
+    await handleThread(_channel, invitedMembers, member)
+  } else {
+    await handleTextChannel(_channel, invitedMembers, member)
   }
 
-  if (!channel) return
-
-  const mismatchedVerificationLevel = CheckIfVerificationLevelIsMismatched(
-    invitedMember,
-    channel
+  const confirmationMessage = generateConfirmationMessage(
+    invitedMembers,
+    _channel
   )
 
-  if (mismatchedVerificationLevel) {
-    await interaction.editReply({
-      content: `You tried inviting an unverified member to a verified channel 🤔`,
-    })
-
-    return
-  }
-
-  if (channel.type === ChannelType.GuildVoice) {
-    await handleVoiceChannel(channel, invitedMember, interaction)
-  } else if (
-    [ChannelType.PublicThread, ChannelType.PrivateThread].includes(channel.type)
-  ) {
-    const thread = channel,
-      { name: threadName } = thread
-
-    const parentChannel = guild.channels.cache.get(thread.parentId),
-      { name: parentChannelName } = parentChannel,
-      isJoinable = await getIdForJoinableChannel(parentChannel)
-
-    if (!isJoinable) {
-      await interaction.editReply({
-        content:
-          `This thread exists within a channel that no one can join or leave 🤔` +
-          `\n\n**Note: If this thread exists within a public channel, just @ the member to add them to the thread.**`,
-      })
-
-      return
-    }
-
-    if (thread.members.cache.get(invitedMember.id)) {
-      await interaction.editReply({
-        content: `${invitedMember} is already part of this thread 🤔`,
-      })
-
-      return
-    }
-
-    const joinThreadButton = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(
-            `!join-invite-thread: ${JSON.stringify({
-              channel: parentChannel.id,
-              thread: thread.id,
-            })}`
-          )
-          .setLabel(`Join ${thread.name}`)
-          .setStyle(ButtonStyle.Primary)
-      ),
-      category = guild.channels.cache.get(parentChannel.parentId),
-      categoryContext = category ? ` in the **${category.name}** category` : ``
-
-    invitedMember
-      .send({
-        content:
-          `${member} from the **${guild}** server has invited you to the **${threadName}** thread within the ${parentChannelName} channel${categoryContext} 🙌` +
-          `\nIf you're interested in joining, click the button below:`,
-        components: [joinThreadButton],
-      })
-      .catch(error => directMessageError(error, invitedMember))
-
-    await interaction.editReply({
-      content: `I sent a message to ${invitedMember} inviting them to ${channel} 👍`,
-    })
-  } else if (channel.type === ChannelType.GuildText) {
-    const context = await CheckIfMemberNeedsToBeAdded(invitedMember, channel.id)
-
-    if (!context) {
-      await interaction.editReply({
-        content: `${channel} is not a channel that anyone can be added to or removed from 🤔`,
-      })
-
-      return
-    } else if (context === `already added`) {
-      await interaction.editReply({
-        content: `${invitedMember} is already a part of ${channel} 🤔`,
-      })
-
-      return
-    }
-
-    const { name: channelName } = channel,
-      joinButton = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`!join-channel: ${channel.id}`)
-          .setLabel(`Join ${channelName}`)
-          .setStyle(ButtonStyle.Primary)
-      ),
-      category = guild.channels.cache.get(channel.parentId),
-      categoryContext = category ? ` in the **${category.name}** category` : ``
-
-    invitedMember
-      .send({
-        content:
-          `${member} from the **${guild}** server has invited you to the **${channelName}** channel${categoryContext} 🙌` +
-          `\nIf you're interested in joining, click the button below:`,
-        components: [joinButton],
-      })
-      .catch(error => directMessageError(error, invitedMember))
-
-    await interaction.editReply({
-      content: `I sent a message to ${invitedMember} inviting them to ${channel} 👍`,
-    })
-  }
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: confirmationMessage,
+  })
 }

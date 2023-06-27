@@ -6,15 +6,8 @@ import {
   ApplicationCommandType,
 } from 'discord.js'
 import { isEqual } from 'lodash-es'
-import { directMessageError } from './error-logging.js'
-import { slashCommands, contextCommands } from './general.js'
-import { getListRoles } from './roles.js'
+import { slashCommands } from './general.js'
 import { getActiveWorld } from '../repositories/guilds.js'
-import {
-  getJoinableChannelList,
-  getPublicChannelList,
-  getArchivedChannelList,
-} from '../repositories/channels.js'
 import {
   getWorldName,
   getWorldGroups,
@@ -23,9 +16,10 @@ import {
   getCoordinatesByUser,
   getCoordinatesByAll,
 } from '../repositories/coordinates.js'
-import { checkIfMemberIsPermissible } from './voice.js'
 import { getBot } from '../cache-bot.js'
 import { cacheCommands } from '../cache-commands.js'
+import { queueApiCall } from '../api-queue.js'
+import { checkIfMemberIsPermissible, getPositionOverrides } from './channels.js'
 
 export const defaultRecordsPerPage = 20,
   dimensions = [`overworld`, `nether`, `end`]
@@ -165,9 +159,12 @@ async function registerProdCommands(bot) {
               const choiceKeys = Object.keys(choice),
                 newChoice = commandObject.options[index].choices[jndex]
 
-              choiceKeys.forEach(key => {
-                if (!newChoice.hasOwnProperty(key)) newChoice[key] = undefined
-              })
+              if (newChoice) {
+                choiceKeys.forEach(key => {
+                  if (!newChoice?.hasOwnProperty(key))
+                    newChoice[key] = undefined
+                })
+              }
             }
           })
       })
@@ -206,6 +203,9 @@ export async function getPages(recordsPerPage, groupBy, guild, filters) {
   let query, activeWorldName
 
   switch (groupBy) {
+    case `position-overrides`:
+      query = await getPositionOverrides(guild)
+      break
     case `coordinates-world`:
       query = await getCoordinatesByWorld(guild.id, filters)
       break
@@ -222,21 +222,6 @@ export async function getPages(recordsPerPage, groupBy, guild, filters) {
       query = await getWorldGroups(guild.id, filters)
       const activeWorldId = await getActiveWorld(guild.id)
       activeWorldName = await getWorldName(activeWorldId)
-      break
-    case `roles-color`:
-      query = getListRoles(guild, `colors`)
-      break
-    case `roles-notifications`:
-      query = getListRoles(guild, `notifications`)
-      break
-    case `channels-joinable`:
-      query = await getJoinableChannelList(guild.id)
-      break
-    case `channels-public`:
-      query = await getPublicChannelList(guild.id)
-      break
-    case `channels-archived`:
-      query = await getArchivedChannelList(guild.id)
       break
   }
 
@@ -325,8 +310,6 @@ export async function generateListMessage(
   color = `#0099ff`,
   defaultPage = 1
 ) {
-  description = description ? `${description} \n` : ``
-
   const totalPages = pages.length,
     disableBack = defaultPage === 1 ? true : false,
     disableForward = defaultPage === totalPages ? true : false,
@@ -360,10 +343,11 @@ export async function generateListMessage(
   const listEmbed = new EmbedBuilder()
     .setColor(color)
     .setTitle(title)
-    .setDescription(description)
     .addFields(pages[defaultPage - 1])
     .setFooter({ text: `Page ${defaultPage} of ${totalPages}` })
     .setTimestamp()
+
+  if (description) listEmbed.setDescription(description)
 
   return {
     embeds: [listEmbed],
@@ -375,40 +359,44 @@ export async function generateListMessage(
 export async function handleVoiceChannel(channel, invitedMember, interaction) {
   const { guild, name: channelName } = channel,
     { member } = interaction,
-    memberIsPermissible = checkIfMemberIsPermissible(channel, invitedMember),
-    category = guild.channels.cache.get(channel.parentId),
-    categoryContext = category ? ` in the **${category.name}** category` : ``
+    memberIsPermissible = checkIfMemberIsPermissible(channel, invitedMember)
 
-  let messageContent = `${member} from the **${guild}** server has invited you to the **${channelName}** voice channel${categoryContext} 🙌`
+  let messageContent = `${member}`
 
   if (memberIsPermissible === true) {
-    messageContent += `\n\nIf you're interested, you can join this voice channel from this message by clicking here → ${channel}`
+    messageContent += ` has invited you to ${channel} ← click here to jump to it 😊`
 
-    invitedMember
-      .send({
-        content: messageContent,
-      })
-      .catch(error => directMessageError(error, invitedMember))
+    await queueApiCall({
+      apiCall: `send`,
+      djsObject: invitedMember,
+      parameters: messageContent,
+    })
   } else {
     const joinChannelButton = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`!join-voice-channel: ${channel.id}`)
-        .setLabel(`Join ${channelName}`)
+        .setLabel(`join ${channelName}`)
         .setStyle(ButtonStyle.Primary)
     )
 
-    messageContent += `\n\nHowever, you currently don't have access to this voice channel, click the button below to gain access.`
+    messageContent +=
+      ` from **${guild}** has invited you to the **${channelName}** voice channel 🙌` +
+      `\n\nHowever, you don't currently have access. Press the button below to gain access.`
 
-    invitedMember
-      .send({
+    await queueApiCall({
+      apiCall: `send`,
+      djsObject: invitedMember,
+      parameters: {
         content: messageContent,
         components: [joinChannelButton],
-      })
-      .catch(error => directMessageError(error, invitedMember))
+      },
+    })
   }
 
-  await interaction.editReply({
-    content: `I sent a message to ${invitedMember} inviting them to ${channel} 👍`,
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: `I sent a message to ${invitedMember} inviting them to ${channel} 👍`,
   })
 }
 
@@ -416,10 +404,7 @@ export function getCommandByName($commandName, guildId) {
   const bot = getBot(),
     guild = bot.guilds.cache.get(guildId),
     botName = bot.user.username,
-    commands =
-      botName === `Omegara`
-        ? guild.commands?.cache
-        : bot.application?.commands?.cache,
+    commands = bot.application?.commands?.cache,
     command = commands.find(command => command.name === $commandName)
 
   return command

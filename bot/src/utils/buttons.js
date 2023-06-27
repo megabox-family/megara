@@ -1,5 +1,4 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
-import { getChannelType } from '../repositories/channels.js'
 import {
   getButtonNumber,
   getNotificationRoleBasename,
@@ -345,7 +344,7 @@ export function generateNotificationButtons(notificationRoles) {
     buttons.push(
       new ButtonBuilder()
         .setCustomId(`!unsubscribe: ${role.id}`)
-        .setLabel(`Unsubscribe from ${getNotificationRoleBasename(role.name)}`)
+        .setLabel(`unsubscribe from ${getNotificationRoleBasename(role.name)}`)
         .setStyle(ButtonStyle.Secondary)
     )
     counter++
@@ -373,63 +372,9 @@ export function chunckButtons(buttons, chunkSize = 5, rowLimit = 5) {
   return rows
 }
 
-export async function generateChannelButtons(mentionedChannels) {
-  const collator = new Intl.Collator(undefined, {
-      numeric: true,
-      sensitivity: 'base',
-    }),
-    buttonDetails = [],
-    buttons = [],
-    rows = []
-
-  for (const [channelId, channel] of mentionedChannels) {
-    const channelType = await getChannelType(channel.id),
-      customId =
-        channelType === `joinable`
-          ? `!join-channel: ${channel.id}`
-          : `!leave-channel: ${channel.id}`,
-      label =
-        channelType === `joinable`
-          ? `Join ${channel.name}`
-          : `Leave ${channel.name}`,
-      style =
-        channelType === `joinable` ? ButtonStyle.Success : ButtonStyle.Danger
-
-    buttonDetails.push({
-      customId: customId,
-      label: label,
-      style: style,
-    })
-  }
-
-  let counter = 0
-
-  for (const buttonDetail of buttonDetails) {
-    if (counter === 25) break
-
-    buttons.push(
-      new ButtonBuilder()
-        .setCustomId(buttonDetail.customId)
-        .setLabel(buttonDetail.label)
-        .setStyle(buttonDetail.style)
-    )
-
-    counter++
-  }
-
-  const chunkSize = 5
-  for (let i = 0; i < buttons.length; i += chunkSize) {
-    rows.push(
-      new ActionRowBuilder().addComponents(buttons.slice(i, i + chunkSize))
-    )
-  }
-
-  return rows
-}
-
 export function getRetractVoteButton(pollId) {
   return new ButtonBuilder()
     .setCustomId(`!retract-vote: ${pollId}`)
-    .setLabel(`Retract my vote`)
+    .setLabel(`retract my vote`)
     .setStyle(ButtonStyle.Danger)
 }

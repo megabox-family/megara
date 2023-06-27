@@ -1,65 +1,64 @@
 import { getBot } from '../cache-bot.js'
 import { addMemberToChannel } from '../utils/channels.js'
-import { getChannelType } from '../repositories/channels.js'
+import { queueApiCall } from '../api-queue.js'
+import { getButtonContext } from '../utils/validation.js'
 
 export default async function (interaction) {
-  let isEphemeral = false
+  const { _guild, user, customId } = interaction,
+    isDm = _guild ? false : true,
+    messageObject = {}
 
-  if (interaction?.guild) isEphemeral = true
+  if (isDm) {
+    await queueApiCall({
+      apiCall: `deferUpdate`,
+      djsObject: interaction,
+    })
 
-  await interaction.deferReply({ ephemeral: isEphemeral })
-
-  const joinChannel = getBot().channels.cache.get(
-    interaction.customId.match(`(?!:)[0-9]+`)[0]
-  )
-
-  if (!joinChannel) {
-    await interaction.editReply(
-      `You tried joining a channel that no longer exists, sorry for the trouble 🥺`
-    )
-
-    return
-  }
-
-  const guild = joinChannel.guild,
-    guildMember = guild.members.cache.get(interaction.user.id),
-    result = await addMemberToChannel(guildMember, joinChannel.id)
-
-  if (!result) {
-    if (!interaction?.guild)
-      await interaction.editReply({
-        content: `${joinChannel} is not a joinable channel in **${guild.name}** 🤔`,
-      })
-    else
-      await interaction.editReply({
-        content: `${joinChannel} is not a joinable channel 🤔`,
-      })
-
-    return
-  }
-
-  const channelType = await getChannelType(joinChannel.id)
-
-  let messageContent
-
-  if (result === `not added`)
-    if (!interaction?.guild)
-      messageContent = `You tried joining a channel that no longer exists in **${guild.name}**, sorry for the trouble 🥺`
-    else
-      messageContent = `You tried joining a channel that no longer exists, sorry for the trouble 🥺`
-  else if (result === `added`) {
-    messageContent =
-      `You've been added to **${joinChannel}** ← click here to jump to it 😊` +
-      `\n\n*Note: You can join and leave channels using the \`/channel-list\` command.*`
-
-    if (channelType === `private`)
-      messageContent += `\n*Note: when joining a private channel if paired voice channels exist they won't immediatly show, in most cases it takes less than 10 seconds for them to populate.*`
+    messageObject.components = []
   } else {
-    messageContent = `You already have access to **${joinChannel}** 🤔`
+    await queueApiCall({
+      apiCall: `deferReply`,
+      djsObject: interaction,
+      parameters: { ephemeral: true },
+    })
   }
 
-  await interaction.editReply({
-    content: messageContent,
-    ephemeral: true,
+  const channelId = getButtonContext(customId),
+    channel = getBot().channels.cache.get(channelId)
+
+  if (!channel) {
+    messageObject.content = `The channel you tried joining no longer exists 😬`
+
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: messageObject,
+    })
+
+    return
+  }
+
+  const { id, name, guild } = channel,
+    member = guild.members.cache.get(user.id),
+    result = await addMemberToChannel(member, id)
+
+  if (result === false) {
+    messageObject.content = `I had a problem adding you to **${name}**, please contact an administrator 😬`
+
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: messageObject,
+    })
+
+    return
+  }
+
+  messageObject.content = `You've been granted access to **${channel}** ← click here to jump to it 😊`
+
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: messageObject,
   })
 }

@@ -1,17 +1,9 @@
 import pgPool from '../pg-pool.js'
 import camelize from 'camelize'
 import SQL from 'sql-template-strings'
-import { deleteNewRoles } from '../utils/general.js'
-import { syncChannels } from '../utils/channels.js'
-import { syncRoles } from '../utils/roles.js'
 import { deleteAllGuildChannels } from './channels.js'
 
-export async function createGuild(guild, syncBool = false) {
-  await deleteNewRoles(guild)
-  await syncRoles(guild)
-
-  if (!syncBool) await syncChannels(guild)
-
+export async function createGuild(guild) {
   pgPool
     .query(
       SQL`
@@ -25,12 +17,7 @@ export async function createGuild(guild, syncBool = false) {
     })
 }
 
-export async function modifyGuild(oldGuild, newGuild) {
-  let guild
-
-  if (newGuild) guild = newGuild
-  else guild = oldGuild
-
+export async function modifyGuild(guild) {
   return await pgPool
     .query(
       SQL`
@@ -47,14 +34,7 @@ export async function modifyGuild(oldGuild, newGuild) {
     })
 }
 
-export async function deleteGuild(guild) {
-  let guildId
-
-  if (guild?.id) guildId = guild.id
-  else guildId = guild
-
-  await deleteAllGuildChannels(guildId)
-
+export async function deleteGuild(guildId) {
   return await pgPool
     .query(
       SQL`
@@ -90,24 +70,26 @@ export async function syncGuilds(guilds) {
         tabledGuildIds = rows.map(row => row.id),
         allGuildIds = [...new Set([...liveGuildIds, ...tabledGuildIds])]
 
-      allGuildIds.forEach(guildId => {
+      allGuildIds.forEach(async guildId => {
         const guild = guilds.get(guildId)
 
         if (
           liveGuildIds.includes(guildId) &&
           !tabledGuildIds.includes(guildId)
         ) {
-          createGuild(guild, true)
+          await deleteNewRoles(guild)
+          await createGuild(guild, true)
         } else if (
           !liveGuildIds.includes(guildId) &&
           tabledGuildIds.includes(guildId)
         ) {
-          deleteGuild(guildId)
+          await deleteGuild(guild.id)
+          await deleteAllGuildChannels(guild.id)
         } else {
           const guildRecord = rows.find(row => row.id === guildId)
 
           if (guild.name !== guildRecord.name) {
-            modifyGuild(guild)
+            await modifyGuild(guild)
           }
         }
       })
@@ -144,18 +126,6 @@ export async function setAnnouncementChannel(guildId, channelId) {
         update guilds
         set
           announcement_channel = ${channelId}
-        where id = ${guildId}
-        returning *;
-      `
-  )
-}
-
-export async function setVerificationChannel(guildId, channelId) {
-  return await pgPool.query(
-    SQL`
-        update guilds
-        set
-          verification_channel = ${channelId}
         where id = ${guildId}
         returning *;
       `
@@ -211,19 +181,6 @@ export async function getAnnouncementChannel(guildId) {
       `
     )
     .then(res => (res.rows[0] ? res.rows[0].announcement_channel : undefined))
-}
-
-export async function getVerificationChannel(guildId) {
-  return await pgPool
-    .query(
-      SQL`
-        select 
-          verification_channel 
-        from guilds 
-        where id = ${guildId}
-      `
-    )
-    .then(res => (res.rows[0] ? res.rows[0].verification_channel : undefined))
 }
 
 export async function getWelcomeChannel(guildId) {
@@ -345,15 +302,28 @@ export async function getFunctionChannels(guildId) {
   return await pgPool
     .query(
       SQL`
-      select 
-        admin_channel,
-        log_channel,
-        announcement_channel,
-        verification_channel,
-        welcome_channel
-      from guilds 
-      where id = ${guildId}
-    `
+        select 
+          admin_channel,
+          announcement_channel,
+          welcome_channel
+        from guilds 
+        where id = ${guildId}
+      `
+    )
+    .then(res => (res.rows[0] ? camelize(res.rows[0]) : undefined))
+}
+
+export async function getFunctionRoles(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          vip_role_id,
+          admin_role_id,
+          channel_notifications_role_id
+        from guilds 
+        where id = ${guildId}
+      `
     )
     .then(res => (res.rows[0] ? camelize(res.rows[0]) : undefined))
 }
@@ -361,12 +331,12 @@ export async function getFunctionChannels(guildId) {
 export async function setNameGuidelines(guildId, nameGuidelines) {
   return await pgPool.query(
     SQL`
-        update guilds
-        set
-          name_guidelines = ${nameGuidelines}
-        where id = ${guildId}
-        returning *;
-      `
+      update guilds
+      set
+        name_guidelines = ${nameGuidelines}
+      where id = ${guildId}
+      returning *;
+    `
   )
 }
 
@@ -416,7 +386,7 @@ export async function getActiveWorld(guildId) {
     })
 }
 
-export async function setVipRoleId(roleId, guildId) {
+export async function setVipRoleId(guildId, roleId) {
   return await pgPool
     .query(
       SQL`
@@ -443,7 +413,73 @@ export async function getVipRoleId(guildId) {
         where id = ${guildId} 
       `
     )
-    .then(res => (res.rows[0] ? res.rows[0].vip_role_id : undefined))
+    .then(res => res.rows[0]?.vip_role_id)
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function setAdminRoleId(guildId, roleId) {
+  return await pgPool
+    .query(
+      SQL`
+        update guilds
+        set
+          admin_role_id = ${roleId}
+        where id = ${guildId}
+        returning *;
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function getAdminRoleId(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          admin_role_id 
+        from guilds
+        where id = ${guildId} 
+      `
+    )
+    .then(res => res.rows[0].admin_role_id)
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function setChannelNotificationsRoleId(guildId, roleId) {
+  return await pgPool
+    .query(
+      SQL`
+        update guilds
+        set
+          channel_notifications_role_id = ${roleId}
+        where id = ${guildId}
+        returning *;
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function getChannelNotificationsRoleId(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          channel_notifications_role_id 
+        from guilds
+        where id = ${guildId} 
+      `
+    )
+    .then(res => res.rows[0].channel_notifications_role_id)
     .catch(error => {
       console.log(error)
     })
@@ -594,4 +630,64 @@ export async function getServerSubscriptionButtonText(guildId) {
     .then(res =>
       res.rows[0] ? res.rows[0].server_subscription_button_text : undefined
     )
+}
+
+export async function getActiveVoiceCategoryId(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          active_voice_category_id 
+        from guilds 
+        where id = ${guildId}
+      `
+    )
+    .then(res => res.rows[0]?.active_voice_category_id)
+    .catch(error => console.log(`query error: \n${error}`))
+}
+
+export async function getInactiveVoiceCategoryId(guildId) {
+  return await pgPool
+    .query(
+      SQL`
+        select 
+          inactive_voice_category_id 
+        from guilds 
+        where id = ${guildId}
+      `
+    )
+    .then(res => res.rows[0]?.inactive_voice_category_id)
+    .catch(error => console.log(`query error: \n${error}`))
+}
+
+export async function setActiveVoiceCategoryId(guildId, categoryId) {
+  return await pgPool
+    .query(
+      SQL`
+        update guilds
+        set
+          active_voice_category_id = ${categoryId}
+        where id = ${guildId}
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function setInactiveVoiceCategoryId(guildId, categoryId) {
+  return await pgPool
+    .query(
+      SQL`
+        update guilds
+        set
+          inactive_voice_category_id = ${categoryId}
+        where id = ${guildId}
+      `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
 }

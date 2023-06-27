@@ -1,24 +1,25 @@
+import { ChannelType } from 'discord.js'
+import { queueApiCall } from '../api-queue.js'
+
 export async function getThreadById(channel, threadId) {
   if (!channel || !threadId) return
 
-  let thread = channel.threads.cache.get(threadId)
+  const { threads } = channel
+
+  let thread = threads.cache.get(threadId)
 
   if (!thread) {
-    const archivedPrivateThreads = await channel.threads
-      .fetchArchived({ type: `private`, fetchAll: true })
-      .catch(error =>
-        console.log(
-          `I was unable to fetch archived private threads, see error below.\n${error}`
-        )
-      )
+    const archivedPrivateThreads = await queueApiCall({
+      apiCall: `fetchArchived`,
+      djsObject: threads,
+      parameters: { type: `private`, fetchAll: true },
+    })
 
-    const archivedPublicThreads = await channel.threads
-      .fetchArchived({ type: `public`, fetchAll: true })
-      .catch(error =>
-        console.log(
-          `I was unable to fetch archived public threads, see error below.\n${error}`
-        )
-      )
+    const archivedPublicThreads = await queueApiCall({
+      apiCall: `fetchArchived`,
+      djsObject: threads,
+      parameters: { type: `public`, fetchAll: true },
+    })
 
     const privateThread = archivedPrivateThreads.threads.get(threadId),
       publicThread = archivedPublicThreads.threads.get(threadId)
@@ -34,27 +35,31 @@ export async function getThreadByName(channel, threadName) {
 
   let thread = channel.threads.cache.find(thread => thread.name === threadName)
 
-  if (!thread) {
-    const archivedPrivateThreads = await channel.threads
-      .fetchArchived({ type: `private`, fetchAll: true })
-      .catch(error =>
-        console.log(
-          `I was unable to fetch archived private threads, see error below.\n${error}`
-        )
+  if (!thread && channel.type !== ChannelType.GuildForum) {
+    const archivedPrivateThreads = await queueApiCall({
+      apiCall: `fetchArchived`,
+      djsObject: channel.threads,
+      parameters: { type: `private`, fetchAll: true },
+    }).catch(error =>
+      console.log(
+        `I was unable to fetch archived private threads, see error below.\n${error}`
       )
+    )
 
-    const archivedPublicThreads = await channel.threads
-      .fetchArchived({ type: `public`, fetchAll: true })
-      .catch(error =>
-        console.log(
-          `I was unable to fetch archived public threads, see error below.\n${error}`
-        )
+    const archivedPublicThreads = await queueApiCall({
+      apiCall: `fetchArchived`,
+      djsObject: channel.threads,
+      parameters: { type: `public`, fetchAll: true },
+    }).catch(error =>
+      console.log(
+        `I was unable to fetch archived public threads, see error below.\n${error}`
       )
+    )
 
-    const privateThread = archivedPrivateThreads.threads.find(
+    const privateThread = archivedPrivateThreads?.threads.find(
         thread => thread.name === threadName
       ),
-      publicThread = archivedPublicThreads.threads.find(
+      publicThread = archivedPublicThreads?.threads.find(
         thread => thread.name === threadName
       )
 
@@ -67,13 +72,11 @@ export async function getThreadByName(channel, threadName) {
 export async function unarchiveThread(thread) {
   if (!thread || !thread?.archived) return
 
-  await thread
-    .setArchived(false)
-    .catch(error =>
-      console.log(
-        `I was unable to unarchive a thread, see error below\n${error}`
-      )
-    )
+  await queueApiCall({
+    apiCall: `setArchived`,
+    djsObject: thread,
+    parameters: false,
+  })
 }
 
 export async function addMemberToThread(thread, member) {

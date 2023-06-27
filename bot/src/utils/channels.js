@@ -4,693 +4,139 @@ import {
   ButtonBuilder,
   ButtonStyle,
   OverwriteType,
+  Collection,
   PermissionsBitField,
 } from 'discord.js'
 import { getBot } from '../cache-bot.js'
+import { collator } from '../utils/general.js'
 import {
-  getIndividualPermissionSets,
-  comparePermissions,
-} from '../utils/general.js'
-import { requiredRoleDifference } from './roles.js'
-import {
-  getAdminChannel,
-  getFunctionChannels,
   getChannelSorting,
-  setAdminChannel,
-  setLogChannel,
-  setAnnouncementChannel,
-  setVerificationChannel,
-  setWelcomeChannel,
   getAnnouncementChannel,
-  getVerificationChannel,
   getWelcomeChannel,
   getPauseChannelNotifications,
+  getChannelNotificationsRoleId,
 } from '../repositories/guilds.js'
 import {
-  createChannelRecord,
-  updateChannelRecord,
+  setChannelRecordName,
   deleteChannelRecord,
-  getChannelTableByGuild,
-  getAlphabeticalCategories,
-  getAlphabeticalChannelsByCategory,
-  getChannelsGuildById,
-  getChannelType,
-  getRoomChannelId,
-  getUnverifiedRoomChannelId,
-  getCategoryName,
+  getChannelsByGuild,
+  getPositionOverride,
+  getPositionOverrideRecords,
+  getVoiceChannelParentId,
+  removeCustomVoiceOptionsByParentId,
+  createChannelRecord,
 } from '../repositories/channels.js'
-import { getChannelBasename } from './voice.js'
+import { queueApiCall } from '../api-queue.js'
+import { isPositiveNumber } from './validation.js'
 
-const setChannelFunction = {
-    adminChannel: setAdminChannel,
-    logChannel: setLogChannel,
-    announcementChannel: setAnnouncementChannel,
-    verificationChannel: setVerificationChannel,
-    welcomeChannel: setWelcomeChannel,
-  },
-  channelVisibilityQueue = [],
-  channelSortingQueue = []
-
-async function emptyChannelVisibilityQueue() {
-  if (channelVisibilityQueue.length === 0) return
-
-  await setChannelVisibility(channelVisibilityQueue[0])
-
-  channelVisibilityQueue.shift()
-
-  // console.log(`channel visibility loop`)
-
-  emptyChannelVisibilityQueue()
-}
-
-export function pushToChannelVisibilityQueue(channelId) {
-  if (!channelVisibilityQueue.includes(channelId)) {
-    channelVisibilityQueue.push(channelId)
-
-    if (channelVisibilityQueue.length === 1) emptyChannelVisibilityQueue()
-  }
-}
+const channelSortingQueue = []
 
 async function emptyChannelSortingQueue() {
   if (channelSortingQueue.length === 0) return
 
-  await sortChannels(channelSortingQueue[0])
+  const guildId = channelSortingQueue[0]
+
+  await sortChannels(guildId)
 
   channelSortingQueue.shift()
 
-  console.log(`channel sorting loop`)
+  // console.log(`channel sorting loop`)
 
   emptyChannelSortingQueue()
 }
 
-export function pushToChannelSortingQueue(GuildId) {
-  if (!channelSortingQueue.includes(GuildId)) {
-    channelSortingQueue.push(GuildId)
+export function pushToChannelSortingQueue(guildId) {
+  if (!channelSortingQueue.includes(guildId)) {
+    channelSortingQueue.push(guildId)
 
     if (channelSortingQueue.length === 1) emptyChannelSortingQueue()
   }
 }
 
-export function checkType(channel) {
-  switch (channel.type) {
-    case ChannelType.GuildCategory:
-      return `category`
-    case ChannelType.GuildVoice:
-      return `voice`
-    case ChannelType.GuildStageVoice:
-      return `voice`
-    case ChannelType.PublicThread:
-      return `public thread`
-    case ChannelType.PrivateThread:
-      return `private thread`
-  }
+export function createPositionArray(categoryBuckets) {
+  const positions = []
 
-  const roles = channel.guild.roles.cache,
-    permissions = channel.permissionOverwrites.cache.map(
-      role => roles.get(role.id)?.name
+  categoryBuckets.forEach((categoryBucket, index) => {
+    const { children } = categoryBucket
+
+    positions.push({
+      name: categoryBucket.name,
+      channel: categoryBucket.id,
+      position: index,
+    })
+
+    children.forEach((child, jndex) =>
+      positions.push({
+        name: child.name,
+        channel: child.id,
+        position: jndex,
+      })
     )
-
-  if (permissions.includes(`!channel type: archived`)) return `archived`
-  else if (permissions.includes(`!channel type: hidden`)) return `hidden`
-  else if (permissions.includes(`!channel type: joinable`)) return `joinable`
-  else if (permissions.includes(`!channel type: public`)) return `public`
-  else return `private`
-}
-
-export function getCommandLevel(channel) {
-  const roles = channel.guild.roles.cache,
-    channelPermissionOverwrites = channel.permissionOverwrites.cache,
-    alphaPermissions = channelPermissionOverwrites.map(
-      role => roles.get(role.id)?.name
-    )
-
-  if (alphaPermissions.includes(`!command level: admin`)) return `admin`
-  else if (alphaPermissions.includes(`!command level: unrestricted`))
-    return `unrestricted`
-  else if (alphaPermissions.includes(`!command level: cinema`)) return `cinema`
-  else if (alphaPermissions.includes(`!command level: restricted`))
-    return `restricted`
-  else return `prohibited`
-}
-
-export function getPositionOverride(channel) {
-  const roles = channel.guild.roles.cache,
-    channelPermissionOverwrites = channel.permissionOverwrites.cache,
-    alphaPermissions = channelPermissionOverwrites.map(
-      role => roles.get(role.id)?.name
-    )
-
-  const positionOverride = alphaPermissions.find(alphaPermission => {
-    if (alphaPermission)
-      return alphaPermission.match(`(?!!)position override(?=:)`)
   })
 
-  return positionOverride ? +positionOverride.match(`-?[0-9]+`)[0] : null
+  return positions
 }
 
-function unarchiveUserOverwrites(overwrites) {
-  if (!overwrites) return
+export async function sortChannels(guildId, bypassComparison = false) {
+  if (!(await getChannelSorting(guildId))) return
 
-  let permissionsHaveChanged = false
+  const guild = getBot().guilds.cache.get(guildId),
+    newCategoryBuckets = await getCategoryBuckets(guild),
+    newChannelPositions = createPositionArray(newCategoryBuckets)
 
-  overwrites.forEach(overwrite => {
-    const denyPermissions = overwrite.deny.serialize()
+  if (bypassComparison) {
+    console.log(`sorted channels`)
 
-    if (
-      overwrite.type === OverwriteType.Member &&
-      (denyPermissions.SendMessages ||
-        denyPermissions.SendMessagesInThreads ||
-        denyPermissions.CreatePrivateThreads ||
-        denyPermissions.CreatePublicThreads ||
-        denyPermissions?.CreatePrivateThreads ||
-        denyPermissions?.CreatePublicThreads)
-    ) {
-      const newOverwrite = overwrites.get(overwrite.id),
-        permissionSets = getIndividualPermissionSets(overwrite)
-
-      permissionSets.allow.delete(`SendMessages`)
-      permissionSets.allow.delete(`SendMessagesInThreads`)
-      permissionSets.allow.delete(`CreatePrivateThreads`)
-      permissionSets.allow.delete(`CreatePublicThreads`)
-      permissionSets.allow.delete(`CreatePrivateThreads`)
-      permissionSets.allow.delete(`CreatePublicThreads`)
-
-      permissionSets.deny.delete(`SendMessages`)
-      permissionSets.deny.delete(`SendMessagesInThreads`)
-      permissionSets.deny.delete(`CreatePrivateThreads`)
-      permissionSets.deny.delete(`CreatePublicThreads`)
-      permissionSets.deny.delete(`CreatePrivateThreads`)
-      permissionSets.deny.delete(`CreatePublicThreads`)
-
-      newOverwrite.allow = new PermissionsBitField([...permissionSets.allow])
-      newOverwrite.deny = new PermissionsBitField([...permissionSets.deny])
-
-      permissionsHaveChanged = true
-    }
-  })
-
-  return permissionsHaveChanged
-}
-
-export async function setChannelVisibility(channelId) {
-  const channel = getBot().channels.cache.get(channelId)
-
-  if (!channel) {
-    console.log(
-      `We tried setting the channel visibility of a channel that no longer exists.`
-    )
+    await queueApiCall({
+      apiCall: `setPositions`,
+      djsObject: guild.channels,
+      parameters: newChannelPositions,
+    })
 
     return
   }
 
-  const channelType = checkType(channel)
-
-  if ([`public thread`, `private thread`].includes(channelType)) return
-
-  const guild = channel.guild,
-    announcementChannelId = await getAnnouncementChannel(guild.id),
-    verificationChannelId = await getVerificationChannel(guild.id),
-    welcomeChannelId = await getWelcomeChannel(guild.id),
-    categoryName = channel.parentId
-      ? guild.channels.cache.get(channel.parentId).name
-      : ``,
-    roles = guild.roles.cache,
-    archivedRoleId = roles.find(
-      role => role.name === `!channel type: archived`
-    )?.id,
-    hiddenRoleId = roles.find(
-      role => role.name === `!channel type: hidden`
-    )?.id,
-    joinableRoleId = roles.find(
-      role => role.name === `!channel type: joinable`
-    )?.id,
-    publicRoleId = roles.find(
-      role => role.name === `!channel type: public`
-    )?.id,
-    undergoingVerificationRoleId = roles.find(
-      role => role.name === `undergoing verification`
-    )?.id,
-    verifiedRoleId = roles.find(role => role.name === `verified`)?.id,
-    everyoneRoleId = roles.find(role => role.name === `@everyone`).id,
-    overwrites = channel.permissionOverwrites.cache,
-    archivedOverwrite = archivedRoleId ? overwrites.get(archivedRoleId) : null,
-    hiddenOverwrite = hiddenRoleId ? overwrites.get(hiddenRoleId) : null,
-    joinableOverwrite = joinableRoleId ? overwrites.get(joinableRoleId) : null,
-    publicOverwrite = publicRoleId ? overwrites.get(publicRoleId) : null,
-    undergoingVerificationOverwrite = undergoingVerificationRoleId
-      ? overwrites.get(undergoingVerificationRoleId)
-      : null,
-    verifiedOverwrite = verifiedRoleId ? overwrites.get(verifiedRoleId) : null,
-    everyoneOverwrite = overwrites.get(everyoneRoleId)
-
-  if ([announcementChannelId, welcomeChannelId].includes(channel.id)) {
-    if (hiddenOverwrite) await hiddenOverwrite.delete()
-    if (archivedOverwrite) await archivedOverwrite.delete()
-    if (joinableOverwrite) await joinableOverwrite.delete()
-    if (undergoingVerificationOverwrite)
-      await undergoingVerificationRoleId.delete()
-    if (!publicOverwrite && publicRoleId)
-      channel.permissionOverwrites.create(publicRoleId, {})
-
-    if (verifiedOverwrite) {
-      const comparedPermissions = comparePermissions(verifiedOverwrite)
-
-      if (
-        !comparedPermissions.ViewChannel ||
-        comparedPermissions.SendMessages ||
-        comparedPermissions.SendMessagesInThreads ||
-        comparedPermissions.CreatePublicThreads ||
-        comparedPermissions.CreatePrivateThreads
+  const currentCategoryBuckets = await getCategoryBuckets(guild, false),
+    currentChannelPositions = createPositionArray(currentCategoryBuckets),
+    comparableCurrentPositions = newChannelPositions.map(newChannelPosition => {
+      return currentChannelPositions.find(
+        currentChannelPositions =>
+          currentChannelPositions.channel === newChannelPosition.channel
       )
-        await verifiedOverwrite.edit({
-          ViewChannel: true,
-          SendMessages: false,
-          SendMessagesInThreads: false,
-          CreatePublicThreads: false,
-          CreatePrivateThreads: false,
-        })
-    } else
-      await channel.permissionOverwrites.create(verifiedRoleId, {
-        ViewChannel: true,
-        SendMessages: false,
-        SendMessagesInThreads: false,
-        CreatePublicThreads: false,
-        CreatePrivateThreads: false,
-      })
-  } else if (channel.id === verificationChannelId) {
-    if (hiddenOverwrite) await hiddenOverwrite.delete()
-    if (archivedOverwrite) await archivedOverwrite.delete()
-    if (joinableOverwrite) await joinableOverwrite.delete()
-    if (publicOverwrite) await publicOverwrite.delete()
-    if (!undergoingVerificationOverwrite && undergoingVerificationRoleId)
-      await channel.permissionOverwrites.create(undergoingVerificationRoleId, {
-        ViewChannel: true,
-        SendMessages: true,
-      })
-
-    if (!verifiedOverwrite && verifiedRoleId)
-      await channel.permissionOverwrites.create(verifiedRoleId, {
-        ViewChannel: false,
-      })
-  } else if (channelType === `hidden`) {
-    if (archivedOverwrite) await archivedOverwrite.delete()
-    if (joinableOverwrite) await joinableOverwrite.delete()
-    if (publicOverwrite) await publicOverwrite.delete()
-    if (undergoingVerificationOverwrite)
-      await undergoingVerificationOverwrite.delete()
-
-    if (!verifiedOverwrite) {
-      await channel.permissionOverwrites.create(verifiedRoleId, {
-        ViewChannel: false,
-      })
-    } else {
-      const allowPermissions = verifiedOverwrite.allow.serialize()
-
-      if (allowPermissions.ViewChannel) {
-        verifiedOverwrite.edit({ ViewChannel: false })
-      }
-    }
-
-    const denyPermissions = everyoneOverwrite.deny.serialize()
-
-    if (denyPermissions.ViewChannel) {
-      everyoneOverwrite.edit({ ViewChannel: true })
-    }
-
-    let permissionsHaveChanged = unarchiveUserOverwrites(overwrites)
-
-    if (permissionsHaveChanged)
-      await channel.edit({ permissionOverwrites: overwrites })
-  } else if (
-    categoryName.toUpperCase() === `ARCHIVED` ||
-    channelType === `archived`
-  ) {
-    if (joinableOverwrite) await joinableOverwrite.delete()
-    if (publicOverwrite) await publicOverwrite.delete()
-    if (undergoingVerificationOverwrite)
-      await undergoingVerificationOverwrite.delete()
-    if (verifiedOverwrite) await verifiedOverwrite.delete()
-
-    if (!archivedOverwrite && archivedRoleId)
-      await channel.permissionOverwrites.create(archivedRoleId, {})
-
-    let permissionsHaveChanged = false
-
-    overwrites.forEach(overwrite => {
-      const comparedPermissions = comparePermissions(overwrite)
-
-      if (
-        overwrite.type === OverwriteType.Member &&
-        (comparedPermissions.SendMessages ||
-          comparedPermissions.SendMessagesInThreads ||
-          comparedPermissions.CreatePrivateThreads ||
-          comparedPermissions.CreatePublicThreads)
-      ) {
-        const newOverwrite = overwrites.get(overwrite.id),
-          permissionSets = getIndividualPermissionSets(overwrite)
-
-        permissionSets.allow.delete(`SendMessages`)
-        permissionSets.allow.delete(`SendMessagesInThreads`)
-        permissionSets.allow.delete(`CreatePrivateThreads`)
-        permissionSets.allow.delete(`CreatePublicThreads`)
-
-        permissionSets.deny.add(`SendMessages`)
-        permissionSets.deny.add(`SendMessagesInThreads`)
-        permissionSets.deny.add(`CreatePrivateThreads`)
-        permissionSets.deny.add(`CreatePublicThreads`)
-
-        newOverwrite.allow = new PermissionsBitField([...permissionSets.allow])
-        newOverwrite.deny = new PermissionsBitField([...permissionSets.deny])
-
-        permissionsHaveChanged = true
-      }
     })
 
-    if (permissionsHaveChanged)
-      await channel.edit({ permissionOverwrites: overwrites })
-  } else if (channelType === `joinable`) {
-    if (undergoingVerificationOverwrite)
-      await undergoingVerificationOverwrite.delete()
-    if (verifiedOverwrite) await verifiedOverwrite.delete()
-
-    let permissionsHaveChanged = unarchiveUserOverwrites(overwrites)
-
-    if (permissionsHaveChanged)
-      await channel.edit({ permissionOverwrites: overwrites })
-  } else if (channelType === `public`) {
-    if (undergoingVerificationOverwrite)
-      await undergoingVerificationOverwrite.delete()
-    if (!verifiedOverwrite && verifiedRoleId)
-      await channel.permissionOverwrites.create(verifiedRoleId, {
-        ViewChannel: true,
-      })
-
-    let permissionsHaveChanged = unarchiveUserOverwrites(overwrites)
-
-    if (permissionsHaveChanged)
-      await channel.edit({ permissionOverwrites: overwrites })
-  } else if (channelType === `private`) {
-    // if (undergoingVerificationOverwrite)
-    //   await undergoingVerificationOverwrite.delete()
-    // if (verifiedOverwrite) await verifiedOverwrite.delete()
-
-    let permissionsHaveChanged = unarchiveUserOverwrites(overwrites)
-
-    if (permissionsHaveChanged)
-      await channel.edit({ permissionOverwrites: overwrites })
-  }
-}
-
-export async function sortChannels(guildId) {
-  if (!(await getChannelSorting(guildId))) return
-
-  const guild = getBot().guilds.cache.get(guildId),
-    channels = guild.channels.cache.filter(
-      channel =>
-        ![ChannelType.PublicThread, ChannelType.PrivateThread].includes(
-          channel.type
-        )
-    ),
-    alphabeticalCategories = await getAlphabeticalCategories(guildId),
-    alphabeticalBuckets = [alphabeticalCategories],
-    finalChannelArr = []
-
-  await Promise.all(
-    alphabeticalCategories.map(async category =>
-      alphabeticalBuckets.push(
-        await getAlphabeticalChannelsByCategory(category.id)
-      )
-    )
-  )
-
-  alphabeticalBuckets.forEach(alphabeticalBucket => {
-    const channelsWithPositionOverrides = {},
-      orderedChannels = [],
-      channelsWithPositiveOverrides = [],
-      channelsWithNegativeOverrides = [],
-      voiceChannelsWithPositionOverrides = {},
-      orderedVoiceChannels = [],
-      voiceChannelsWithPositiveOverrides = [],
-      voiceChannelsWithNegativeOverrides = []
-
-    channels.forEach(channel => {
-      const positionOverride = getPositionOverride(channel)
-
-      if (positionOverride) {
-        if (channel.type === ChannelType.GuildVoice)
-          voiceChannelsWithPositionOverrides[channel.id] = positionOverride
-        else channelsWithPositionOverrides[channel.id] = positionOverride
-      }
-    })
-
-    alphabeticalBucket.forEach(channel => {
-      if (channelsWithPositionOverrides.hasOwnProperty(channel.id)) {
-        if (channelsWithPositionOverrides[channel.id] > 0)
-          channelsWithPositiveOverrides.push({
-            id: channel.id,
-            positionOverride: channelsWithPositionOverrides[channel.id],
-          })
-        else
-          channelsWithNegativeOverrides.push({
-            id: channel.id,
-            positionOverride: channelsWithPositionOverrides[channel.id],
-          })
-      } else if (
-        voiceChannelsWithPositionOverrides.hasOwnProperty(channel.id)
-      ) {
-        if (voiceChannelsWithPositionOverrides[channel.id] > 0)
-          voiceChannelsWithPositiveOverrides.push({
-            id: channel.id,
-            positionOverride: voiceChannelsWithPositionOverrides[channel.id],
-          })
-        else
-          voiceChannelsWithNegativeOverrides.push({
-            id: channel.id,
-            positionOverride: voiceChannelsWithPositionOverrides[channel.id],
-          })
-      } else if (channel.channelType === `voice`)
-        orderedVoiceChannels.push(channel.id)
-      else orderedChannels.push(channel.id)
-    })
-
-    channelsWithPositiveOverrides.sort((a, b) =>
-      a.positionOverride > b.positionOverride ? -1 : 1
-    )
-
-    channelsWithNegativeOverrides.sort((a, b) =>
-      a.positionOverride < b.positionOverride ? -1 : 1
-    )
-
-    channelsWithPositiveOverrides.forEach(categoriesWithPositiveOverride =>
-      orderedChannels.unshift(categoriesWithPositiveOverride.id)
-    )
-
-    channelsWithNegativeOverrides.forEach(categoriesWithNegativeOverride =>
-      orderedChannels.push(categoriesWithNegativeOverride.id)
-    )
-
-    voiceChannelsWithPositiveOverrides.sort((a, b) =>
-      a.positionOverride > b.positionOverride ? -1 : 1
-    )
-
-    voiceChannelsWithNegativeOverrides.sort((a, b) =>
-      a.positionOverride < b.positionOverride ? -1 : 1
-    )
-
-    voiceChannelsWithPositiveOverrides.forEach(categoriesWithPositiveOverride =>
-      orderedVoiceChannels.unshift(categoriesWithPositiveOverride.id)
-    )
-
-    voiceChannelsWithNegativeOverrides.forEach(categoriesWithNegativeOverride =>
-      orderedVoiceChannels.push(categoriesWithNegativeOverride.id)
-    )
-
-    orderedChannels.forEach((channelId, index) =>
-      finalChannelArr.push({ channel: channelId, position: index })
-    )
-
-    orderedVoiceChannels.forEach((channelId, index) =>
-      finalChannelArr.push({ channel: channelId, position: index })
-    )
-  })
-
-  const currentChannelPosition = finalChannelArr.map(channel => {
-    const _channel = channels.get(channel.channel)
-
-    if (!_channel)
-      console.log(
-        `This channel is deleted but we're trying to sort it: ${channel.channel}`
-      )
-
-    return { channel: _channel?.id, position: _channel?.position }
-  })
-
-  console.log(`tried sorting channels`)
+  // console.log(newChannelPositions, currentChannelPositions)
 
   if (
-    JSON.stringify(finalChannelArr) !== JSON.stringify(currentChannelPosition)
+    JSON.stringify(newChannelPositions) !==
+    JSON.stringify(comparableCurrentPositions)
   ) {
     console.log(`sorted channels`)
 
-    await guild.channels
-      .setPositions(finalChannelArr)
-      .catch(error =>
-        console.log(`channel sorting failed, see error below:\n`, error)
-      )
+    await queueApiCall({
+      apiCall: `setPositions`,
+      djsObject: guild.channels,
+      parameters: newChannelPositions,
+    })
   }
 }
 
-export async function createChannel(channel, skipAnnouncementAndSort = false) {
-  const channelType = checkType(channel)
-
-  if ([`public thread`, `private thread`].includes(channelType)) return
-
-  const commandLevel = getCommandLevel(channel),
-    positionOverride = getPositionOverride(channel)
-
-  await createChannelRecord(
-    channel,
-    channelType,
-    commandLevel,
-    positionOverride
+export function getAlphaChannelType(channel) {
+  const channelTypeKeys = Object.keys(ChannelType).filter(
+    channelTypeKey => !isPositiveNumber(channelTypeKey)
   )
 
-  pushToChannelVisibilityQueue(channel.id)
+  const alphaChannelType = channelTypeKeys.find(
+    channelTypeKey => ChannelType[channelTypeKey] === channel.type
+  )
 
-  if (skipAnnouncementAndSort) {
-    return channel.id
-  }
-
-  if (!channelSortingQueue.includes(channel.guild.id))
-    pushToChannelSortingQueue(channel.guild.id)
-
-  announceNewChannel(channel)
+  return alphaChannelType
 }
 
-export async function modifyChannel(
-  oldChannel,
-  newChannel,
-  skipAnnouncementAndSort = false
-) {
-  const oldChannelType = oldChannel.hasOwnProperty(`channelType`)
-    ? oldChannel.channelType
-    : checkType(oldChannel)
+export function checkIfChannelIsSuggestedType(channel, alphaType) {
+  const alphaChannelType = getAlphaChannelType(channel)
 
-  if ([`public thread`, `private thread`].includes(oldChannelType)) return
-
-  //queue stuffs
-  if (oldChannel?.permissionOverwrites) {
-    const requiredRole = requiredRoleDifference(
-      newChannel.guild,
-      oldChannel.permissionOverwrites.cache.map(
-        permissionOverwrite => permissionOverwrite.id
-      ),
-      newChannel.permissionOverwrites.cache.map(
-        permissionOverwrite => permissionOverwrite.id
-      )
-    )
-  }
-
-  pushToChannelVisibilityQueue(newChannel.id)
-
-  //other stuffs
-  const oldCatergoryId = oldChannel.hasOwnProperty(`categoryId`)
-      ? oldChannel.categoryId
-      : oldChannel.parentId,
-    oldCommandLevel = oldChannel.hasOwnProperty(`commandLevel`)
-      ? oldChannel.commandLevel
-      : getCommandLevel(oldChannel),
-    oldPositionOverride = oldChannel.hasOwnProperty(`positionOverride`)
-      ? oldChannel.positionOverride
-      : getPositionOverride(oldChannel),
-    newChannelType = checkType(newChannel),
-    newCommandLevel = getCommandLevel(newChannel),
-    newPositionOverride = getPositionOverride(newChannel)
-
-  if (
-    oldChannel.name !== newChannel.name ||
-    oldCatergoryId !== newChannel.parentId ||
-    oldChannelType !== newChannelType ||
-    oldCommandLevel !== newCommandLevel ||
-    oldPositionOverride !== newPositionOverride ||
-    oldChannel.position !== newChannel.position ||
-    (oldChannel?.rawPosition &&
-      oldChannel.rawPosition !== newChannel.rawPosition)
-  ) {
-    await updateChannelRecord(
-      newChannel,
-      newChannelType,
-      newCommandLevel,
-      newPositionOverride
-    )
-
-    if (skipAnnouncementAndSort) {
-      if (oldChannelType !== newChannelType) return newChannel.id
-    } else {
-      if (
-        !channelSortingQueue.includes(newChannel.guild.id) &&
-        (oldPositionOverride !== newPositionOverride ||
-          oldChannel.position !== newChannel.position ||
-          (oldChannel?.rawPosition &&
-            oldChannel.rawPosition !== newChannel.rawPosition) ||
-          oldChannel.name !== newChannel.name)
-      ) {
-        pushToChannelSortingQueue(newChannel.guild.id)
-      }
-
-      if (oldChannelType !== newChannelType) {
-        console.log(
-          `Channel type ${oldChannelType} changed to ${newChannelType} in ${newChannel.name}.`
-        )
-
-        if (newChannelType !== `private`) announceNewChannel(newChannel)
-      }
-    }
-  }
-}
-
-export async function deleteChannel(channel, skipSort = false) {
-  let channelId
-
-  if (channel?.id) channelId = channel.id
-  else channelId = channel
-
-  const guild = getBot().guilds.cache.get(
-      await getChannelsGuildById(channelId)
-    ),
-    functionChannels = await getFunctionChannels(guild.id)
-
-  Object.keys(functionChannels).forEach(key => {
-    const channelName = key.match(`^[a-z]+`)[0]
-
-    if (channelId === functionChannels[key]) {
-      setChannelFunction[key](guild.id, null)
-
-      if (key === `adminChannel`)
-        guild.members.cache
-          .get(guild.ownerId)
-          .send(
-            `You're receiving this message because you are the owner of the ${guild.name} server.` +
-              `\nThe channel that was set as the admin channel was deleted at some point 🤔` +
-              `\nTo receive important notifications from me in the server this needs to be set again.`
-          )
-      else {
-        const adminChannel = guild.channels.cache.get(
-          functionChannels.adminChannel
-        )
-
-        if (adminChannel)
-          adminChannel.send(
-            `The channel that was set as the ${channelName} channel was deleted at some point 🤔` +
-              `\nYou'll need to set this channel function again to gain its functionality.`
-          )
-      }
-    }
-  })
-
-  await deleteChannelRecord(channelId)
-
-  // if (!skipSort) pushToChannelSortingQueue(guild.id) //I'm not sure why this is needed
+  return alphaChannelType?.toLowerCase()?.match(alphaType.toLowerCase())
 }
 
 export async function syncChannels(guild) {
@@ -698,18 +144,14 @@ export async function syncChannels(guild) {
     liveChannelIds = []
 
   channels.forEach(channel => {
-    if (
-      ![ChannelType.PublicThread, ChannelType.PrivateThread].includes(
-        channel.type
-      )
-    )
+    // checkIfChannel
+    if (!checkIfChannelIsSuggestedType(channel, `thread`))
       liveChannelIds.push(channel.id)
   })
 
-  const channelTable = await getChannelTableByGuild(guild.id),
+  const channelTable = await getChannelsByGuild(guild.id),
     tabledChannelIds = channelTable.map(row => row.id),
-    allIds = [...new Set([...liveChannelIds, ...tabledChannelIds])],
-    channelsToAnnounce = []
+    allIds = [...new Set([...liveChannelIds, ...tabledChannelIds])]
 
   let positionHasChanged = false
 
@@ -720,15 +162,20 @@ export async function syncChannels(guild) {
       if (liveChannelIds.includes(id) && !tabledChannelIds.includes(id)) {
         positionHasChanged = true
 
-        const channelId = await createChannel(channel, true)
-        if (channelId) channelsToAnnounce.push(channelId)
+        await createChannelRecord(channel)
       } else if (
         !liveChannelIds.includes(id) &&
         tabledChannelIds.includes(id)
       ) {
         positionHasChanged = true
 
-        deleteChannel({ id: id }, true)
+        const voiceChannelParentId = await getVoiceChannelParentId(id)
+
+        if (voiceChannelParentId) {
+          await removeCustomVoiceOptionsByParentId(voiceChannelParentId)
+        }
+
+        await deleteChannelRecord(id)
       } else {
         const record = channelTable.find(row => {
             return row.id === id
@@ -737,272 +184,78 @@ export async function syncChannels(guild) {
 
         if (
           record.positionOverride !== livePositionalOverride ||
-          record.positionHasChanged !== channel.position
+          record.positionHasChanged !== channel.rawPosition
         )
           positionHasChanged = true
 
-        const channelId = await modifyChannel(record, channel, true)
-
-        if (channelId) channelsToAnnounce.push(channelId)
+        if (record.name !== channel.name) {
+          await setChannelRecordName(channel)
+        }
       }
     })
   )
 
   if (positionHasChanged) pushToChannelSortingQueue(guild.id)
-
-  if (channelsToAnnounce.length >= 5) {
-    const adminChannelId = await getAdminChannel(guild.id)
-
-    if (!adminChannelId)
-      guild.channels.cache.get(adminChannelId)?.send(
-        `Potential oopsie detected. More than five channels were marked for announcement:
-          ${channelsToAnnounce.join(', ')}`
-      )
-  } else {
-    channelsToAnnounce.forEach(channelToAnnounce => {
-      announceNewChannel(channelToAnnounce)
-    })
-  }
 }
 
-export async function addMemberToDynamicChannels(
-  member,
-  permissions,
-  parentChannelName
-) {
-  const guild = member.guild,
-    channels = guild.channels.cache,
-    dynamicVoiceChannels = channels.filter(
-      channel =>
-        getChannelBasename(channel.name) === parentChannelName &&
-        channel.type === ChannelType.GuildVoice
-    )
-
-  for (const [voiceChannelId, voiceChannel] of dynamicVoiceChannels) {
-    await new Promise(resolution => setTimeout(resolution, 5000))
-
-    if (voiceChannel)
-      await voiceChannel.permissionOverwrites
-        .create(member, permissions)
-        .catch(error =>
-          console.log(
-            `I was unable to add a member to a dynamic voice channel, it was probably deleted as I was adding them:\n${error}`
-          )
-        )
-  }
-}
-
-export async function CheckIfMemberNeedsToBeAdded(
-  member,
-  channelId,
-  temporary = false
-) {
-  if (!channelId) return
-
-  const guild = member.guild,
-    welcomeChannelId = await getWelcomeChannel(guild.id),
-    roomChannelId = await getRoomChannelId(guild.id),
-    unverifiedRoomId = await getUnverifiedRoomChannelId(guild.id)
-
-  if ([welcomeChannelId, roomChannelId, unverifiedRoomId].includes(channelId))
-    return
-
-  const channel = guild.channels.cache.get(channelId)
-
-  if (!channel) return `not added`
-
-  const channelType = await getChannelType(channel.id)
-
-  if (channelType === `hidden`) return
-
-  const userOverwrite = channel.permissionOverwrites.cache.find(
-      permissionOverwrite => permissionOverwrite.id === member.id
-    ),
-    comparedPermissions = comparePermissions(userOverwrite),
-    allowPermissions = userOverwrite?.allow.serialize()
-
-  if (channelType === `archived`) {
-    const archivedPermissions = {
-      ViewChannel: true,
-      SendMessages: false,
-      SendMessagesInThreads: false,
-      CreatePrivateThreads: false,
-      CreatePublicThreads: false,
-    }
-
-    if (!userOverwrite)
-      return { action: `create`, permissions: archivedPermissions }
-    else if (
-      !comparedPermissions.ViewChannel ||
-      comparedPermissions.SendMessages ||
-      comparedPermissions.SendMessagesInThreads ||
-      comparedPermissions.CreatePrivateThreads ||
-      comparedPermissions.CreatePublicThreads
-    )
-      return { action: `edit`, permissions: archivedPermissions }
-  } else if (channelType === `joinable`) {
-    const joinablePermissions = temporary
-      ? { ViewChannel: true, SendMessages: true }
-      : { ViewChannel: true, SendMessages: null }
-
-    if (!userOverwrite)
-      return { action: `create`, permissions: joinablePermissions }
-    else if (!comparedPermissions.ViewChannel || allowPermissions.SendMessages)
-      return { action: `edit`, permissions: joinablePermissions }
-  } else if (channelType === `public`) {
-    if (temporary) {
-      if (userOverwrite && comparedPermissions?.ViewChannel === false)
-        return {
-          action: `edit`,
-          permissions: {
-            ViewChannel: true,
-            SendMessages: true,
-          },
-        }
-    } else {
-      if (userOverwrite) {
-        return { action: `delete` }
-      }
-    }
-  } else if (channelType === `private`) {
-    const privatePermissions = { ViewChannel: true }
-
-    if (!userOverwrite || !comparedPermissions.ViewChannel) {
-      return { action: `create`, permissions: privatePermissions }
-    }
-  }
-
-  return `already added`
-}
-
-export async function addMemberToChannel(member, channelId, temporary = false) {
+export async function addMemberToChannel(member, channelId) {
   if (!channelId) return
 
   const guild = member.guild,
     channel = guild.channels.cache.get(channelId)
 
-  if (!channel) return `not added`
+  if (!channel) return false
 
-  const userOverwrite = channel.permissionOverwrites.cache.find(
-      permissionOverwrite => permissionOverwrite.id === member.id
-    ),
-    context = await CheckIfMemberNeedsToBeAdded(member, channelId, temporary)
+  const isMemberPermissible = checkIfMemberIsPermissible(channel, member)
 
-  if (!context) return
+  if (isMemberPermissible) return
 
-  const channelType = await getChannelType(channel.id)
+  await queueApiCall({
+    apiCall: `create`,
+    djsObject: channel.permissionOverwrites,
+    parameters: [member, { ViewChannel: true }],
+    multipleParameters: true,
+  })
 
-  if ([`not added`, `already added`].includes(context)) return context
-  else if (context.action === `delete`) {
-    await userOverwrite.delete()
-  } else {
-    await channel.permissionOverwrites[context.action](
-      member.id,
-      context.permissions
-    )
-
-    if (channelType === `private`)
-      addMemberToDynamicChannels(member, context.permissions, channel.name)
-  }
-
-  return `added`
+  return true
 }
 
-export async function removeMemberFromDynamicChannels(
-  member,
-  parentChannelName
-) {
+export async function checkIfMemberneedsToBeRemoved(member, channel) {
   const guild = member.guild,
-    channels = guild.channels.cache,
-    dynamicVoiceChannels = channels.filter(
-      channel =>
-        getChannelBasename(channel.name) === parentChannelName &&
-        channel.type === ChannelType.GuildVoice
-    )
+    channelId = channel?.id,
+    welcomeChannelId = await getWelcomeChannel(guild.id)
 
-  for (const [voiceChannelId, voiceChannel] of dynamicVoiceChannels) {
-    await new Promise(resolution => setTimeout(resolution, 5000))
+  if (channelId === welcomeChannelId) return `welcome`
 
-    if (voiceChannel)
-      await voiceChannel.permissionOverwrites
-        .delete(member)
-        .catch(error =>
-          console.log(
-            `I was unable to remove a member from a dynamic voice channel, it was probably deleted as I was removing them:\n${error}`
-          )
-        )
-  }
+  if (!channel) return false
+
+  const isPermissible = checkIfMemberIsPermissible(channel, member)
+
+  if (isPermissible) return true
+
+  return false
 }
 
-export async function checkIfmemberneedsToBeRemoved(member, channelId) {
-  if (!channelId) return
+export async function removeMemberFromChannel(member, channel) {
+  if (!member || !channel) return false
 
-  const guild = member.guild,
-    welcomeChannelId = await getWelcomeChannel(guild.id),
-    roomChannelId = await getRoomChannelId(guild.id),
-    unverifiedRoomId = await getUnverifiedRoomChannelId(guild.id)
+  const needsToBeRemoved = await checkIfMemberneedsToBeRemoved(member, channel)
 
-  if ([welcomeChannelId, roomChannelId, unverifiedRoomId].includes(channelId))
-    return
+  if (!needsToBeRemoved || needsToBeRemoved === `welcome`)
+    return needsToBeRemoved
 
-  const channel = guild.channels.cache.get(channelId)
+  await queueApiCall({
+    apiCall: `create`,
+    djsObject: channel.permissionOverwrites,
+    parameters: [member, { ViewChannel: false }],
+    multipleParameters: true,
+  })
 
-  if (!channel) return `not removed`
-
-  const channelType = await getChannelType(channel.id)
-
-  if (channelType === `hidden`) return
-
-  const userOverwrite = channel.permissionOverwrites.cache.find(
-      permissionOverwrite => permissionOverwrite.id === member.id
-    ),
-    comparedPermissions = comparePermissions(userOverwrite)
-
-  if ([`archived`, `joinable`, `private`].includes(channelType)) {
-    if (userOverwrite) return { action: `delete` }
-  } else if (channelType === `public`) {
-    const permissions = {
-      ViewChannel: false,
-    }
-
-    if (!userOverwrite) return { action: `create`, permissions: permissions }
-    else if (comparedPermissions.ViewChannel)
-      return { action: `edit`, permissions: permissions }
-  }
-
-  return `already removed`
-}
-
-export async function removeMemberFromChannel(member, channelId) {
-  if (!channelId) return
-
-  const context = await checkIfmemberneedsToBeRemoved(member, channelId)
-
-  if ([null, `not removed`].includes(context)) return context
-
-  const guild = member.guild,
-    channel = guild.channels.cache.get(channelId)
-
-  if (!channel) return `not removed`
-
-  if ([`edit`, `create`].includes(context?.action)) {
-    channel?.permissionOverwrites[context.action](member, context.permissions)
-
-    return `removed`
-  } else if (context?.action === `delete`) {
-    channel?.permissionOverwrites[context.action](member)
-
-    return `removed`
-  } else return `already removed`
+  return true
 }
 
 export async function announceNewChannel(newChannel) {
-  const {
-      id: newChannelId,
-      name: newChannelName,
-      parentId: newChannelParentId,
-      guild,
-    } = newChannel,
+  const { parentId: newChannelParentId, guild } = newChannel,
     { id: guildId, channels, roles } = guild,
     pauseChannelNotifications = await getPauseChannelNotifications(guildId)
 
@@ -1012,66 +265,330 @@ export async function announceNewChannel(newChannel) {
 
   if (!announcementChannelId) return
 
-  const welcomeChannelId = await getWelcomeChannel(guildId)
+  const isVoiceChannel = checkIfChannelIsSuggestedType(newChannel, `voice`)
 
-  if (
-    welcomeChannelId === newChannelId ||
-    [`rooms`, `unverified-rooms`].includes(newChannel.name)
-  )
-    return
+  if (isVoiceChannel) return
 
-  const channelType = await getChannelType(newChannelId)
+  const guildRolePermissions =
+      newChannel.permissionOverwrites.cache.get(guildId),
+    denyPermissions = guildRolePermissions?.deny.serialize()
 
-  if ([`category`, `hidden`, `private`, `voice`].includes(channelType)) return
+  if (!denyPermissions?.ViewChannel) {
+    const categoryName = guild.channels.cache.get(newChannelParentId)?.name,
+      announcementChannel = channels.cache.get(announcementChannelId),
+      channelNotificationsRoleId = await getChannelNotificationsRoleId(guildId),
+      channelNotificationsRole = roles.cache.get(channelNotificationsRoleId)
 
-  const channelNotificationSquad = roles.cache.find(
-      role => role.name === `-channel notifications-`
-    ),
-    { id: channelNotificationRoleId } = channelNotificationSquad,
-    categoryName = await getCategoryName(newChannelParentId),
-    announcementChannel = channels.cache.get(announcementChannelId),
-    joinButtonRow = new ActionRowBuilder().addComponents(
+    const buttonRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`!join-channel: ${newChannelId}`)
-        .setLabel(`Join ${newChannelName}`)
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId(`!unsubscribe: ${channelNotificationRoleId}`)
-        .setLabel(`Unsubscribe from channel notifications`)
-        .setStyle(ButtonStyle.Secondary)
-    ),
-    leaveButtonRow = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`!leave-channel: ${newChannelName}`)
-        .setLabel(`Leave ${newChannelName}`)
-        .setStyle(ButtonStyle.Danger),
-      new ButtonBuilder()
-        .setCustomId(`!unsubscribe: ${channelNotificationRoleId}`)
-        .setLabel(`Unsubscribe from channel notifications`)
-        .setStyle(ButtonStyle.Secondary)
+        .setLabel(`channels & roles`)
+        .setStyle(ButtonStyle.Link)
+        .setURL(`https://discord.com/channels/${guild.id}/customize-community`)
     )
 
-  let channelTypeMessage,
-    buttonRow = joinButtonRow
+    if (announcementChannel)
+      await queueApiCall({
+        apiCall: `send`,
+        djsObject: announcementChannel,
+        parameters: {
+          content:
+            `${channelNotificationsRole ? channelNotificationsRole : ''}` +
+            `\nA new channel has been created in the **${categoryName}** category ${newChannel} ← click here to view and join the channel 😁` +
+            `\nYou can also join/leave channels or manage these notifications by clicking the button below.`,
+          components: [buttonRow],
+        },
+      })
+  }
+}
 
-  switch (channelType) {
-    case `public`:
-      channelTypeMessage = `We've added a new ${channelType} channel`
-      buttonRow = leaveButtonRow
-      break
-    case `joinable`:
-      channelTypeMessage = `We've added a new ${channelType} channel`
-      break
-    default:
-      channelTypeMessage = `A channel has been archived`
-      buttonRow = leaveButtonRow
+export function checkIfMemberIsPermissible(channel, member) {
+  const { guild, permissionOverwrites, type } = channel
+
+  if (member.id === guild.ownerId) {
+    return true
   }
 
-  if (announcementChannel)
-    announcementChannel.send({
-      content:
-        `${channelNotificationSquad}` +
-        `\n${channelTypeMessage}, **${newChannelName}**, in the **${categoryName}** category 😁`,
-      components: [buttonRow],
+  const relevantPermissions = []
+
+  switch (type) {
+    case ChannelType?.GuildVoice:
+      relevantPermissions.push(`ViewChannel`, `Connect`)
+      break
+    default:
+      relevantPermissions.push(`ViewChannel`)
+  }
+
+  const { id: guildId, roles } = guild,
+    roleCache = roles.cache,
+    channelOverwrites = permissionOverwrites.cache,
+    relevantOverwrites = channelOverwrites
+      .filter(overwrite => {
+        const { id } = overwrite
+
+        return (
+          member._roles.includes(id) ||
+          id === member.id ||
+          roleCache.get(id)?.name === `@everyone`
+        )
+      })
+      .map(overwrite => {
+        const { id } = overwrite
+
+        if (id === member.id)
+          return {
+            position: roleCache.size + 1,
+            overwrite: overwrite,
+          }
+        else
+          return {
+            position: roleCache.get(id).position,
+            overwrite: overwrite,
+            role: roleCache.get(id),
+          }
+      }),
+    collator = new Intl.Collator(undefined, {
+      numeric: true,
+      sensitivity: 'base',
     })
+
+  if (relevantOverwrites.length === 0) {
+    const guildOverwrite = channelOverwrites.get(guildId),
+      denyPermissions = guildOverwrite?.overwrite.deny.serialize()
+
+    if (
+      relevantPermissions.some(permission => {
+        const existingPermission = denyPermissions?.[permission]
+      })
+    )
+      return false
+    else return true
+  }
+
+  relevantOverwrites.sort((a, b) => collator.compare(b.position, a.position))
+
+  const memberOverwrite =
+    relevantOverwrites[0]?.overwrite.type === OverwriteType.Member
+      ? relevantOverwrites[0].overwrite
+      : null
+
+  const collectionStartingPoint = relevantPermissions.map(permission => [
+      permission,
+      undefined,
+    ]),
+    permissionCollection = new Collection(collectionStartingPoint)
+
+  if (memberOverwrite) {
+    const allowPermissions = memberOverwrite.allow.serialize()
+
+    relevantPermissions.forEach(permission => {
+      permissionCollection.set(permission, allowPermissions?.[permission])
+    })
+
+    relevantOverwrites.shift()
+  }
+
+  for (const relevantOverwrite of relevantOverwrites) {
+    if (permissionCollection.every(permission => permission !== undefined))
+      break
+
+    const allowPermissions = relevantOverwrite.overwrite.allow.serialize(),
+      denyPermissions = relevantOverwrite.overwrite.deny.serialize(),
+      rolePermissions = relevantOverwrite?.role
+        ? relevantOverwrite.role.permissions.serialize()
+        : roleCache.get(relevantOverwrite?.id)
+
+    const _permissionCollection = new Collection(collectionStartingPoint)
+
+    relevantPermissions.forEach(permission => {
+      if (!allowPermissions?.[permission] && !denyPermissions?.[permission]) {
+        if (rolePermissions?.[permission])
+          _permissionCollection.set(permission, true)
+        else _permissionCollection.set(permission, false)
+      } else
+        _permissionCollection.set(permission, allowPermissions?.[permission])
+    })
+
+    relevantPermissions.forEach(permission => {
+      if (permissionCollection.get(permission) === undefined) {
+        if (_permissionCollection.get(permission))
+          permissionCollection.set(permission, true)
+        else permissionCollection.set(permission, false)
+      }
+    })
+  }
+
+  if (permissionCollection.every(permission => permission === true)) return true
+  else return false
+}
+
+export function isChannelThread(channel) {
+  if (!channel) return
+
+  const threadChannelTypes = [
+    ChannelType.PrivateThread,
+    ChannelType.PublicThread,
+    ChannelType.GuildStageVoice,
+    ChannelType.GuildVoice,
+  ]
+
+  if (threadChannelTypes.includes(channel?.type)) return true
+
+  return false
+}
+
+export function convertSerialzedPermissionsToPermissionsBitfield(
+  serializedPermissions
+) {
+  const permissionKeys = Object.keys(serializedPermissions),
+    permissionsBitFieldFlags = []
+
+  permissionKeys.forEach(permissionKey => {
+    if (serializedPermissions[permissionKey])
+      permissionsBitFieldFlags.push(PermissionsBitField.Flags[permissionKey])
+  })
+
+  const permissionsBitField = new PermissionsBitField(permissionsBitFieldFlags)
+
+  return permissionsBitField
+}
+
+export function getPositionOverrideSort(positionOverride) {
+  let positionOverrideSort
+
+  if (positionOverride === undefined) {
+    positionOverrideSort = 10000
+  } else if (positionOverride > 0) positionOverrideSort = positionOverride
+  else {
+    const invertedOverride = positionOverride * -1
+
+    positionOverrideSort = 100000 - invertedOverride
+  }
+
+  return positionOverrideSort
+}
+
+export async function getCategoryBuckets(
+  guild,
+  sortByOverrides = true,
+  filterForOverrides = false
+) {
+  const positionOverrideRecords = await getPositionOverrideRecords(guild.id),
+    positionOverrideObject = {}
+
+  positionOverrideRecords.forEach(
+    record => (positionOverrideObject[record.id] = record.positionOverride)
+  )
+
+  const guildCategories = guild.channels.cache.filter(
+    channel => channel.type === ChannelType.GuildCategory
+  )
+
+  // construct category buckets
+  let categoryBuckets = guildCategories.map(category => {
+    const positionOverride = positionOverrideObject[category.id],
+      sort = getPositionOverrideSort(positionOverride),
+      children = guild.channels.cache.filter(
+        channel => channel.parentId === category.id
+      ),
+      childrenBucket = children.map(child => {
+        const childPositionOverride = positionOverrideObject[child.id],
+          childSort = getPositionOverrideSort(childPositionOverride)
+
+        return {
+          id: child.id,
+          name: child.name,
+          rawPosition: child.rawPosition,
+          positionOverride: childPositionOverride,
+          customSort: childSort,
+        }
+      })
+
+    childrenBucket.sort((a, b) => {
+      if (a.sort === b.sort) return collator.compare(a.name, b.name)
+      else return collator.compare(a.sort, b.sort)
+    })
+
+    return {
+      id: category.id,
+      name: category.name,
+      rawPosition: category.rawPosition,
+      positionOverride: positionOverride,
+      customSort: sort,
+      children: childrenBucket,
+    }
+  })
+
+  // filter to only categories/channels that have position overrides
+  if (filterForOverrides)
+    categoryBuckets = categoryBuckets.filter(categoryBucket => {
+      const categoryHasPositionOverride =
+          categoryBucket?.positionOverride !== undefined,
+        childrenWithOverrides = categoryBucket.children.filter(
+          child => child?.positionOverride !== undefined
+        )
+
+      if (categoryHasPositionOverride || childrenWithOverrides.length > 0) {
+        categoryBucket.children = childrenWithOverrides
+
+        return true
+      }
+    })
+
+  //sort buckets by position override and then name
+  if (sortByOverrides) {
+    for (const categoryBucket of categoryBuckets) {
+      categoryBucket.children.sort((a, b) => {
+        if (a.customSort === b.customSort)
+          return collator.compare(a.name, b.name)
+        else return collator.compare(a.customSort, b.customSort)
+      })
+    }
+
+    categoryBuckets.sort((a, b) => {
+      if (a.customSort === b.customSort) return collator.compare(a.name, b.name)
+      else return collator.compare(a.customSort, b.customSort)
+    })
+  } else {
+    for (const categoryBucket of categoryBuckets) {
+      categoryBucket.children.sort((a, b) =>
+        collator.compare(a.rawPosition, b.rawPosition)
+      )
+    }
+
+    categoryBuckets.sort((a, b) =>
+      collator.compare(a.rawPosition, b.rawPosition)
+    )
+  }
+
+  return categoryBuckets
+}
+
+export async function getPositionOverrides(guild) {
+  const categoryBuckets = await getCategoryBuckets(guild, true, true),
+    positionOverrides = [],
+    channelPositionOverrides = []
+
+  categoryBuckets.forEach(categoryBucket => {
+    positionOverrides.push({
+      group: `categories`,
+      values: `<#${categoryBucket.id}>: ${categoryBucket.positionOverride}`,
+    })
+  })
+
+  categoryBuckets.forEach(categoryBucket => {
+    const { children } = categoryBucket
+
+    if (children?.length > 0) {
+      children.forEach(child => {
+        channelPositionOverrides.push({
+          group: `<#${categoryBucket.id}>`,
+          values: `<#${child.id}> : ${child.positionOverride}`,
+        })
+      })
+    }
+  })
+
+  positionOverrides.push(...channelPositionOverrides)
+
+  return positionOverrides
 }

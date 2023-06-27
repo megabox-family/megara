@@ -1,6 +1,7 @@
 import { ApplicationCommandOptionType, EmbedBuilder } from 'discord.js'
-import { getAllVoiceChannelIds } from '../repositories/channels.js'
 import { extractElement } from '../utils/general.js'
+import { checkIfChannelIsSuggestedType } from '../utils/channels.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Creates a sepcificed number of randomized teams composed of people in the voice channel you're in.`
 export const dmPermission = false,
@@ -43,47 +44,56 @@ const teamsNames = [
   `paco's last stand`,
   `hillary clinton and the gang`,
   `yo-yo tokyo`,
+  `live laugh lynch`,
 ]
 
 export default async function (interaction) {
-  const guild = interaction.guild,
-    voiceChannelIds = await getAllVoiceChannelIds(guild.id),
-    voiceChannels = voiceChannelIds.map(voiceChannelId =>
-      guild.channels.cache.get(voiceChannelId)
+  const { guild, options } = interaction,
+    voiceChannels = guild.channels.cache.filter(channel =>
+      checkIfChannelIsSuggestedType(channel, `voice`)
     ),
     voiceChannelMemberNames = voiceChannels
       .find(voiceChannel => voiceChannel.members.get(interaction.member.id))
       ?.members.map(voiceChannelMember => {
-        const user = voiceChannelMember.user
+        const user = voiceChannelMember.user,
+          { id: userId } = user
 
-        return voiceChannelMember?.nickname
-          ? `${voiceChannelMember.nickname} (${user.username}#${user.discriminator})`
-          : `${user.username} (#${user.discriminator})`
+        return `<@${userId}>`
       }),
-    options = interaction.options,
     numberOfTeams = options.getInteger(`number-of-teams`),
     teams = []
 
   if (!voiceChannelMemberNames) {
-    await interaction.reply({
-      content: `You must be in a call to use the \`/teams\` command 🤔`,
-      ephemeral: true,
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: interaction,
+      parameters: {
+        content: `You must be in a call to use the \`/teams\` command 🤔`,
+        ephemeral: true,
+      },
     })
 
     return
   } else if (voiceChannelMemberNames.length < 2) {
-    await interaction.reply({
-      content: `You need at least 2 people in a call to use the \`/teams\` command 🤔`,
-      ephemeral: true,
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: interaction,
+      parameters: `You need at least 2 people in a call to use the \`/teams\` command 🤔`,
     })
 
     return
   } else if (voiceChannelMemberNames.length < numberOfTeams) {
-    await interaction.deferReply()
+    await queueApiCall({
+      apiCall: `deferReply`,
+      djsObject: interaction,
+    })
 
     voiceChannelMemberNames.forEach(() => teams.push([]))
   } else {
-    await interaction.deferReply()
+    await queueApiCall({
+      apiCall: `deferReply`,
+      djsObject: interaction,
+    })
 
     for (let i = 0; i < numberOfTeams; i++) {
       teams.push([])
@@ -130,5 +140,9 @@ export default async function (interaction) {
     .setFooter({ text: `good luck everyone 🍀` })
     .setTimestamp()
 
-  await interaction.editReply({ embeds: [embed] })
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: { embeds: [embed] },
+  })
 }

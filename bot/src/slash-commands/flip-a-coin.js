@@ -1,4 +1,5 @@
 import { ApplicationCommandOptionType } from 'discord.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Flips a coin and displays the result`
 export const dmPermission = true,
@@ -19,11 +20,17 @@ export default async function (interaction) {
 
   makePrivate = makePrivate === null ? false : true
 
-  await interaction.deferReply({ ephemeral: makePrivate })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: makePrivate },
+  })
 
   const headsOrTails = Math.round(Math.random()) === 1 ? `heads` : `tails`
 
-  await interaction.editReply(
-    `🪙 \n\n👍 🫴 🫳 \n\nThe coin landed on **${headsOrTails}**.`
-  )
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: `🪙 \n\n👍 🫴 🫳 \n\nThe coin landed on **${headsOrTails}**.`,
+  })
 }

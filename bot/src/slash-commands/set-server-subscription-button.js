@@ -3,6 +3,7 @@ import {
   getServerSubscriptionButtonText,
   setServerSubscriptionButtonText,
 } from '../repositories/guilds.js'
+import { queueApiCall } from '../api-queue.js'
 
 export const description = `Allows you to set the display text of the server subscription button.`
 export const dmPermission = false,
@@ -17,7 +18,11 @@ export const dmPermission = false,
   ]
 
 export default async function (interaction) {
-  await interaction.deferReply({ ephemeral: true })
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: { ephemeral: true },
+  })
 
   const guild = interaction.guild,
     options = interaction.options
@@ -31,13 +36,18 @@ export default async function (interaction) {
   const buttonText = await getServerSubscriptionButtonText(guild.id)
 
   if (buttonText === null) {
-    await interaction.editReply(
-      `The server subscription button text has been cleared 🧼`
-    )
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `The server subscription button text has been cleared 🧼`,
+    })
   } else {
-    await interaction.editReply(
-      `The server subscription button text has been set to:` +
-        `\n> ${buttonText}`
-    )
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters:
+        `The server subscription button text has been set to:` +
+        `\n> ${buttonText}`,
+    })
   }
 }
