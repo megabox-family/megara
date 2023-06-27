@@ -1,13 +1,15 @@
+import { getBot } from '../cache-bot.js'
 import {
   pushToRoleSortingQueue,
   roleSortPauseDuration,
 } from '../utils/roles.js'
 
 export async function handleRoleCreate(role) {
-  const { guild, roles } = role,
-    botRole = roles.find(role => role.tags?.botId === getBot().user.id)
+  const { guild } = role,
+    { roles } = guild,
+    botRole = roles.cache.find(role => role.tags?.botId === getBot().user.id)
 
-  roles.forEach(async _role => {
+  roles.cache.forEach(async _role => {
     if (_role.name === `new role` && _role.id !== role.id)
       await _role.delete().catch(error => console.log(`it don't exist bruh`))
   })

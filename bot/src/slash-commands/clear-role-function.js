@@ -4,7 +4,6 @@ import {
   getFunctionRoles,
   setAdminRoleId,
   setChannelNotificationsRoleId,
-  setUndergoingVerificationRoleId,
   setVipRoleId,
 } from '../repositories/guilds.js'
 import { getExpectedRunTime, getVipMemberArray } from '../utils/members.js'
@@ -16,7 +15,6 @@ import { queueApiCall } from '../api-queue.js'
 
 const setCommands = {
   vip: setVipRoleId,
-  undergoingVerification: setUndergoingVerificationRoleId,
   admin: setAdminRoleId,
   channelNotifications: setChannelNotificationsRoleId,
 }
@@ -32,7 +30,6 @@ export const dmPermission = false,
       required: true,
       choices: [
         { name: `vip`, value: `vip` },
-        { name: `undergoing-verification`, value: `undergoingVerification` },
         { name: `admin`, value: `admin` },
         { name: `channel-notifications`, value: `channelNotifications` },
       ],

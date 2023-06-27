@@ -18,8 +18,6 @@ export default async function (interaction) {
       ? guild.channels.cache.get(adminChannelId)
       : null
 
-  console.log(adminChannel)
-
   if (!adminChannel) {
     await queueApiCall({
       apiCall: `editReply`,

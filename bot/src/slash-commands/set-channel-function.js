@@ -2,7 +2,6 @@ import { ApplicationCommandOptionType, ChannelType } from 'discord.js'
 import {
   setAdminChannel,
   setAnnouncementChannel,
-  setVerificationChannel,
   setWelcomeChannel,
   getFunctionChannels,
 } from '../repositories/guilds.js'
@@ -11,7 +10,6 @@ import { queueApiCall } from '../api-queue.js'
 const setCommands = {
   admin: setAdminChannel,
   announcement: setAnnouncementChannel,
-  verification: setVerificationChannel,
   welcome: setWelcomeChannel,
 }
 
@@ -27,7 +25,6 @@ export const dmPermission = false,
       choices: [
         { name: `admin`, value: `admin` },
         { name: `announcement`, value: `announcement` },
-        { name: `verification`, value: `verification` },
         { name: `welcome`, value: `welcome` },
       ],
     },

@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType, ChannelType } from 'discord.js'
+import { ApplicationCommandOptionType } from 'discord.js'
 import { queueApiCall } from '../api-queue.js'
 import {
   getActiveVoiceCategoryId,
@@ -12,7 +12,7 @@ const setCommands = {
   inactive: setInactiveVoiceCategoryId,
 }
 
-export const description = `Removes the voice function from the category it's assigned to.`
+export const description = `Removes the custom function from the category it's assigned to.`
 export const dmPermission = false,
   defaultMemberPermissions = `0`,
   options = [

@@ -12,7 +12,7 @@ const setCommands = {
   inactive: setInactiveVoiceCategoryId,
 }
 
-export const description = `Sets the specified category's voice functionality.`
+export const description = `Sets the specified category's custom function.`
 export const dmPermission = false,
   defaultMemberPermissions = `0`,
   options = [

@@ -11,7 +11,7 @@ import {
   handleChannelUpdate,
 } from './handlers/channels.js'
 import { handleRoleCreate, handleRoleUpdate } from './handlers/roles.js'
-import { handleMemberAdd, handleMemberUpdate } from './handlers/members.js'
+import { handleMemberUpdate } from './handlers/members.js'
 import {
   handleInteractionCreate,
   handleMessageCreate,
@@ -45,7 +45,6 @@ bot.on('channelUpdate', handleChannelUpdate)
 bot.on('channelDelete', handleChannelDelete)
 bot.on('roleCreate', handleRoleCreate)
 bot.on('roleUpdate', handleRoleUpdate)
-bot.on('guildMemberAdd', handleMemberAdd)
 bot.on('guildMemberUpdate', handleMemberUpdate)
 bot.on('messageCreate', handleMessageCreate)
 bot.on('interactionCreate', handleInteractionCreate)

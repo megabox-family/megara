@@ -5,7 +5,7 @@ import {
   ButtonStyle,
   ChannelType,
 } from 'discord.js'
-import { filterVerifiedUsers, getNicknameOrUsername } from '../utils/members.js'
+import { getNicknameOrUsername } from '../utils/members.js'
 import { checkIfMemberIsPermissible } from '../utils/channels.js'
 import { queueApiCall } from '../api-queue.js'
 import { collator } from '../utils/general.js'
@@ -86,29 +86,14 @@ export const dmPermission = false,
     },
   ]
 
-function generateConfirmationMessage(
-  someUnverifiedMembers,
-  verifiedMembers,
-  channel
-) {
-  let confirmationMessage = ``
-
-  if (someUnverifiedMembers)
-    confirmationMessage += `One or more of the members you tried to invite were unverified.\n\n`
-
-  confirmationMessage = confirmationMessage
-    ? (confirmationMessage += `Nevertheless... `)
-    : ``
-
-  const memberNameArray = verifiedMembers
-      .map(verifiedMember =>
-        getNicknameOrUsername(verifiedMember, verifiedMember.user)
-      )
+function generateConfirmationMessage(members, channel) {
+  const memberNameArray = members
+      .map(member => getNicknameOrUsername(member, member.user))
       .sort((a, b) => collator.compare(a, b)),
     memberDisplayString = memberNameArray.join(`\n- `)
 
-  confirmationMessage +=
-    verifiedMembers.length === 1
+  const confirmationMessage =
+    members.length === 1
       ? `**${memberNameArray[0]}** has been invited to ${channel} 🙌`
       : `Below is a list of members I was able to invite to ${channel} 🙌` +
         `\n- ${memberDisplayString}`
@@ -158,19 +143,19 @@ async function handleVoiceChannel(channel, invitedMembers, member) {
   )
 }
 
-async function handleThread(channel, verifiedMembers, member) {
+async function handleThread(channel, invitedMembers, member) {
   const thread = channel,
     { id, guild, name, parentId, members } = thread
 
   const parentChannel = guild.channels.cache.get(parentId),
-    inviteMessageArray = verifiedMembers.map(verifiedMember => {
+    inviteMessageArray = invitedMembers.map(invitedMember => {
       const memberIsPermissibleInParent = checkIfMemberIsPermissible(
           parentChannel,
-          verifiedMember
+          invitedMember
         ),
-        returnObject = { member: verifiedMember },
+        returnObject = { member: invitedMember },
         memberIsPermissibleInThread =
-          members.cache.get(verifiedMember?.id) ||
+          members.cache.get(invitedMember?.id) ||
           (memberIsPermissibleInParent &&
             thread.type === ChannelType.PublicThread)
 
@@ -217,15 +202,15 @@ async function handleThread(channel, verifiedMembers, member) {
   )
 }
 
-async function handleTextChannel(channel, verifiedMembers, member) {
+async function handleTextChannel(channel, members, member) {
   const { id, guild, name, parentId } = channel
 
-  const inviteMessageArray = verifiedMembers.map(verifiedMember => {
+  const inviteMessageArray = members.map(invitedMember => {
     const memberIsPermissible = checkIfMemberIsPermissible(
         channel,
-        verifiedMember
+        invitedMember
       ),
-      returnObject = { member: verifiedMember }
+      returnObject = { member: invitedMember }
 
     if (memberIsPermissible)
       returnObject.message = `${member} has invited you to view ${channel} ← click here to jump to it 😊`
@@ -277,14 +262,13 @@ export default async function (interaction) {
   })
 
   const { guild, member, options, channel } = interaction,
-    { members } = guild,
     invitedMember1 = options.getUser(`member`),
     invitedMember2 = options.getUser(`member-2`),
     invitedMember3 = options.getUser(`member-3`),
     invitedMember4 = options.getUser(`member-4`),
     invitedMember5 = options.getUser(`member-5`),
     invitedMember6 = options.getUser(`member-6`),
-    memberArray = [
+    invitedMembers = [
       invitedMember1,
       invitedMember2,
       invitedMember3,
@@ -293,38 +277,24 @@ export default async function (interaction) {
       invitedMember6,
     ]
       .filter(user => user)
-      .map(user => members.cache.get(user?.id)),
+      .map(user => guild.members.cache.get(user?.id)),
     optionChannel = options.getChannel(`channel`),
     _channel = optionChannel ? optionChannel : channel
 
-  const verifiedMembers = await filterVerifiedUsers(guild.id, memberArray)
-
-  if (verifiedMembers.length === 0) {
-    await queueApiCall({
-      apiCall: `editReply`,
-      djsObject: interaction,
-      parameters: `You provided a list of unverified members 🤔`,
-    })
-
-    return
-  }
-
-  const { type } = _channel,
-    someUnverifiedMembers = verifiedMembers?.length !== memberArray?.length
+  const { type } = _channel
 
   if (type === ChannelType.GuildVoice) {
-    await handleVoiceChannel(_channel, verifiedMembers, member)
+    await handleVoiceChannel(_channel, invitedMembers, member)
   } else if (
     [ChannelType.PublicThread, ChannelType.PrivateThread].includes(type)
   ) {
-    await handleThread(_channel, verifiedMembers, member)
+    await handleThread(_channel, invitedMembers, member)
   } else {
-    await handleTextChannel(_channel, verifiedMembers, member)
+    await handleTextChannel(_channel, invitedMembers, member)
   }
 
   const confirmationMessage = generateConfirmationMessage(
-    someUnverifiedMembers,
-    verifiedMembers,
+    invitedMembers,
     _channel
   )
 

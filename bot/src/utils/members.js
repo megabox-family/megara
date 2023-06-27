@@ -3,12 +3,10 @@ import {
   getAdminChannel,
   getVipRoleId,
   setVipRoleId,
-  getVerificationChannel,
   getWelcomeChannel,
   getNameGuidelines,
   getVipAssignMessage,
   getVipRemoveMessage,
-  getUndergoingVerificationRoleId,
 } from '../repositories/guilds.js'
 import {
   getVipOverriedId,
@@ -251,53 +249,6 @@ export async function handleVipRole(oldMember, newMember) {
   }
 }
 
-export async function verifyNewMember(oldMember, newMember) {
-  const guild = newMember.guild,
-    nameGuidelines = await getNameGuidelines(guild.id),
-    undergoingVerificationRoleId = await getUndergoingVerificationRoleId(
-      guild.id
-    )
-
-  if (
-    !nameGuidelines ||
-    !undergoingVerificationRoleId ||
-    oldMember?.pending === newMember?.pending
-  )
-    return
-
-  const verificationChannelId = await getVerificationChannel(guild.id),
-    verificationChannel = guild.channels.cache.get(verificationChannelId),
-    welcomeChannelId = await getWelcomeChannel(guild.id),
-    welcomeChannel = guild.channels.cache.get(welcomeChannelId)
-
-  if (nameGuidelines) {
-    const setNameCommand = getCommandByName(`set-name`, guild.id),
-      { name: commandName, id: commandId } = setNameCommand
-
-    await verificationChannel?.send(
-      `Hey ${newMember}, welcome to **${guild.name}** 👋` +
-        `\nBefore we continue, you need to set your nickname, here are **${guild}'s** nickname guidelines:` +
-        `\n> ${nameGuidelines}` +
-        `\n\nTo change your nickname click here → </${commandName}:${commandId}>, then type your nickname into the "name" text box below and hit enter.`
-    )
-  } else {
-    if (welcomeChannel)
-      await verificationChannel?.send(
-        `↓` +
-          `Thanks for accepting our rules ${newMember}!` +
-          `\n\nYou're good to go now, but I'd recommend checking out our ${welcomeChannel} for more details 👍`
-      )
-    else
-      await verificationChannel?.send(
-        `↓` +
-          `Thanks for accepting our rules ${newMember}!` +
-          `\n\nYou're good to go now, **${guild}** doesn't have a welcome channel so I'd just take a look around 👀`
-      )
-
-    newMember.roles.remove(undergoingVerificationRoleId)
-  }
-}
-
 export async function handlePremiumSub(oldMember, newMember) {
   const guild = newMember.guild,
     premiumRole = guild.roles.cache.find(
@@ -347,16 +298,6 @@ export async function handlePremiumSub(oldMember, newMember) {
 
     if (memberHasVipRole) newMember.roles.remove(vipRole)
   }
-}
-
-export async function filterVerifiedUsers(guildId, members) {
-  const undergoingVerificationRoleId = await getUndergoingVerificationRoleId(
-    guildId
-  )
-
-  return members.filter(
-    member => !member._roles.includes(undergoingVerificationRoleId)
-  )
 }
 
 export function getNicknameOrUsername(member, user) {

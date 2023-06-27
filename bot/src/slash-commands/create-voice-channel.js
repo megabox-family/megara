@@ -4,7 +4,10 @@ import {
   createVoiceCommandChannel,
   deactivateOrDeleteVoiceChannel,
 } from '../utils/voice.js'
-import { getChannelRecordById } from '../repositories/channels.js'
+import {
+  checkIfCustomFunctionIsVoice,
+  getChannelRecordById,
+} from '../repositories/channels.js'
 import { queueApiCall } from '../api-queue.js'
 import {
   getActiveVoiceCategoryId,
@@ -102,7 +105,7 @@ export default async function (interaction) {
     ephemeral = options.getBoolean(`ephemeral`)
 
   if (!name) {
-    const dynamicVoiceRecord = await getChannelRecordById(channelId)
+    const dynamicVoiceRecord = await checkIfCustomFunctionIsVoice(channelId)
 
     if (dynamicVoiceRecord) {
       await queueApiCall({
@@ -111,26 +114,6 @@ export default async function (interaction) {
         parameters: {
           content:
             "You can't create a voice channel based on another voice channel generated with `/voice` 🤔",
-          ephemeral: true,
-        },
-      })
-
-      return
-    }
-  } else if (name) {
-    const existingChannelWithSameName = channels.cache.find(channel => {
-      const isVoiceChannel = checkIfChannelIsSuggestedType(channel, `Voice`)
-
-      if (channel.name === name && !isVoiceChannel) return true
-    })
-
-    if (existingChannelWithSameName) {
-      await queueApiCall({
-        apiCall: `reply`,
-        djsObject: interaction,
-        parameters: {
-          content:
-            "You can't create a new voice channel with the same name as an existing channel, rather use the `/voice` command in said channel without setting the name parameter. 🤔",
           ephemeral: true,
         },
       })

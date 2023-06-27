@@ -19,7 +19,7 @@ import {
 import {
   activateVoiceChannel,
   createOrActivateDynamicChannel,
-  deactivateOrDeleteDynamicVoiceChannels,
+  deactivateOrDeleteFirstDynamicVoiceChannel,
   deactivateOrDeleteVoiceChannel,
 } from '../utils/voice.js'
 import { deleteNewRoles, syncRoles } from '../utils/roles.js'
@@ -170,5 +170,5 @@ export async function handleVoiceStatusUpdate(oldState, newState) {
   await activateVoiceChannel(voiceChannel)
   await createOrActivateDynamicChannel(voiceChannel)
   await deactivateOrDeleteVoiceChannel(voiceChannel)
-  // await deactivateOrDeleteDynamicVoiceChannels(voiceChannel)
+  await deactivateOrDeleteFirstDynamicVoiceChannel(voiceChannel)
 }

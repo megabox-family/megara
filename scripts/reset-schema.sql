@@ -10,7 +10,6 @@ create table guilds (
   name_guidelines text,
   admin_channel text,
   announcement_channel text,
-  verification_channel text,
   welcome_channel text,
   active_world text,
   pause_channel_notifications boolean not null,
@@ -20,7 +19,6 @@ create table guilds (
   active_voice_category_id text,
   inactive_voice_category_id text
   vip_role_id text,
-  undergoing_verification_role_id text,
   admin_role_id text,
   channel_notifications_role_id text
 );

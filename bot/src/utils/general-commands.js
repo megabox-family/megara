@@ -597,7 +597,7 @@ export async function printPollResults(channelId, messageId) {
 
   listMessage.content = `${resultMentions}The numbers are in, ${winner}`
 
-  await queueApiCall({
+  const resultsMessage = await queueApiCall({
     apiCall: `reply`,
     djsObject: message,
     parameters: listMessage,

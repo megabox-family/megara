@@ -2,7 +2,10 @@ import { getBot } from '../cache-bot.js'
 import { getButtonContext } from '../utils/validation.js'
 import { queueApiCall } from '../api-queue.js'
 import { checkIfMemberIsPermissible } from '../utils/channels.js'
-import { getDynamicVoiceChildrenRecords } from '../repositories/channels.js'
+import {
+  getChannelAndChildrenRecords,
+  getVoiceChannelParentId,
+} from '../repositories/channels.js'
 
 export default async function (interaction) {
   const { _guild, user, customId } = interaction,
@@ -59,16 +62,21 @@ export default async function (interaction) {
   messageObject.content = `You've been added to ${voiceChannel} ← click here to jump to it 😊`
 
   if (isMemberPermissible !== true) {
-    const relatedChannelRecords = await getDynamicVoiceChildrenRecords(
-        voiceChannel.id
+    let voiceChannelParentId = await getVoiceChannelParentId(voiceChannel.id)
+    voiceChannelParentId = voiceChannelParentId
+      ? voiceChannelParentId
+      : voiceChannel.id
+
+    const relatedChannelRecords = await getChannelAndChildrenRecords(
+        voiceChannelParentId
       ),
       relatedVoiceChannels = relatedChannelRecords.map(record =>
         guild.channels.cache.get(record.id)
-      )
-    voicePermissons = {
-      ViewChannel: true,
-      Connect: true,
-    }
+      ),
+      voicePermissons = {
+        ViewChannel: true,
+        Connect: true,
+      }
 
     await queueApiCall({
       apiCall: `create`,
@@ -83,13 +91,14 @@ export default async function (interaction) {
       parameters: messageObject,
     })
 
-    relatedVoiceChannels.forEach(_voiceChannel =>
-      queueApiCall({
-        apiCall: `create`,
-        djsObject: _voiceChannel.permissionOverwrites,
-        parameters: [member, voicePermissons],
-        multipleParameters: true,
-      })
+    relatedVoiceChannels.forEach(
+      async _voiceChannel =>
+        await queueApiCall({
+          apiCall: `create`,
+          djsObject: _voiceChannel.permissionOverwrites,
+          parameters: [member, voicePermissons],
+          multipleParameters: true,
+        })
     )
   } else
     await queueApiCall({

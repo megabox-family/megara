@@ -132,18 +132,6 @@ export async function setAnnouncementChannel(guildId, channelId) {
   )
 }
 
-export async function setVerificationChannel(guildId, channelId) {
-  return await pgPool.query(
-    SQL`
-        update guilds
-        set
-          verification_channel = ${channelId}
-        where id = ${guildId}
-        returning *;
-      `
-  )
-}
-
 export async function setWelcomeChannel(guildId, channelId) {
   return await pgPool.query(
     SQL`
@@ -193,19 +181,6 @@ export async function getAnnouncementChannel(guildId) {
       `
     )
     .then(res => (res.rows[0] ? res.rows[0].announcement_channel : undefined))
-}
-
-export async function getVerificationChannel(guildId) {
-  return await pgPool
-    .query(
-      SQL`
-        select 
-          verification_channel 
-        from guilds 
-        where id = ${guildId}
-      `
-    )
-    .then(res => (res.rows[0] ? res.rows[0].verification_channel : undefined))
 }
 
 export async function getWelcomeChannel(guildId) {
@@ -330,7 +305,6 @@ export async function getFunctionChannels(guildId) {
         select 
           admin_channel,
           announcement_channel,
-          verification_channel,
           welcome_channel
         from guilds 
         where id = ${guildId}
@@ -345,7 +319,6 @@ export async function getFunctionRoles(guildId) {
       SQL`
         select 
           vip_role_id,
-          undergoing_verification_role_id,
           admin_role_id,
           channel_notifications_role_id
         from guilds 
@@ -441,39 +414,6 @@ export async function getVipRoleId(guildId) {
       `
     )
     .then(res => res.rows[0]?.vip_role_id)
-    .catch(error => {
-      console.log(error)
-    })
-}
-
-export async function setUndergoingVerificationRoleId(guildId, roleId) {
-  return await pgPool
-    .query(
-      SQL`
-        update guilds
-        set
-          undergoing_verification_role_id = ${roleId}
-        where id = ${guildId}
-        returning *;
-      `
-    )
-    .then(res => camelize(res.rows))
-    .catch(error => {
-      console.log(error)
-    })
-}
-
-export async function getUndergoingVerificationRoleId(guildId) {
-  return await pgPool
-    .query(
-      SQL`
-        select 
-          undergoing_verification_role_id 
-        from guilds
-        where id = ${guildId} 
-      `
-    )
-    .then(res => res.rows[0]?.undergoing_verification_role_id)
     .catch(error => {
       console.log(error)
     })

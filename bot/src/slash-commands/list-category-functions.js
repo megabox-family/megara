@@ -5,7 +5,7 @@ import {
   getInactiveVoiceCategoryId,
 } from '../repositories/guilds.js'
 
-export const description = `Lists categories associated with custom voice functionality.`
+export const description = `Lists categories associated with custom functions.`
 export const dmPermission = false,
   defaultMemberPermissions = `0`
 
