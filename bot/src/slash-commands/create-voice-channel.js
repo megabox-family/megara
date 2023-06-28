@@ -1,9 +1,4 @@
-import {
-  ActionRowBuilder,
-  ApplicationCommandOptionType,
-  ButtonBuilder,
-  ButtonStyle,
-} from 'discord.js'
+import { ApplicationCommandOptionType } from 'discord.js'
 import { checkIfChannelIsSuggestedType } from '../utils/channels.js'
 import {
   createVoiceCommandChannel,
@@ -14,8 +9,6 @@ import { queueApiCall } from '../api-queue.js'
 import {
   getActiveVoiceCategoryId,
   getInactiveVoiceCategoryId,
-  getServerSubscriptionButtonText,
-  getVipRoleId,
   setActiveVoiceCategoryId,
   setInactiveVoiceCategoryId,
 } from '../repositories/guilds.js'
@@ -55,12 +48,6 @@ export const dmPermission = false,
       required: false,
     },
     {
-      name: `private`,
-      description: `Contributors only; choose if the channel is private, /invite others (default is false).`,
-      type: ApplicationCommandOptionType.Boolean,
-      required: false,
-    },
-    {
       name: `ephemeral`,
       description: `If true only you will see the reply to this command (default true if channel, false if thread).`,
       type: ApplicationCommandOptionType.Boolean,
@@ -68,7 +55,7 @@ export const dmPermission = false,
     },
   ]
 
-export default async function (interaction) {
+export default async function (interaction, isPrivate = false) {
   const { guild, channel, member, options } = interaction,
     { id: guildId, name: guildName, channels } = guild
 
@@ -105,58 +92,7 @@ export default async function (interaction) {
     temporary = options.getBoolean(`temporary`),
     disableChat = options.getBoolean(`disable-chat`),
     alwaysActive = options.getBoolean(`always-active`),
-    isPrivate = options.getBoolean(`private`),
     ephemeral = options.getBoolean(`ephemeral`)
-
-  if (isPrivate) {
-    const vipRoleId = await getVipRoleId(guild.id),
-      vipRole = guild.roles.cache.get(vipRoleId)
-
-    if (!vipRole) {
-      await queueApiCall({
-        apiCall: `reply`,
-        djsObject: interaction,
-        parameters: {
-          content:
-            'Something is misconfigured regarding private voice channels, please contact and administrator 🤔',
-          ephemeral: true,
-        },
-      })
-    }
-
-    const memberIsVip = member._roles.includes(vipRoleId)
-
-    if (!memberIsVip) {
-      const parameters = { ephemeral: true }
-
-      const serverSubscriptionButtonText =
-        await getServerSubscriptionButtonText(guild.id)
-
-      if (serverSubscriptionButtonText) {
-        const buttonRow = new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setLabel(serverSubscriptionButtonText)
-            .setStyle(ButtonStyle.Link)
-            .setURL(
-              `https://discord.com/channels/${guild.id}/role-subscriptions`
-            )
-        )
-
-        parameters.components = [buttonRow]
-        parameters.content = `The 'private' parameter can only be set if you're a ${vipRole}, click the button below to learn more 👊`
-      } else {
-        parameters.content = `The 'private' parameter can only be set if you're a ${vipRole} 🤔`
-      }
-
-      await queueApiCall({
-        apiCall: `reply`,
-        djsObject: interaction,
-        parameters: parameters,
-      })
-
-      return
-    }
-  }
 
   if (!name) {
     const dynamicVoiceRecord = await checkIfCustomFunctionIsVoice(channelId)
@@ -185,21 +121,6 @@ export default async function (interaction) {
       : parentChannel,
     parentThread = channelIsThread ? parentChannel : null
 
-  if (parentTextChannel && isPrivate) {
-    await queueApiCall({
-      apiCall: `reply`,
-      djsObject: interaction,
-      parameters: {
-        content:
-          `You can't create a voice channel based on a text channel and make it private 🤔\n` +
-          'Please set the `name` parameter if you want to bypass copying the permissions of the channel you use `/voice` in 🤓',
-        ephemeral: true,
-      },
-    })
-
-    return
-  }
-
   name = name ? name : channelName
 
   if (channelIsThread) {
@@ -215,7 +136,6 @@ export default async function (interaction) {
   }
 
   alwaysActive = alwaysActive ? alwaysActive : false
-  isPrivate = isPrivate ? isPrivate : false
 
   await queueApiCall({
     apiCall: `deferReply`,
