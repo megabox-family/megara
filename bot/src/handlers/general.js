@@ -55,7 +55,7 @@ export async function startup(bot) {
 
   await startPollTimers()
 
-  if (bot.user.username === `Omegara`) await test(bot)
+  if (bot.user.username === `omegara`) await test(bot)
 }
 
 export async function handleMessageCreate(message) {

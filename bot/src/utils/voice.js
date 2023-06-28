@@ -196,6 +196,8 @@ export async function createVoiceCommandChannel(
     }
   }
 
+  console.log(premiumTier)
+
   switch (premiumTier) {
     case `TIER_1`:
       maxBitrate = 128000
