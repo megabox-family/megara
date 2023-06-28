@@ -83,8 +83,8 @@ export async function syncGuilds(guilds) {
           !liveGuildIds.includes(guildId) &&
           tabledGuildIds.includes(guildId)
         ) {
-          await deleteGuild(guild.id)
-          await deleteAllGuildChannels(guild.id)
+          await deleteGuild(guildId)
+          await deleteAllGuildChannels(guildId)
         } else {
           const guildRecord = rows.find(row => row.id === guildId)
 

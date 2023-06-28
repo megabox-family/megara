@@ -190,7 +190,8 @@ async function registerProdCommands(bot) {
 }
 
 export async function registerSlashCommands(bot) {
-  const guild = bot.guilds.cache.get(`711043006253367426`)
+  // const guild = bot.guilds.cache.get(`711043006253367426`)
+  const guild = null
 
   if (guild) {
     await registerDevCommands(guild)

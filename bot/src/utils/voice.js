@@ -38,7 +38,7 @@ export async function createVoiceCommandChannel(
   parentVoiceChannel,
   member
 ) {
-  const { id: guildId, channels } = guild,
+  const { id: guildId, channels, premiumTier } = guild,
     activeVoiceCategoryId = await getActiveVoiceCategoryId(guildId)
 
   if (!activeVoiceCategoryId)
@@ -103,8 +103,6 @@ export async function createVoiceCommandChannel(
   } else if (existingChannel && !memberIsPermissible) {
     return { message: `non-permissible` }
   }
-
-  const premiumTier = guild.premiumTier
 
   let permissions = new Collection(),
     maxBitrate
@@ -196,16 +194,14 @@ export async function createVoiceCommandChannel(
     }
   }
 
-  console.log(premiumTier)
-
   switch (premiumTier) {
-    case `TIER_1`:
+    case 1:
       maxBitrate = 128000
       break
-    case `TIER_2`:
+    case 2:
       maxBitrate = 256000
       break
-    case `TIER_3`:
+    case 3:
       maxBitrate = 384000
       break
     default:

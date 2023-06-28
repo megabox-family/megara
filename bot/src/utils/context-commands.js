@@ -96,7 +96,8 @@ async function registerProdContextCommands(bot) {
 }
 
 export async function registerContextCommands(bot) {
-  const guild = bot.guilds.cache.get(`711043006253367426`)
+  // const guild = bot.guilds.cache.get(`711043006253367426`)
+  const guild = null
 
   if (guild) {
     await registerDevContextCommands(guild)
