@@ -25,6 +25,8 @@ import { queueApiCall } from '../api-queue.js'
 import { collator } from './general.js'
 import { getVoiceChannelBasename } from './validation.js'
 
+const voiceNumberGate = new Collection()
+
 export async function createVoiceCommandChannel(
   name,
   dynamic,
@@ -405,10 +407,20 @@ export async function createOrActivateDynamicChannel(voiceChannel) {
   if (!activeVoiceCategory) return
 
   const _parentVoiceChannelId = parentVoiceChannelId
-      ? parentVoiceChannelId
-      : voiceChannel.id,
-    firstAvailableDynamicVoiceChannel =
-      await getFirstAvailableDynamicVoiceChannel(guild, _parentVoiceChannelId)
+    ? parentVoiceChannelId
+    : voiceChannel.id
+
+  const firstAvailableDynamicVoiceChannel =
+      await getFirstAvailableDynamicVoiceChannel(guild, _parentVoiceChannelId),
+    voiceGate = voiceNumberGate.get(_parentVoiceChannelId)
+
+  if (
+    firstAvailableDynamicVoiceChannel &&
+    firstAvailableDynamicVoiceChannel === voiceGate
+  )
+    return
+
+  voiceNumberGate.set(_parentVoiceChannelId, firstAvailableDynamicVoiceChannel)
 
   if (firstAvailableDynamicVoiceChannel) {
     if (firstAvailableDynamicVoiceChannel?.parentId !== activeVoiceCategoryId) {
@@ -452,6 +464,8 @@ export async function createOrActivateDynamicChannel(voiceChannel) {
     parentThreadId,
     _parentVoiceChannelId
   )
+
+  voiceNumberGate.delete(_parentVoiceChannelId)
 
   return true
 }
