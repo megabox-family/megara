@@ -178,4 +178,11 @@ export async function handleVoiceStatusUpdate(oldState, newState) {
 
   if (positionBooleanArray.find(boolean => boolean))
     sortChannels(guild.id, true)
+
+  // implemented a delayed second check to make sure a new voice channel is always generated when all rooms are full
+  await new Promise(resolution => setTimeout(resolution, 2000))
+
+  const needsToBeSorted = await createOrActivateDynamicChannel(voiceChannel)
+
+  if (needsToBeSorted) sortChannels(guild.id, true)
 }

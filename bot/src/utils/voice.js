@@ -407,20 +407,10 @@ export async function createOrActivateDynamicChannel(voiceChannel) {
   if (!activeVoiceCategory) return
 
   const _parentVoiceChannelId = parentVoiceChannelId
-    ? parentVoiceChannelId
-    : voiceChannel.id
-
-  const firstAvailableDynamicVoiceChannel =
-      await getFirstAvailableDynamicVoiceChannel(guild, _parentVoiceChannelId),
-    voiceGate = voiceNumberGate.get(_parentVoiceChannelId)
-
-  if (
-    firstAvailableDynamicVoiceChannel &&
-    firstAvailableDynamicVoiceChannel === voiceGate
-  )
-    return
-
-  voiceNumberGate.set(_parentVoiceChannelId, firstAvailableDynamicVoiceChannel)
+      ? parentVoiceChannelId
+      : voiceChannel.id,
+    firstAvailableDynamicVoiceChannel =
+      await getFirstAvailableDynamicVoiceChannel(guild, _parentVoiceChannelId)
 
   if (firstAvailableDynamicVoiceChannel) {
     if (firstAvailableDynamicVoiceChannel?.parentId !== activeVoiceCategoryId) {
@@ -440,7 +430,14 @@ export async function createOrActivateDynamicChannel(voiceChannel) {
   const firstAvailableDynamicNumber = await getFirstAvailableDynamicNumber(
       _parentVoiceChannelId
     ),
-    basename = getVoiceChannelBasename(voiceChannel.name),
+    voiceGate = voiceNumberGate.get(_parentVoiceChannelId)
+
+  if (firstAvailableDynamicNumber && firstAvailableDynamicNumber === voiceGate)
+    return
+
+  voiceNumberGate.set(_parentVoiceChannelId, firstAvailableDynamicNumber)
+
+  const basename = getVoiceChannelBasename(voiceChannel.name),
     newVoiceChannelName = `${basename}-${firstAvailableDynamicNumber}`,
     permissionOverwrites = voiceChannel.permissionOverwrites.cache,
     newVoiceChannel = await queueApiCall({
