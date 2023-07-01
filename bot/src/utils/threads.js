@@ -1,5 +1,7 @@
 import { ChannelType } from 'discord.js'
 import { queueApiCall } from '../api-queue.js'
+import { getChannelRecordById } from '../repositories/channels.js'
+import { checkIfMemberIsPermissible } from './channels.js'
 
 export async function getThreadById(channel, threadId) {
   if (!channel || !threadId) return
@@ -91,4 +93,37 @@ export async function addMemberToThread(thread, member) {
   //   .catch(error =>
   //     console.log(`Could not add member to thread, see error below\n${error}`)
   //   )
+}
+
+export async function addVoiceMemberToParentThread(voiceChannel, member) {
+  if (!voiceChannel || !member) return
+
+  const { guild } = voiceChannel,
+    channelRecord = await getChannelRecordById(voiceChannel.id),
+    { parentTextChannelId, parentThreadId } = channelRecord
+
+  if (!parentThreadId) return
+
+  const parentTextChannel = guild.channels.cache.get(parentTextChannelId)
+
+  if (!parentTextChannel) return
+
+  const memberIsPermissible = checkIfMemberIsPermissible(voiceChannel, member)
+
+  if (!memberIsPermissible) return
+
+  const thread = guild.channels.cache.get(parentThreadId)
+
+  if (!thread) return
+
+  await unarchiveThread(thread)
+
+  const { members } = thread
+
+  if (!members.cache.get(member.id))
+    await queueApiCall({
+      apiCall: `add`,
+      djsObject: members,
+      parameters: member.id,
+    })
 }

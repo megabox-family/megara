@@ -9,7 +9,7 @@ export const dmPermission = false,
       name: `name`,
       description: `The name of the voice channel you're creating (defaults to the name of the channel you're in).`,
       type: ApplicationCommandOptionType.String,
-      required: false,
+      required: true,
     },
     {
       name: `dynamic`,

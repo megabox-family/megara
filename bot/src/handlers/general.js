@@ -29,6 +29,7 @@ import { registerSlashCommands } from '../utils/slash-commands.js'
 import { registerContextCommands } from '../utils/context-commands.js'
 import test from '../utils/test.js'
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
+import { addVoiceMemberToParentThread } from '../utils/threads.js'
 
 export async function startup(bot) {
   console.log(`logged in as ${bot.user.tag} 😈`)
@@ -164,8 +165,12 @@ export async function handleInteractionCreate(interaction) {
 }
 
 export async function handleVoiceStatusUpdate(oldState, newState) {
-  const { guild } = newState,
-    channelId = newState.channelId ? newState.channelId : oldState.channelId,
+  const { channelId: oldChannelId } = oldState,
+    { channelId: newChannelId, guild, member } = newState
+
+  if (oldChannelId === newChannelId) return
+
+  const channelId = newChannelId ? newChannelId : oldChannelId,
     voiceChannel = guild.channels.cache.get(channelId),
     positionBooleanArray = []
 
@@ -178,6 +183,10 @@ export async function handleVoiceStatusUpdate(oldState, newState) {
 
   if (positionBooleanArray.find(boolean => boolean))
     sortChannels(guild.id, true)
+
+  if (newChannelId) {
+    await addVoiceMemberToParentThread(voiceChannel, member)
+  }
 
   // implemented a delayed second check to make sure a new voice channel is always generated when all rooms are full
   await new Promise(resolution => setTimeout(resolution, 2000))
