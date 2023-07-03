@@ -91,28 +91,16 @@ export async function handleMessageCreate(message) {
     )
 
   if (notificationRoles) {
-    const buttonRow = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setLabel(
-          hasChannelNotificationRole
-            ? `channels & roles`
-            : `manage notifications`
-        )
-        .setStyle(ButtonStyle.Link)
-        .setURL(`https://discord.com/channels/${guild.id}/customize-community`)
-    )
+    let messageContent = `To manage these notification click here → <id:customize>`
 
-    const parameters = {
-      components: [buttonRow],
-    }
-
-    if (hasChannelNotificationRole)
-      parameters.content = `You can join/leave channels or manage these notifications by clicking the button below.`
+    messageContent += hasChannelNotificationRole
+      ? `, to manage your channel list click here → <id:browse>.`
+      : `.`
 
     await queueApiCall({
       apiCall: `reply`,
       djsObject: message,
-      parameters,
+      parameters: messageContent,
     })
   }
 }
