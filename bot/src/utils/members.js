@@ -292,11 +292,21 @@ export async function handlePremiumSub(oldMember, newMember) {
   if (!oldRoles.includes(premiumRole.id) && newRoles.includes(premiumRole.id)) {
     const memberHasVipRole = newRoles.includes(vipRole.id)
 
-    if (!memberHasVipRole) newMember.roles.add(vipRole)
+    if (!memberHasVipRole)
+      queueApiCall({
+        apiCall: `add`,
+        djsObject: newMember.roles,
+        parameters: vipRole,
+      })
   } else {
     const memberHasVipRole = newRoles.includes(vipRole.id)
 
-    if (memberHasVipRole) newMember.roles.remove(vipRole)
+    if (memberHasVipRole)
+      queueApiCall({
+        apiCall: `remove`,
+        djsObject: newMember.roles,
+        parameters: vipRole,
+      })
   }
 }
 
