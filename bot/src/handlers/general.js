@@ -181,5 +181,5 @@ export async function handleVoiceStatusUpdate(oldState, newState) {
 
   const needsToBeSorted = await createOrActivateDynamicChannel(voiceChannel)
 
-  if (needsToBeSorted) sortChannels(guild.id, true)
+  if (needsToBeSorted) await sortChannels(guild.id, true)
 }

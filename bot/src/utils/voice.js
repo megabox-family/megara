@@ -88,10 +88,9 @@ export async function createVoiceCommandChannel(
         djsObject: existingChannel,
         parameters: [activeVoiceCategoryId, { lockPermissions: false }],
         multipleParameters: true,
-      }).then(
-        event => setTimeout(sortChannels.bind(null, guild.id, true)),
-        1000
-      )
+      })
+
+    sortChannels(guild.id, true)
 
     const channelInUse = existingChannel.members.size > 0
 
@@ -231,6 +230,8 @@ export async function createVoiceCommandChannel(
     parentThread?.id,
     parentVoiceChannel?.id
   )
+
+  sortChannels(guild.id, true)
 
   return { channel: newVoiceChannel }
 }
