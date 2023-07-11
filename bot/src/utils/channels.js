@@ -122,6 +122,8 @@ export async function sortChannels(guildId, bypassComparison = false) {
 }
 
 export function getAlphaChannelType(channel) {
+  if (!channel) return
+
   const channelTypeKeys = Object.keys(ChannelType).filter(
     channelTypeKey => !isPositiveNumber(channelTypeKey)
   )
@@ -279,13 +281,6 @@ export async function announceNewChannel(newChannel) {
       channelNotificationsRoleId = await getChannelNotificationsRoleId(guildId),
       channelNotificationsRole = roles.cache.get(channelNotificationsRoleId)
 
-    const buttonRow = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setLabel(`channels & roles`)
-        .setStyle(ButtonStyle.Link)
-        .setURL(`https://discord.com/channels/${guild.id}/customize-community`)
-    )
-
     if (announcementChannel)
       await queueApiCall({
         apiCall: `send`,
@@ -294,8 +289,8 @@ export async function announceNewChannel(newChannel) {
           content:
             `${channelNotificationsRole ? channelNotificationsRole : ''}` +
             `\nA new channel has been created in the **${categoryName}** category ${newChannel} ← click here to view and join the channel 😁` +
-            `\nYou can also join/leave channels or manage these notifications by clicking the button below.`,
-          components: [buttonRow],
+            `\n\n- manage notifications → <id:customize>` +
+            `\n- manage channel list → <id:browse>`,
         },
       })
   }

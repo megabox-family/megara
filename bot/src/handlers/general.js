@@ -91,11 +91,11 @@ export async function handleMessageCreate(message) {
     )
 
   if (notificationRoles) {
-    let messageContent = `To manage these notification click here → <id:customize>`
+    let messageContent = `- manage notifications → <id:customize>`
 
     messageContent += hasChannelNotificationRole
-      ? `, to manage your channel list click here → <id:browse>.`
-      : `.`
+      ? `\n- manage channel list → <id:browse>`
+      : ``
 
     await queueApiCall({
       apiCall: `reply`,
