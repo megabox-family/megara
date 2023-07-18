@@ -11,9 +11,8 @@ export default async function (interaction) {
   const guild = interaction.guild,
     channel = interaction.channel,
     user = interaction.user,
-    threadId = interaction.customId.match(`(?!:)[0-9]+`)[0]
-
-  const thread = await getThreadById(channel, threadId)
+    threadId = interaction.customId.match(`(?!:)[0-9]+`)[0],
+    thread = await getThreadById(channel, threadId)
 
   if (thread) {
     await unarchiveThread(thread)
