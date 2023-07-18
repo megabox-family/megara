@@ -1,3 +1,4 @@
+import { queueApiCall } from '../api-queue.js'
 import { getThreadById, unarchiveThread } from '../utils/threads.js'
 
 export default async function (interaction) {
@@ -17,18 +18,31 @@ export default async function (interaction) {
   if (thread) {
     await unarchiveThread(thread)
 
-    await thread.members
-      .add(user.id)
-      .then(await interaction.editReply(`You've been added to ${thread} 👍`))
+    await queueApiCall({
+      apiCall: `add`,
+      djsObject: thread.members,
+      parameters: user.id,
+    })
+      .then(
+        await queueApiCall({
+          apiCall: `editReply`,
+          djsObject: interaction,
+          parameters: `You've been added to ${thread} ← click here to jump to it 👍`,
+        })
+      )
       .catch(async error => {
-        await interaction.editReply(
-          `There was a problem adding you to the thread, please contact an administrator 😬`
-        )
+        await queueApiCall({
+          apiCall: `editReply`,
+          djsObject: interaction,
+          parameters: `There was a problem adding you to the thread, please contact an administrator 😬`,
+        })
 
         console.log(`Unable to add user to thread, see error below:\n${error}`)
       })
   } else
-    await interaction.editReply({
-      content: `The thread you tried joining no longer exits in the ${channel} channel within the ${guild} server.`,
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `The thread you tried joining no longer exits in the ${channel} channel within the ${guild} server.`,
     })
 }
