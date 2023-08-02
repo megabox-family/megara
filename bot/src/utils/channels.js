@@ -287,8 +287,8 @@ export async function announceNewChannel(newChannel) {
         djsObject: announcementChannel,
         parameters: {
           content:
-            `${channelNotificationsRole ? channelNotificationsRole : ''}` +
-            `\nA new channel has been created in the **${categoryName}** category ${newChannel} ← click here to view and join the channel 😁` +
+            `${channelNotificationsRole ? channelNotificationsRole : ''} ` +
+            `a new channel has been created in the **${categoryName}** category ${newChannel} ← click here to view and join the channel 😁` +
             `\n\n- manage notifications → <id:customize>` +
             `\n- manage channel list → <id:browse>`,
         },
