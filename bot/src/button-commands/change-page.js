@@ -1,13 +1,7 @@
 import { EmbedBuilder } from 'discord.js'
 import { directMessageError } from '../utils/error-logging.js'
-import {
-  toggleListButtons,
-  getColorButtons,
-  getChannelButtons,
-  getNotificationButtons,
-} from '../utils/buttons.js'
+import { toggleListButtons } from '../utils/buttons.js'
 import { getGroupBy, getPageData } from '../repositories/lists.js'
-import { getformattedChannelPages } from '../utils/general-commands.js'
 
 export default async function (interaction) {
   await interaction.deferUpdate()
@@ -55,23 +49,13 @@ export default async function (interaction) {
   else newPageNo = _newPageNo <= 0 ? 1 : _newPageNo
 
   const groupBy = await getGroupBy(message.id)
-  let displayPages
-
-  if (
-    [`channels-joinable`, `channels-public`, `channels-archived`].includes(
-      groupBy
-    )
-  ){
-    displayPages = getformattedChannelPages(pages)
-  }
 
   const newPage = pages[newPageNo - 1],
-    displayPage = displayPages ? displayPages[newPageNo - 1] : newPage,
     newEmbed = new EmbedBuilder()
       .setColor(existingEmbed.color)
       .setTitle(existingEmbed.title)
       .setDescription(existingEmbed.description)
-      .addFields(displayPage)
+      .addFields(newPage)
       .setFooter({ text: `Page ${newPageNo} of ${totalPages}` })
       .setTimestamp(),
     paginationButtons = await toggleListButtons(
@@ -80,30 +64,7 @@ export default async function (interaction) {
       message.components[0]
     )
 
-
-
-  let otherButtons
-
-  if (groupBy === `roles-color`)
-    otherButtons = getColorButtons(newPage, member._roles)
-  else if (groupBy === `roles-notifications`)
-    otherButtons = getNotificationButtons(newPage, member._roles)
-  else if (
-      [`channels-joinable`, `channels-public`, `channels-archived`].includes(
-        groupBy
-      )
-    ){
-      otherButtons = getChannelButtons(
-        newPage,
-        member.id,
-        guild.channels.cache,
-        groupBy
-      )
-    }
-
-  const newComponents = otherButtons
-    ? [paginationButtons, ...otherButtons]
-    : [paginationButtons]
+  const newComponents = [paginationButtons]
 
   await interaction.editReply({ embeds: [newEmbed], components: newComponents })
 }

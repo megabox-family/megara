@@ -114,7 +114,7 @@ export default async function (interaction) {
       userId: onlyMyCoordinates ? member.id : null,
       dimension: _dimensionFilter,
     },
-    pages = await getPages(recordsPerPage, groupBy, guild, filters)
+    pages = await getPages({ recordsPerPage, groupBy, guild, filters })
 
   if (!pages || !pages.length) {
     await queueApiCall({
@@ -128,7 +128,7 @@ export default async function (interaction) {
 
   const title = `Minecraft Coordinates (X / Y / Z)`,
     description = `group by: ${_groupBy} \nkey: 🟢 = overworld, 🔴 = nether, 🟣 = end \nfilters: world = ${worldFilter}, dimension = ${dimensionFilter}, user = ${userFilter}`,
-    messageContents = await generateListMessage(pages, title, description)
+    messageContents = await generateListMessage({ pages, title, description })
 
   const message = await queueApiCall({
     apiCall: `editReply`,
@@ -136,13 +136,13 @@ export default async function (interaction) {
     parameters: messageContents,
   })
 
-  createList(
-    message.id,
+  createList({
+    id: message.id,
     title,
     description,
     pages,
     recordsPerPage,
     groupBy,
-    filters
-  )
+    filters,
+  })
 }

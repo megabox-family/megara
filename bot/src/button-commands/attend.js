@@ -1,164 +1,133 @@
-import { EmbedBuilder } from 'discord.js'
-import moment from 'moment'
-import {
-  editMovieInviteData,
-  getMovieInviteLastUpdated,
-} from '../repositories/movie-invites.js'
-import {
-  commasFollowedBySpace,
-  extractAttendees,
-  getButtonContext,
-} from '../utils/validation.js'
+import { ActionRowBuilder, StringSelectMenuBuilder } from '@discordjs/builders'
 import { queueApiCall } from '../api-queue.js'
+import {
+  checkIfGuestsAreAllowed,
+  checkIfVenmoIsRequired,
+} from '../repositories/events.js'
+import {
+  addAttendee,
+  getAttendeeRecord,
+  updateAttendee,
+} from '../repositories/attendees.js'
+import { guestPicker } from '../utils/general-commands.js'
+import { getVenmoTag } from '../repositories/venmo.js'
+import { ButtonBuilder, ButtonStyle } from 'discord.js'
 
-function formatAttendees(attendeeArrays) {
-  const attendeeArray = attendeeArrays[0],
-    attendeeString =
-      attendeeArray.length === 0 ? `*none*` : attendeeArray.join(`, `)
+export async function logAttendance(context) {
+  const {
+      interaction,
+      message,
+      getAttendeesRecord,
+      guestCount,
+      prependMessage,
+    } = context,
+    { user } = interaction,
+    { id: messageId, thread } = message,
+    attendeeRecord = getAttendeesRecord
+      ? await getAttendeeRecord(user.id, messageId)
+      : { length: 0 },
+    threadMembers = thread?.members
 
-  return attendeeString
-}
+  if (attendeeRecord?.length === 0) {
+    await addAttendee(user.id, messageId, guestCount)
 
-export default async function (interaction) {
-  const { channel, message, customId, user } = interaction,
-    { id: messageId, embeds, thread } = message
-
-  let timestamp = moment().valueOf()
-
-  await editMovieInviteData(messageId, timestamp)
-
-  const { id: userId } = user
-
-  let embed = embeds?.[0],
-    newEmbed,
-    attending = true
-
-  if (!embed) {
-    await queueApiCall({
-      apiCall: `reply`,
-      djsObject: interaction,
-      parameters: {
-        content: `There was a problem recording your attendence 😬`,
-        ephemeral: true,
-      },
-    })
-  }
-
-  await queueApiCall({
-    apiCall: `deferUpdate`,
-    djsObject: interaction,
-  })
-
-  while (true) {
-    const { fields } = embed,
-      attendeesFieldArray = fields
-        ?.find(field => field?.name === `attendees`)
-        ?.value?.split(`\n`),
-      attendeeArrays = attendeesFieldArray.map((attendees, index) => {
-        const position = index + 1
-
-        let existingAttendess = []
-
-        if (!attendees.match(`\\*none\\*`)) {
-          const attendeeText =
-              attendeesFieldArray?.length === 1
-                ? attendees
-                : extractAttendees(attendees),
-            formattedAttendeeText = attendeeText?.replaceAll(
-              commasFollowedBySpace,
-              `,`
-            )
-
-          existingAttendess.push(...formattedAttendeeText?.split(`,`))
-        }
-
-        return existingAttendess
+    if (!threadMembers.cache.has(user.id))
+      await queueApiCall({
+        apiCall: `add`,
+        djsObject: threadMembers,
+        parameters: user.id,
       })
-
-    const movieIndex = getButtonContext(customId) * 1,
-      newAttendeeArrays = attendeeArrays.map((attendeeArray, index) => {
-        if (index === movieIndex) {
-          const userIdMarkdown = `<@${userId}>`
-
-          if (attendeeArray?.length === 0) attendeeArray.push(userIdMarkdown)
-          else {
-            const attendeeSet = new Set(attendeeArray)
-
-            if (attendeeSet?.has(userIdMarkdown)) {
-              attendeeSet.delete(userIdMarkdown)
-
-              attending = false
-            } else attendeeSet.add(userIdMarkdown)
-
-            attendeeArray = [...attendeeSet].sort()
-          }
-        }
-
-        return attendeeArray
-      }),
-      attendeesFieldValue =
-        newAttendeeArrays?.length === 1
-          ? formatAttendees(newAttendeeArrays)
-          : newAttendeeArrays
-              .map((newAttendeeArray, index) => {
-                const position = index + 1,
-                  attendeeString =
-                    newAttendeeArray.length === 0
-                      ? `*none*`
-                      : newAttendeeArray.join(`, `)
-
-                return `${position}. ${attendeeString}`
-              })
-              .join(`\n`),
-      embedFieldsLength = fields?.length,
-      oldFields = fields.splice(0, embedFieldsLength - 1),
-      attendeeField = {
-        name: `attendees`,
-        value: attendeesFieldValue,
-      }
-
-    const { color, thumbnail, title, image, description } = embed
-
-    newEmbed = new EmbedBuilder()
-      .setColor(color)
-      .setThumbnail(thumbnail?.url)
-      .setTitle(title)
-      .setDescription(description)
-      .addFields(...oldFields, attendeeField)
-      .setImage(image?.url)
-      .setTimestamp()
-
-    const lastUpdated = await getMovieInviteLastUpdated(messageId)
-
-    if (lastUpdated <= timestamp) break
-    else {
-      await new Promise(resolution => setTimeout(resolution, 1000))
-
-      const updatedMessage = await channel.messages.fetch(messageId)
-
-      embed = updatedMessage?.embeds?.[0]
-
-      timestamp = moment().valueOf()
-      await editMovieInviteData(messageId, timestamp)
-    }
-  }
+  } else await updateAttendee(user.id, messageId, guestCount)
 
   await queueApiCall({
     apiCall: `editReply`,
     djsObject: interaction,
-    parameters: { embeds: [newEmbed] },
+    parameters: {
+      content: `${prependMessage}Your attendance information has been successfuly recorded 🥰`,
+      components: [],
+    },
+  })
+}
+
+export default async function (interaction) {
+  await queueApiCall({
+    apiCall: `deferReply`,
+    djsObject: interaction,
+    parameters: {
+      ephemeral: true,
+    },
   })
 
-  if (attending)
+  const { message, user } = interaction,
+    { id: messageId } = message,
+    attendeeRecord = await getAttendeeRecord(user.id, messageId)
+
+  if (attendeeRecord?.length > 0) {
     await queueApiCall({
-      apiCall: `add`,
-      djsObject: thread?.members,
-      parameters: userId,
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters:
+        `You're already attending this event 🤔` +
+        `\n\nTo unattend / modify your attendance click the "modify attendance" button 🤓`,
     })
-  else
+
+    return
+  }
+
+  const venmoRequired = await checkIfVenmoIsRequired(messageId)
+
+  if (venmoRequired) {
+    const venmoTag = await getVenmoTag(user.id)
+
+    if (!venmoTag) {
+      const supplyVenmo = new ButtonBuilder()
+          .setCustomId(`!supply-venmo:`)
+          .setLabel(`supply venmo tag`)
+          .setStyle(ButtonStyle.Primary),
+        noVenmo = new ButtonBuilder()
+          .setCustomId(`!no-venmo:`)
+          .setLabel(`I don't have venmo`)
+          .setStyle(ButtonStyle.Primary),
+        actionRow = new ActionRowBuilder().addComponents(supplyVenmo, noVenmo)
+
+      await queueApiCall({
+        apiCall: `editReply`,
+        djsObject: interaction,
+        parameters: {
+          content:
+            `The organizer of this event is requesting your venmo tag 💸` +
+            `\n\n*We only collect this information once*, and only you and organizers of events you're attending can see it 👊`,
+          components: [actionRow],
+        },
+      })
+
+      return
+    }
+  }
+
+  const guestsAllowed = await checkIfGuestsAreAllowed(messageId)
+
+  if (guestsAllowed) {
+    const actionRow = new ActionRowBuilder().addComponents(guestPicker)
+
     await queueApiCall({
-      apiCall: `remove`,
-      djsObject: thread?.members,
-      parameters: userId,
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: {
+        components: [actionRow],
+      },
     })
+
+    return
+  }
+
+  const context = {
+    interaction,
+    message,
+    getAttendeesRecord: false,
+    guestCount: 0,
+    prependMessage: ``,
+  }
+
+  await logAttendance(context)
 }

@@ -90,12 +90,6 @@ export function getImdbMovieId(imdbUrl) {
   return movieId
 }
 
-export function extractAttendees(attendees) {
-  const attendeeText = attendees?.match(`(?<=^\\d\. ).+`)?.[0]
-
-  return attendeeText
-}
-
 export function isPositiveNumber(string) {
   return string.match(`^\\d+$`)
 }
@@ -106,4 +100,20 @@ export function getVoiceChannelBasename(channelName) {
   basename = basename ? basename : channelName
 
   return basename
+}
+
+export async function checkIfUrlContainsImage(url) {
+  if (!url) return null
+
+  const imageFetch = await fetch(url, { method: 'HEAD' })
+      .then(result => result)
+      .catch(error =>
+        console.log(
+          `User didn't provide valid image url (schedule-event command).`
+        )
+      ),
+    { type } = (await imageFetch?.blob()) || {},
+    isImage = type?.startsWith('image/')
+
+  return isImage
 }
