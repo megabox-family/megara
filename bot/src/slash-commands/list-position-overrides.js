@@ -31,8 +31,8 @@ export default async function (interaction) {
   const { guild, options } = interaction,
     _recordsPerPage = options.getInteger(`records-per-page`),
     recordsPerPage = _recordsPerPage ? _recordsPerPage : defaultRecordsPerPage,
-    group = `position-overrides`,
-    pages = await getPages(recordsPerPage, group, guild)
+    groupBy = `position-overrides`,
+    pages = await getPages({ recordsPerPage, groupBy, guild })
 
   if (pages.length === 0) {
     await queueApiCall({
@@ -45,7 +45,7 @@ export default async function (interaction) {
   }
 
   const title = `position overrides`,
-    messageContents = await generateListMessage(pages, title)
+    messageContents = await generateListMessage({ pages, title })
 
   const message = await queueApiCall({
     apiCall: `editReply`,
@@ -53,5 +53,11 @@ export default async function (interaction) {
     parameters: messageContents,
   })
 
-  await createList(message.id, title, null, pages, recordsPerPage, group)
+  await createList({
+    id: message.id,
+    title,
+    pages,
+    recordsPerPage,
+    groupBy,
+  })
 }

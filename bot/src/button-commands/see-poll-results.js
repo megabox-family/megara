@@ -56,13 +56,13 @@ export default async function (interaction) {
     description =
       `Details: Total Voters = ${totalVoters.toLocaleString()}, Total Votes = ${totalVotes.toLocaleString()}, Ranked choice voting = ${rankedChoiceVoting}\n` +
       `Rules: In this poll voters were able to select up to ${totalChoices} candidate(s) and were required to select at least ${requiredChoices} candidate(s) to vote.`,
-    listMessage = await generateListMessage(
+    listMessage = await generateListMessage({
       pages,
       title,
       description,
-      `#CF2C2C`,
-      pages.length
-    )
+      color: `#CF2C2C`,
+      defaultPage: pages.length,
+    })
 
   listMessage.content = `Here's the results of said poll thus far 📃`
 
@@ -72,5 +72,12 @@ export default async function (interaction) {
     parameters: listMessage,
   })
 
-  await createList(replyMessage.id, title, description, pages, 0, `poll`)
+  await createList({
+    id: replyMessage.id,
+    title,
+    description,
+    pages,
+    recordsPerPage: 0,
+    groupBy: `poll`,
+  })
 }

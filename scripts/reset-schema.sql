@@ -42,6 +42,23 @@ create table channels (
   parent_voice_channel_id text
 );
 
+-- voice
+drop table if exists voice;
+
+create table voice (
+  id text not null primary key,
+  name text not null,
+  dynamic boolean not null,
+  dynamic_number int,
+  temporary boolean not null,
+  always_active boolean not null,
+  is_private boolean not null,
+  guild_id text not null,
+  parent_text_channel_id text,
+  parent_thread_id text,
+  parent_voice_channel_id text
+);
+
 -- vip-user-overrides
 drop table if exists vip_user_overrides;
 
@@ -105,18 +122,6 @@ create table users (
   last_seen_at timestamp without time zone
 );
 
---roles
--- drop table if exists roles;
--- drop type if exists role_type;
-
--- create type role_type as enum('admin', 'color', 'other');
-
--- create table roles (
---   id text not null primary key,
---   name text not null,
---   role_type role_type default 'other'
--- );
-
 -- polls
 drop table if exists polls;
 
@@ -141,25 +146,29 @@ create table poll_data (
   choices text not null
 );
 
-drop table if exists movie_invites;
+-- events
+drop table if exists events;
 
-create table movie_invites (
+create table events (
   id text not null primary key,
-  last_updated bigint not null
+  created_by text not null,
+  allow_guests boolean not null,
+  request_venmo boolean not null
 );
 
-drop table if exists voice;
+drop table if exists attendees;
 
-create table voice (
+create table attendees (
+  id uuid primary key,
+  user_id text not null,
+  event_id text not null,
+  guest_count int not null
+);
+
+-- venmo
+drop table if exists venmo;
+
+create table venmo (
   id text not null primary key,
-  name text not null,
-  dynamic boolean not null,
-  dynamic_number int,
-  temporary boolean not null,
-  always_active boolean not null,
-  is_private boolean not null,
-  guild_id text not null,
-  parent_text_channel_id text,
-  parent_thread_id text,
-  parent_voice_channel_id text
+  tag text not null
 );

@@ -1,16 +1,8 @@
 import { getPages, generateListMessage } from '../utils/slash-commands.js'
-import {
-  getColorButtons,
-  getChannelButtons,
-  getNotificationButtons,
-} from '../utils/buttons.js'
 import { getListInfo, updateListPageData } from '../repositories/lists.js'
-import {
-  getformattedChannelPages,
-  getPollDetails,
-  getPollPages,
-} from '../utils/general-commands.js'
+import { getPollDetails, getPollPages } from '../utils/general-commands.js'
 import { queueApiCall } from '../api-queue.js'
+import { getButtonContext } from '../utils/validation.js'
 
 export default async function (interaction) {
   await queueApiCall({
@@ -18,9 +10,13 @@ export default async function (interaction) {
     djsObject: interaction,
   })
 
-  const guild = interaction.guild,
-    message = interaction.message,
-    member = interaction.member,
+  const { guild, message, customId } = interaction,
+    referenceMessageId = message.reference?.messageId,
+    buttonContextString = getButtonContext(customId),
+    buttonContext = buttonContextString ? JSON.parse(buttonContextString) : ``,
+    pagesMessageId = referenceMessageId
+      ? referenceMessageId
+      : buttonContext?.msgId,
     listInfo = await getListInfo(message.id)
 
   if (!listInfo) {
@@ -34,77 +30,51 @@ export default async function (interaction) {
   }
 
   const recordsPerPage = listInfo.recordsPerPage,
-    group = listInfo.groupBy,
+    groupBy = listInfo.groupBy,
     filters = listInfo.filters
 
   let pages,
-    startingPage = 1
+    defaultPage = 1
 
-  if (group === `poll`) {
+  if (groupBy === `poll`) {
     const channel = interaction.channel,
       pollMessage = await channel.messages.fetch(message.reference?.messageId),
       pollId = pollMessage?.id,
       pollDetails = await getPollDetails(pollId)
 
     pages = await getPollPages(pollDetails)
-    startingPage = pages.length
-  } else pages = await getPages(recordsPerPage, group, guild, filters)
+    defaultPage = pages.length
+  } else
+    pages = await getPages({
+      recordsPerPage,
+      groupBy,
+      guild,
+      messageId: pagesMessageId,
+      filters,
+    })
 
-  if (pages?.length === 0) {
+  if (!(pages?.length > 0)) {
     await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,
-      parameters: `There was an error refreshing the list, please dismiss this message and create a new list message 😬`,
+      parameters: {
+        content: `There was an error refreshing the list, please dismiss this message and create a new list message 😬`,
+        embeds: [],
+        components: [],
+      },
     })
 
     return
   }
 
-  let displayPages = pages
-
-  if (
-    [`channels-joinable`, `channels-public`, `channels-archived`].includes(
-      group
-    )
-  ) {
-    displayPages = getformattedChannelPages(pages)
-  }
-
   const existingEmbed = message.embeds[0],
-    messageContent = await generateListMessage(
-      displayPages,
-      listInfo.title,
-      listInfo.description,
-      existingEmbed?.color,
-      startingPage
-    )
-
-  const groupBy = listInfo.groupBy
-
-  let otherButtons
-
-  if (groupBy === `roles-color`)
-    otherButtons = getColorButtons(pages[0], member._roles)
-  if (groupBy === `roles-notifications`)
-    otherButtons = getNotificationButtons(pages[0], member._roles)
-  else if (
-    [`channels-joinable`, `channels-public`, `channels-archived`].includes(
-      groupBy
-    )
-  )
-    otherButtons = getChannelButtons(
-      pages[0],
-      member.id,
-      guild.channels.cache,
-      groupBy
-    )
-
-  const paginationButtons = messageContent.components[0],
-    newComponents = otherButtons
-      ? [paginationButtons, ...otherButtons]
-      : [paginationButtons]
-
-  messageContent.components = newComponents
+    messageContent = await generateListMessage({
+      pages,
+      title: listInfo.title,
+      description: listInfo.description,
+      color: existingEmbed?.color,
+      defaultPage,
+    })
 
   await updateListPageData(message.id, pages)
 

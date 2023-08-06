@@ -26,7 +26,17 @@ import {
 import { getBot } from '../cache-bot.js'
 import { queueApiCall } from '../api-queue.js'
 
-export const pollTimeoutMap = new Map()
+export const pollTimeoutMap = new Map(),
+  guestPicker = new StringSelectMenuBuilder()
+    .setCustomId(`event-guests`)
+    .setPlaceholder(`How many guests are you bringing?`)
+    .setMinValues(1)
+    .setMaxValues(1)
+    .addOptions(
+      [`0`, `1`, `2`, `3`, `4`, `5`].map(value => {
+        return { label: value, value }
+      })
+    )
 
 export function getEndingUnix(timeStamp, currentUnix) {
   const timeArray = timeStamp.split(`:`),
@@ -147,7 +157,7 @@ export async function generatePollMessage(
 
   const idObject = getIdsFromTags(tags)
 
-  const pollMessage = await queueApiCall({
+  await queueApiCall({
     apiCall: `reply`,
     djsObject: interaction,
     parameters: {
@@ -157,6 +167,11 @@ export async function generatePollMessage(
       fetchReply: true,
       allowedMentions: { users: idObject.userIds, roles: idObject.roleIds },
     },
+  })
+
+  const pollMessage = await queueApiCall({
+    apiCall: `fetchReply`,
+    djsObject: interaction,
   })
 
   await createPoll(
@@ -543,13 +558,13 @@ export async function printPollResults(channelId, messageId) {
 
   page.push({ name: `Time frame`, value: timeFrame })
 
-  const listMessage = await generateListMessage(
+  const listMessage = await generateListMessage({
     pages,
     title,
     description,
-    `#CF2C2C`,
-    pages.length
-  )
+    color: `#CF2C2C`,
+    defaultPage: pages.length,
+  })
 
   const pollMentions = message?.mentions,
     mentionedUsers = pollMentions?.users,
@@ -628,19 +643,4 @@ export async function printPollResults(channelId, messageId) {
   clearTimeout(timeOutId)
 
   pollTimeoutMap.delete(message.id)
-}
-
-export function getformattedChannelPages(pages) {
-  const pagesCopy = JSON.parse(JSON.stringify(pages))
-
-  for (const [index, page] of pagesCopy.entries()) {
-    for (let [jndex, list] of page.entries()) {
-      pagesCopy[index][jndex].value = list?.value?.replaceAll(
-        / \([0-9]+\)/gi,
-        ''
-      )
-    }
-  }
-
-  return pagesCopy
 }

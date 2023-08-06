@@ -20,6 +20,10 @@ import { getBot } from '../cache-bot.js'
 import { cacheCommands } from '../cache-commands.js'
 import { queueApiCall } from '../api-queue.js'
 import { checkIfMemberIsPermissible, getPositionOverrides } from './channels.js'
+import {
+  getOrganizerView,
+  getViewAttendeePages,
+} from '../repositories/attendees.js'
 
 export const defaultRecordsPerPage = 20,
   dimensions = [`overworld`, `nether`, `end`]
@@ -200,10 +204,18 @@ export async function registerSlashCommands(bot) {
   }
 }
 
-export async function getPages(recordsPerPage, groupBy, guild, filters) {
+export async function getPages(context) {
+  const { recordsPerPage, groupBy, guild, messageId, filters } = context
+
   let query, activeWorldName
 
   switch (groupBy) {
+    case `view-attendees`:
+      query = await getViewAttendeePages(messageId)
+      break
+    case `organizer-view`:
+      query = await getOrganizerView(messageId, guild)
+      break
     case `position-overrides`:
       query = await getPositionOverrides(guild)
       break
@@ -226,7 +238,7 @@ export async function getPages(recordsPerPage, groupBy, guild, filters) {
       break
   }
 
-  if (query.length === 0) return
+  if (!(query?.length > 0)) return
 
   if (activeWorldName)
     query.forEach(record => {
@@ -304,16 +316,15 @@ export async function getPages(recordsPerPage, groupBy, guild, filters) {
   return formattedBuckets
 }
 
-export async function generateListMessage(
-  pages,
-  title,
-  description,
-  color = `#0099ff`,
-  defaultPage = 1
-) {
-  const totalPages = pages.length,
-    disableBack = defaultPage === 1 ? true : false,
-    disableForward = defaultPage === totalPages ? true : false,
+export async function generateListMessage(context) {
+  const { pages, title, description, color, defaultPage, refreshContext } =
+      context,
+    _color = color ? color : `#0099ff`,
+    _defaultPage = defaultPage ? defaultPage : 1,
+    _refreshContext = refreshContext ? JSON.stringify(refreshContext) : ``,
+    totalPages = pages.length,
+    disableBack = _defaultPage === 1 ? true : false,
+    disableForward = _defaultPage === totalPages ? true : false,
     listButtons = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`!change-page: first`)
@@ -326,7 +337,7 @@ export async function generateListMessage(
         .setStyle(ButtonStyle.Primary)
         .setDisabled(disableBack),
       new ButtonBuilder()
-        .setCustomId(`!refresh-embed:`)
+        .setCustomId(`!refresh-embed: ${_refreshContext}`)
         .setLabel(`⟳`)
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
@@ -342,10 +353,10 @@ export async function generateListMessage(
     )
 
   const listEmbed = new EmbedBuilder()
-    .setColor(color)
+    .setColor(_color)
     .setTitle(title)
-    .addFields(pages[defaultPage - 1])
-    .setFooter({ text: `Page ${defaultPage} of ${totalPages}` })
+    .addFields(pages[_defaultPage - 1])
+    .setFooter({ text: `Page ${_defaultPage} of ${totalPages}` })
     .setTimestamp()
 
   if (description) listEmbed.setDescription(description)
@@ -401,10 +412,8 @@ export async function handleVoiceChannel(channel, invitedMember, interaction) {
   })
 }
 
-export function getCommandByName($commandName, guildId) {
+export function getCommandByName($commandName) {
   const bot = getBot(),
-    guild = bot.guilds.cache.get(guildId),
-    botName = bot.user.username,
     commands = bot.application?.commands?.cache,
     command = commands.find(command => command.name === $commandName)
 

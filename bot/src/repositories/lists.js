@@ -2,17 +2,11 @@ import pgPool from '../pg-pool.js'
 import camelize from 'camelize'
 import SQL from 'sql-template-strings'
 
-export async function createList(
-  id,
-  title,
-  description,
-  pages,
-  recordsPerPage,
-  group,
-  filters
-) {
-  pages = JSON.stringify(pages)
-  filters = JSON.stringify(filters)
+export async function createList(context) {
+  const { id, title, description, pages, recordsPerPage, groupBy, filters } =
+      context,
+    _pages = JSON.stringify(pages),
+    _filters = JSON.stringify(filters)
 
   return await pgPool
     .query(
@@ -22,10 +16,10 @@ export async function createList(
           ${id}, 
           ${title}, 
           ${description}, 
-          ${pages},
+          ${_pages},
           ${recordsPerPage},
-          ${group},
-          ${filters}
+          ${groupBy},
+          ${_filters}
         );
       `
     )
