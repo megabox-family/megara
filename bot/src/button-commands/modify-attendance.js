@@ -23,7 +23,7 @@ export default async function (interaction) {
       djsObject: interaction,
       parameters:
         `You aren't currently marked as attending this event 🤔` +
-        `\nTo attend click the "attend" button 🤓`,
+        `\n\nTo attend click the "attend" button 🤓`,
     })
 
     return
