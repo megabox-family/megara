@@ -19,10 +19,10 @@ export async function checkIfGuestsAreAllowed(messageId) {
   return await pgPool
     .query(
       SQL`
-        select 
+        select
           allow_guests
         from events
-        where id = ${messageId} 
+        where id = ${messageId}
       `
     )
     .then(res => res.rows[0]?.allow_guests)
@@ -35,10 +35,10 @@ export async function checkIfVenmoIsRequired(messageId) {
   return await pgPool
     .query(
       SQL`
-        select 
+        select
           request_venmo
         from events
-        where id = ${messageId} 
+        where id = ${messageId}
       `
     )
     .then(res => res.rows[0]?.request_venmo)

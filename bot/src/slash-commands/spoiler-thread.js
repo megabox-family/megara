@@ -20,27 +20,18 @@ export default async function (interaction) {
     djsObject: interaction,
   })
 
-  const guild = interaction.guild,
-    options = interaction.options,
+  const { options, channel } = interaction,
     threadName = options.getString(`thread-name`),
-    premiumTier = guild.premiumTier,
-    channel = interaction.channel
-
-  let thread, threadType
-
-  if (premiumTier < 2) threadType = ChannelType.PublicThread
-  else threadType = ChannelType.PrivateThread
-
-  thread = await queueApiCall({
-    apiCall: `create`,
-    djsObject: channel.threads,
-    parameters: {
-      name: threadName,
-      autoArchiveDuration: 10080,
-      type: threadType,
-      reason: 'Needed a private thread for a specified topic',
-    },
-  })
+    thread = await queueApiCall({
+      apiCall: `create`,
+      djsObject: channel.threads,
+      parameters: {
+        name: threadName,
+        autoArchiveDuration: 10080,
+        type: ChannelType.PrivateThread,
+        reason: 'Needed a private thread for a specified topic',
+      },
+    })
 
   const threadButton = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
