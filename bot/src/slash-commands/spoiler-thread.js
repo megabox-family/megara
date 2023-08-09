@@ -44,7 +44,7 @@ export default async function (interaction) {
     apiCall: `editReply`,
     djsObject: interaction,
     parameters: {
-      content: `A new private thread for **${threadName}** has been created, press the button below to join the thread (**spoiler warning**):`,
+      content: `A new private thread for **${threadName}** has been created (**spoiler warning**):`,
       components: [threadButton],
     },
   })
