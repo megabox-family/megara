@@ -87,9 +87,7 @@ export const dmPermission = false,
   ]
 
 function generateConfirmationMessage(members, channel) {
-  const memberNameArray = members
-      .map(member => getNicknameOrUsername(member, member.user))
-      .sort((a, b) => collator.compare(a, b)),
+  const memberNameArray = members.map(member => `<#${member.id}>`),
     memberDisplayString = memberNameArray.join(`\n- `)
 
   const confirmationMessage =
