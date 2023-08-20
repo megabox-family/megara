@@ -57,12 +57,8 @@ export async function pushToChannelSortingQueue(context) {
     { guildId: _guildId, bypassComparison: _bypassComparison } =
       channelSortingQueue.get(guildId) || {}
 
-  console.log(`hit function`)
-
   if (!_guildId || (_bypassComparison === false && bypassComparison)) {
     await new Promise(resolution => setTimeout(resolution, 2000))
-
-    console.log(`added to collection`)
 
     channelSortingQueue.set(guildId, context)
 
@@ -71,6 +67,8 @@ export async function pushToChannelSortingQueue(context) {
 
       emptyChannelSortingQueue()
     }
+  } else {
+    console.log(`already in queue`)
   }
 }
 
