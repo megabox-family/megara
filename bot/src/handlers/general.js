@@ -169,8 +169,11 @@ export async function manageDynamicVoiceChannel(voiceChannel, connect) {
     await deactivateOrDeleteFirstDynamicVoiceChannel(voiceChannel)
   )
 
-  if (positionBooleanArray.find(boolean => boolean))
+  if (positionBooleanArray.find(boolean => boolean)) {
+    console.log(`made it`)
+
     pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
+  }
 
   if (connect) {
     await addVoiceMemberToParentThread(voiceChannel, member)
