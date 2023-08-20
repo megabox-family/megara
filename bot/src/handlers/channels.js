@@ -24,6 +24,8 @@ export async function handleChannelCreate(channel) {
   if (announcementTypes.includes(channel.type))
     await announceNewChannel(channel)
 
+  await new Promise(result => setTimeout(result, 2000))
+
   pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
 }
 
