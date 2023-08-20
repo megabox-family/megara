@@ -1,5 +1,8 @@
 import { ApplicationCommandOptionType } from 'discord.js'
-import { checkIfChannelIsSuggestedType } from '../utils/channels.js'
+import {
+  checkIfChannelIsSuggestedType,
+  pushToChannelSortingQueue,
+} from '../utils/channels.js'
 import {
   createVoiceCommandChannel,
   deactivateOrDeleteVoiceChannel,

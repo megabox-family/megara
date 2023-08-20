@@ -91,8 +91,6 @@ export async function createVoiceCommandChannel(
         multipleParameters: true,
       })
 
-    pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
-
     const channelInUse = existingChannel.members.size > 0
 
     return {
