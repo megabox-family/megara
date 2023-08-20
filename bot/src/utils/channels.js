@@ -52,8 +52,6 @@ export async function pushToChannelSortingQueue(context) {
       channelSortingQueue.get(guildId) || {}
 
   if (!_guildId || (_bypassComparison === false && bypassComparison)) {
-    await new Promise(resolution => setTimeout(resolution, 1000))
-
     channelSortingQueue.set(guildId, context)
 
     if (channelSortingQueue.size === 1) emptyChannelSortingQueue()
