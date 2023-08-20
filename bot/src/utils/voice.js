@@ -566,9 +566,17 @@ export async function deactivateOrDeleteFirstDynamicVoiceChannel(voiceChannel) {
 
   if (activeChannels.length !== 1) return
 
-  const relevantVoiceChannel = guild.channels.cache.get(activeChannels[0]?.id)
+  const relevantChannelRecord = activeChannels[0],
+    relevantVoiceChannel = guild.channels.cache.get(relevantChannelRecord?.id)
 
-  if (relevantVoiceChannel.members.size === 0) {
+  if (relevantVoiceChannel.members.size !== 0) return
+
+  if (relevantChannelRecord.temporary) {
+    await queueApiCall({
+      apiCall: `delete`,
+      djsObject: relevantVoiceChannel,
+    })
+  } else {
     const inactiveVoiceCategoryId = await getInactiveVoiceCategoryId(guild.id)
 
     await queueApiCall({

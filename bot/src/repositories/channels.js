@@ -232,7 +232,7 @@ export async function setCustomVoiceOptions(
         guildId: guild.id,
         bypassComparison: true,
       }),
-      1000
+      2000
     )
 }
 
