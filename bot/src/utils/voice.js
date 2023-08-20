@@ -21,10 +21,12 @@ import {
   getChannelAndChildrenRecords,
   getChannelRecordById,
   getVoiceChannelParentId,
+  getCreateMessageContext,
 } from '../repositories/channels.js'
 import { queueApiCall } from '../api-queue.js'
 import { collator } from './general.js'
 import { getVoiceChannelBasename } from './validation.js'
+import { getCommandByName } from './slash-commands.js'
 
 const voiceNumberGate = new Collection()
 
@@ -463,14 +465,39 @@ export async function createOrActivateDynamicChannel(voiceChannel) {
   voiceNumberGate.delete(_parentVoiceChannelId)
 }
 
+export async function editCreateMessage(voiceChannel) {
+  const { guild } = voiceChannel,
+    { createChannelId, createMessageId } = await getCreateMessageContext(
+      voiceChannel.id
+    ),
+    createChannel = guild.channels.cache.get(createChannelId)
+
+  if (!createChannel) return
+
+  const createMessage = await queueApiCall({
+    apiCall: `fetch`,
+    djsObject: createChannel.messages,
+    parameters: createMessageId,
+  })
+
+  if (!createMessage) return
+
+  const voiceCommand = getCommandByName(`create-voice-channel`)
+
+  await queueApiCall({
+    apiCall: `edit`,
+    djsObject: createMessage,
+    parameters: {
+      content: `The voice channel linked in this message has since been deleted. Use </create-voice-channel:${voiceCommand.id}> to generate a new voice channel.`,
+    },
+  })
+}
+
 export async function deactivateOrDeleteVoiceChannel(voiceChannel) {
-  const { guild } = voiceChannel
-
-  // voiceChannel = guild.channels.cache.get(voiceChannel.id)
-
   if (!voiceChannel) return
 
-  const inactiveVoiceCategoryId = await getInactiveVoiceCategoryId(guild.id),
+  const { guild } = voiceChannel,
+    inactiveVoiceCategoryId = await getInactiveVoiceCategoryId(guild.id),
     inactiveVoiceCategory = guild.channels.cache.get(inactiveVoiceCategoryId)
 
   if (!inactiveVoiceCategory) return
@@ -513,6 +540,8 @@ export async function deactivateOrDeleteVoiceChannel(voiceChannel) {
     return
 
   if (temporary) {
+    await editCreateMessage(relevantVoiceChannel)
+
     await queueApiCall({
       apiCall: `delete`,
       djsObject: relevantVoiceChannel,
@@ -570,6 +599,8 @@ export async function deactivateOrDeleteFirstDynamicVoiceChannel(voiceChannel) {
   if (relevantVoiceChannel.members.size !== 0) return
 
   if (relevantChannelRecord.temporary) {
+    await editCreateMessage(relevantVoiceChannel)
+
     await queueApiCall({
       apiCall: `delete`,
       djsObject: relevantVoiceChannel,
@@ -586,4 +617,16 @@ export async function deactivateOrDeleteFirstDynamicVoiceChannel(voiceChannel) {
 
     return true
   }
+}
+
+export async function delayedDeactivateOrDelete(voiceChannel) {
+  await new Promise(resolution => setTimeout(resolution, 30000))
+
+  if (!voiceChannel) return
+
+  const { guild } = voiceChannel,
+    needsToBeSorted = await deactivateOrDeleteVoiceChannel(voiceChannel)
+
+  if (needsToBeSorted)
+    pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
 }

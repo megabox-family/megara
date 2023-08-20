@@ -39,24 +39,9 @@ create table channels (
   always_active boolean,
   parent_text_channel_id text,
   parent_thread_id text,
-  parent_voice_channel_id text
-);
-
--- voice
-drop table if exists voice;
-
-create table voice (
-  id text not null primary key,
-  name text not null,
-  dynamic boolean not null,
-  dynamic_number int,
-  temporary boolean not null,
-  always_active boolean not null,
-  is_private boolean not null,
-  guild_id text not null,
-  parent_text_channel_id text,
-  parent_thread_id text,
-  parent_voice_channel_id text
+  parent_voice_channel_id text,
+  create_channel_message_id text,
+  create_message_id text
 );
 
 -- vip-user-overrides

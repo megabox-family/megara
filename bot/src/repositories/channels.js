@@ -236,6 +236,40 @@ export async function setCustomVoiceOptions(
     )
 }
 
+export async function setCreateMessageContext(voiceChannelId, createMessage) {
+  const { id, channel } = createMessage
+
+  return await pgPool
+    .query(
+      SQL`
+      update channels
+      set
+        create_channel_id = ${channel.id},
+        create_message_id = ${id}
+      where id = ${voiceChannelId}
+      returning *;
+    `
+    )
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
+    })
+}
+
+export async function getCreateMessageContext(voiceChannelId) {
+  return await pgPool
+    .query(
+      SQL`
+      select
+        create_channel_id, 
+        create_message_id
+      from channels
+      where id = ${voiceChannelId}
+    `
+    )
+    .then(res => camelize(res.rows?.[0]))
+}
+
 export async function removeCustomVoiceOptions(channelId) {
   return await pgPool
     .query(
@@ -249,7 +283,8 @@ export async function removeCustomVoiceOptions(channelId) {
         always_active = ${null},
         parent_text_channel_id = ${null},
         parent_thread_id = ${null},
-        parent_voice_channel_id = ${null}
+        parent_voice_channel_id = ${null},
+        message_create_id = ${null}
       where id = ${channelId}
       returning *;
     `

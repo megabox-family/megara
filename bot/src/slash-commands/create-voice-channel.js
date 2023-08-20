@@ -1,13 +1,14 @@
 import { ApplicationCommandOptionType } from 'discord.js'
-import {
-  checkIfChannelIsSuggestedType,
-  pushToChannelSortingQueue,
-} from '../utils/channels.js'
+import { checkIfChannelIsSuggestedType } from '../utils/channels.js'
 import {
   createVoiceCommandChannel,
   deactivateOrDeleteVoiceChannel,
+  delayedDeactivateOrDelete,
 } from '../utils/voice.js'
-import { getChannelCustomFunction } from '../repositories/channels.js'
+import {
+  getChannelCustomFunction,
+  setCreateMessageContext,
+} from '../repositories/channels.js'
 import { queueApiCall } from '../api-queue.js'
 import {
   getActiveVoiceCategoryId,
@@ -203,6 +204,8 @@ export default async function (interaction, isPrivate = false) {
       ? ``
       : `\n\n*Note that if no one joins this channel within the next 30 seconds it will be ${temporaryMessage}.*`
 
+  let createMessage
+
   if (preexisting) {
     const movedMessage = channelMoved ? `was moved to` : `is in`,
       dynamicMessage = voiceRecord?.dynamic
@@ -213,7 +216,7 @@ export default async function (interaction, isPrivate = false) {
         : ``,
       _timerMessage = channelInUseMessage ? `` : timerMessage
 
-    await queueApiCall({
+    createMessage = await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,
       parameters:
@@ -221,7 +224,7 @@ export default async function (interaction, isPrivate = false) {
         `${channelInUseMessage}${_timerMessage}`,
     })
   } else {
-    await queueApiCall({
+    createMessage = await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,
       parameters:
@@ -230,5 +233,7 @@ export default async function (interaction, isPrivate = false) {
     })
   }
 
-  setTimeout(deactivateOrDeleteVoiceChannel.bind(null, voiceChannel), 30000)
+  await setCreateMessageContext(voiceChannel.id, createMessage)
+
+  delayedDeactivateOrDelete(voiceChannel)
 }
