@@ -171,7 +171,7 @@ export async function handleDisconnect(voiceChannel) {
     pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
 }
 
-export async function handleConnect(voiceChannel) {
+export async function handleConnect(voiceChannel, member) {
   if (!voiceChannel) return
 
   const { guild } = voiceChannel,
@@ -206,5 +206,5 @@ export async function handleVoiceStatusUpdate(oldState, newState) {
     newVoiceChannel = guild.channels.cache.get(newChannelId)
 
   handleDisconnect(oldVoiceChannel)
-  handleConnect(newVoiceChannel)
+  handleConnect(newVoiceChannel, member)
 }
