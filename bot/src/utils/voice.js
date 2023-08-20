@@ -461,8 +461,6 @@ export async function createOrActivateDynamicChannel(voiceChannel) {
   )
 
   voiceNumberGate.delete(_parentVoiceChannelId)
-
-  return true
 }
 
 export async function deactivateOrDeleteVoiceChannel(voiceChannel) {
