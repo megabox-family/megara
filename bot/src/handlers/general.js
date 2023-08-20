@@ -156,7 +156,7 @@ export async function handleInteractionCreate(interaction) {
   }
 }
 
-export async function manageDynamicVoiceChannel(voiceChannel, connect) {
+export async function handleConnect(voiceChannel) {
   if (!voiceChannel) return
 
   const { guild } = voiceChannel,
@@ -164,20 +164,12 @@ export async function manageDynamicVoiceChannel(voiceChannel, connect) {
 
   positionBooleanArray.push(await activateVoiceChannel(voiceChannel))
   positionBooleanArray.push(await createOrActivateDynamicChannel(voiceChannel))
-  positionBooleanArray.push(await deactivateOrDeleteVoiceChannel(voiceChannel))
-  positionBooleanArray.push(
-    await deactivateOrDeleteFirstDynamicVoiceChannel(voiceChannel)
-  )
 
-  if (positionBooleanArray.find(boolean => boolean)) {
+  if (connect) await addVoiceMemberToParentThread(voiceChannel, member)
+
+  if (positionBooleanArray.find(boolean => boolean))
     pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
-  }
 
-  if (connect) {
-    await addVoiceMemberToParentThread(voiceChannel, member)
-  }
-
-  // implemented a delayed second check to make sure a new voice channel is always generated when all rooms are full
   await new Promise(resolution => setTimeout(resolution, 2000))
 
   const needsToBeSorted = await createOrActivateDynamicChannel(voiceChannel)
@@ -187,6 +179,21 @@ export async function manageDynamicVoiceChannel(voiceChannel, connect) {
       guildId: guild.id,
       bypassComparison: true,
     })
+}
+
+export async function handleDisconnect(voiceChannel) {
+  if (!voiceChannel) return
+
+  const { guild } = voiceChannel,
+    positionBooleanArray = []
+
+  positionBooleanArray.push(await deactivateOrDeleteVoiceChannel(voiceChannel))
+  positionBooleanArray.push(
+    await deactivateOrDeleteFirstDynamicVoiceChannel(voiceChannel)
+  )
+
+  if (positionBooleanArray.find(boolean => boolean))
+    pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
 }
 
 export async function handleVoiceStatusUpdate(oldState, newState) {

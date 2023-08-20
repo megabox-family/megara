@@ -34,20 +34,14 @@ const channelSortingQueue = new Collection()
 let sortCount = 0
 
 async function emptyChannelSortingQueue() {
-  if (channelSortingQueue.size === 0) {
-    console.log(`queue ended`)
-
-    return
-  }
+  if (channelSortingQueue.size === 0) return
 
   const context = channelSortingQueue.first(),
     { guildId } = context
 
-  await sortChannels(channelSortingQueue.first())
-
   channelSortingQueue.delete(guildId)
 
-  // console.log(`channel sorting loop`)
+  await sortChannels(channelSortingQueue.first())
 
   emptyChannelSortingQueue()
 }
@@ -58,17 +52,11 @@ export async function pushToChannelSortingQueue(context) {
       channelSortingQueue.get(guildId) || {}
 
   if (!_guildId || (_bypassComparison === false && bypassComparison)) {
-    await new Promise(resolution => setTimeout(resolution, 2000))
+    await new Promise(resolution => setTimeout(resolution, 1000))
 
     channelSortingQueue.set(guildId, context)
 
-    if (channelSortingQueue.size === 1) {
-      console.log(`queue started`)
-
-      emptyChannelSortingQueue()
-    }
-  } else {
-    console.log(`already in queue`)
+    if (channelSortingQueue.size === 1) emptyChannelSortingQueue()
   }
 }
 
