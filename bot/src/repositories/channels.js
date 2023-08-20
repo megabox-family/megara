@@ -174,7 +174,7 @@ export async function getChannelCustomFunction(channelId) {
         where id = ${channelId}
       `
     )
-    .then(res => res.rows[0]?.custom_functon)
+    .then(res => res.rows[0]?.custom_function)
 }
 
 // ----------------------- voice ----------------------- //

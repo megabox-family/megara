@@ -208,8 +208,6 @@ export async function handleVoiceStatusUpdate(oldState, newState) {
     oldChannelCustomFunction = await getChannelCustomFunction(oldChannelId),
     newChannelCustomFunction = await getChannelCustomFunction(newChannelId)
 
-  console.log(oldChannelCustomFunction, newChannelCustomFunction)
-
   if (oldChannelCustomFunction === `voice`) handleDisconnect(oldVoiceChannel)
 
   if (newChannelCustomFunction === `voice`)
