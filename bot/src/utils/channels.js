@@ -41,7 +41,7 @@ async function emptyChannelSortingQueue() {
 
   channelSortingQueue.delete(guildId)
 
-  await sortChannels(channelSortingQueue.first())
+  await sortChannels(context)
 
   emptyChannelSortingQueue()
 }
