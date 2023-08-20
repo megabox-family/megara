@@ -180,7 +180,7 @@ export async function handleConnect(voiceChannel) {
   positionBooleanArray.push(await activateVoiceChannel(voiceChannel))
   positionBooleanArray.push(await createOrActivateDynamicChannel(voiceChannel))
 
-  if (connect) await addVoiceMemberToParentThread(voiceChannel, member)
+  await addVoiceMemberToParentThread(voiceChannel, member)
 
   if (positionBooleanArray.find(boolean => boolean))
     pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
