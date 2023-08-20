@@ -170,8 +170,6 @@ export async function manageDynamicVoiceChannel(voiceChannel, connect) {
   )
 
   if (positionBooleanArray.find(boolean => boolean)) {
-    console.log(`made it`)
-
     pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
   }
 
