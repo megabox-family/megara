@@ -156,6 +156,21 @@ export async function handleInteractionCreate(interaction) {
   }
 }
 
+export async function handleDisconnect(voiceChannel) {
+  if (!voiceChannel) return
+
+  const { guild } = voiceChannel,
+    positionBooleanArray = []
+
+  positionBooleanArray.push(await deactivateOrDeleteVoiceChannel(voiceChannel))
+  positionBooleanArray.push(
+    await deactivateOrDeleteFirstDynamicVoiceChannel(voiceChannel)
+  )
+
+  if (positionBooleanArray.find(boolean => boolean))
+    pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
+}
+
 export async function handleConnect(voiceChannel) {
   if (!voiceChannel) return
 
@@ -181,21 +196,6 @@ export async function handleConnect(voiceChannel) {
     })
 }
 
-export async function handleDisconnect(voiceChannel) {
-  if (!voiceChannel) return
-
-  const { guild } = voiceChannel,
-    positionBooleanArray = []
-
-  positionBooleanArray.push(await deactivateOrDeleteVoiceChannel(voiceChannel))
-  positionBooleanArray.push(
-    await deactivateOrDeleteFirstDynamicVoiceChannel(voiceChannel)
-  )
-
-  if (positionBooleanArray.find(boolean => boolean))
-    pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
-}
-
 export async function handleVoiceStatusUpdate(oldState, newState) {
   const { channelId: oldChannelId } = oldState,
     { channelId: newChannelId, guild, member } = newState
@@ -205,6 +205,6 @@ export async function handleVoiceStatusUpdate(oldState, newState) {
   const oldVoiceChannel = guild.channels.cache.get(oldChannelId),
     newVoiceChannel = guild.channels.cache.get(newChannelId)
 
-  manageDynamicVoiceChannel(oldVoiceChannel)
-  manageDynamicVoiceChannel(newVoiceChannel)
+  handleDisconnect(oldVoiceChannel)
+  handleConnect(newVoiceChannel)
 }
