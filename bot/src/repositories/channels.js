@@ -169,7 +169,7 @@ export async function getChannelCustomFunction(channelId) {
     .query(
       SQL`
         select
-          custom_functon
+          custom_function
         from channels
         where id = ${channelId}
       `
