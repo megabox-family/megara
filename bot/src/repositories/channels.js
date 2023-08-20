@@ -277,19 +277,6 @@ export async function removeCustomVoiceOptionsByParentId(parentVoiceChannelId) {
     })
 }
 
-export async function checkIfCustomFunctionIsVoice(channelId) {
-  return await pgPool
-    .query(
-      SQL`
-          select 1
-          from channels
-          where id = ${channelId} and
-            custom_function = 'voice'
-        `
-    )
-    .then(res => camelize(res.rows?.[0]))
-}
-
 export async function getVoiceTemporaryStatus(channelId) {
   return await pgPool
     .query(

@@ -4,6 +4,7 @@ import {
   deleteChannelRecord,
   setChannelRecordName,
   removeCustomVoiceOptionsByParentId,
+  getChannelCustomFunction,
 } from '../repositories/channels.js'
 import {
   announceNewChannel,
@@ -40,7 +41,10 @@ export async function handleChannelUpdate(oldChannel, newChannel) {
     oldChannel.rawPosition !== newChannel.rawPosition ||
     oldChannel.position !== newChannel.position
   ) {
-    pushToChannelSortingQueue({ guildId: guild.id })
+    const channelCustomFunction = await getChannelCustomFunction(newChannel.id)
+
+    if (channelCustomFunction !== `voice`)
+      pushToChannelSortingQueue({ guildId: guild.id })
   }
 
   if (oldChannel.name !== newChannel.name) {

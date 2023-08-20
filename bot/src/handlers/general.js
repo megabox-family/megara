@@ -34,6 +34,7 @@ import { registerContextCommands } from '../utils/context-commands.js'
 import test from '../utils/test.js'
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
 import { addVoiceMemberToParentThread } from '../utils/threads.js'
+import { getChannelCustomFunction } from '../repositories/channels.js'
 
 export async function startup(bot) {
   console.log(`logged in as ${bot.user.tag} 😈`)
@@ -203,8 +204,12 @@ export async function handleVoiceStatusUpdate(oldState, newState) {
   if (oldChannelId === newChannelId) return
 
   const oldVoiceChannel = guild.channels.cache.get(oldChannelId),
-    newVoiceChannel = guild.channels.cache.get(newChannelId)
+    newVoiceChannel = guild.channels.cache.get(newChannelId),
+    oldChannelCustomFunction = await getChannelCustomFunction(oldChannelId),
+    newChannelCustomFunction = await getChannelCustomFunction(newChannelId)
 
-  handleDisconnect(oldVoiceChannel)
-  handleConnect(newVoiceChannel, member)
+  if (oldChannelCustomFunction === `voice`) handleDisconnect(oldVoiceChannel)
+
+  if (newChannelCustomFunction === `voice`)
+    handleConnect(newVoiceChannel, member)
 }

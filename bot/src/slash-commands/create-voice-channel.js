@@ -4,7 +4,7 @@ import {
   createVoiceCommandChannel,
   deactivateOrDeleteVoiceChannel,
 } from '../utils/voice.js'
-import { checkIfCustomFunctionIsVoice } from '../repositories/channels.js'
+import { getChannelCustomFunction } from '../repositories/channels.js'
 import { queueApiCall } from '../api-queue.js'
 import {
   getActiveVoiceCategoryId,
@@ -95,9 +95,9 @@ export default async function (interaction, isPrivate = false) {
     ephemeral = options.getBoolean(`ephemeral`)
 
   if (!name) {
-    const dynamicVoiceRecord = await checkIfCustomFunctionIsVoice(channelId)
+    const customFunction = await getChannelCustomFunction(channelId)
 
-    if (dynamicVoiceRecord) {
+    if (customFunction === `voice`) {
       await queueApiCall({
         apiCall: `reply`,
         djsObject: interaction,
