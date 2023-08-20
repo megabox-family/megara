@@ -25,7 +25,13 @@ export async function handleChannelCreate(channel) {
   if (announcementTypes.includes(channel.type))
     await announceNewChannel(channel)
 
-  pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
+  setTimeout(
+    pushToChannelSortingQueue.bind(null, {
+      guildId: guild.id,
+      bypassComparison: true,
+    }),
+    2000
+  )
 }
 
 export async function handleChannelUpdate(oldChannel, newChannel) {
