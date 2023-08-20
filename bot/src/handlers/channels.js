@@ -40,7 +40,7 @@ export async function handleChannelUpdate(oldChannel, newChannel) {
     oldChannel.rawPosition !== newChannel.rawPosition ||
     oldChannel.position !== newChannel.position
   ) {
-    pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
+    pushToChannelSortingQueue({ guildId: guild.id })
   }
 
   if (oldChannel.name !== newChannel.name) {
