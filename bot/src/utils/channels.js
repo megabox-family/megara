@@ -31,6 +31,8 @@ import { isPositiveNumber } from './validation.js'
 
 const channelSortingQueue = new Collection()
 
+let sortCount = 0
+
 async function emptyChannelSortingQueue() {
   if (channelSortingQueue.size === 0) return
 
@@ -94,7 +96,7 @@ export async function sortChannels(context) {
     newChannelPositions = createPositionArray(newCategoryBuckets)
 
   if (bypassComparison) {
-    console.log(`sorted channels`)
+    console.log(`sorted channels ${sortCount++}`)
 
     await queueApiCall({
       apiCall: `setPositions`,
@@ -121,7 +123,7 @@ export async function sortChannels(context) {
       JSON.stringify(comparableCurrentPositions) ||
     bypassComparison
   ) {
-    console.log(`sorted channels`)
+    console.log(`sorted channels ${sortCount++}`)
 
     await queueApiCall({
       apiCall: `setPositions`,
