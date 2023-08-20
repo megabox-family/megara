@@ -65,5 +65,5 @@ export default async function (interaction) {
     parameters: message,
   })
 
-  pushToChannelSortingQueue(guild.id)
+  pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
 }

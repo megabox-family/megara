@@ -9,6 +9,7 @@ import {
   checkIfChannelIsSuggestedType,
   convertSerialzedPermissionsToPermissionsBitfield,
   sortChannels,
+  pushToChannelSortingQueue,
 } from './channels.js'
 import {
   getActiveVoiceCategoryId,
@@ -90,7 +91,7 @@ export async function createVoiceCommandChannel(
         multipleParameters: true,
       })
 
-    sortChannels(guild.id, true)
+    pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
 
     const channelInUse = existingChannel.members.size > 0
 
@@ -230,8 +231,6 @@ export async function createVoiceCommandChannel(
     parentThread?.id,
     parentVoiceChannel?.id
   )
-
-  sortChannels(guild.id, true)
 
   return { channel: newVoiceChannel }
 }

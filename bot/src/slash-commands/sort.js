@@ -48,7 +48,7 @@ export default async function (interaction) {
 
   if (enableSorting) {
     if (whatToSort.toLowerCase() === `channels`)
-      pushToChannelSortingQueue(guild.id)
+      pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
     else pushToRoleSortingQueue(guild.id)
 
     await queueApiCall({

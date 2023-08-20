@@ -23,7 +23,11 @@ import {
   deactivateOrDeleteVoiceChannel,
 } from '../utils/voice.js'
 import { deleteNewRoles, syncRoles } from '../utils/roles.js'
-import { sortChannels, syncChannels } from '../utils/channels.js'
+import {
+  pushToChannelSortingQueue,
+  sortChannels,
+  syncChannels,
+} from '../utils/channels.js'
 import { syncVipMembers } from '../utils/members.js'
 import { registerSlashCommands } from '../utils/slash-commands.js'
 import { registerContextCommands } from '../utils/context-commands.js'
@@ -170,7 +174,7 @@ export async function handleVoiceStatusUpdate(oldState, newState) {
   )
 
   if (positionBooleanArray.find(boolean => boolean))
-    sortChannels(guild.id, true)
+    pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
 
   if (newChannelId) {
     await addVoiceMemberToParentThread(voiceChannel, member)
@@ -181,5 +185,9 @@ export async function handleVoiceStatusUpdate(oldState, newState) {
 
   const needsToBeSorted = await createOrActivateDynamicChannel(voiceChannel)
 
-  if (needsToBeSorted) await sortChannels(guild.id, true)
+  if (needsToBeSorted)
+    pushToChannelSortingQueue({
+      guildId: guild.id,
+      bypassComparison: true,
+    })
 }

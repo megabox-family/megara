@@ -226,7 +226,8 @@ export async function setCustomVoiceOptions(
       console.log(error)
     })
 
-  if (positionOverride) pushToChannelSortingQueue(guild.id)
+  if (positionOverride)
+    pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
 }
 
 export async function removeCustomVoiceOptions(channelId) {

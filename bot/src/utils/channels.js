@@ -29,27 +29,32 @@ import {
 import { queueApiCall } from '../api-queue.js'
 import { isPositiveNumber } from './validation.js'
 
-const channelSortingQueue = []
+const channelSortingQueue = new Collection()
 
 async function emptyChannelSortingQueue() {
-  if (channelSortingQueue.length === 0) return
+  if (channelSortingQueue.size === 0) return
 
-  const guildId = channelSortingQueue[0]
+  const context = channelSortingQueue.first(),
+    { guildId } = context
 
-  await sortChannels(guildId)
+  await sortChannels(channelSortingQueue.first())
 
-  channelSortingQueue.shift()
+  channelSortingQueue.delete(guildId)
 
   // console.log(`channel sorting loop`)
 
   emptyChannelSortingQueue()
 }
 
-export function pushToChannelSortingQueue(guildId) {
-  if (!channelSortingQueue.includes(guildId)) {
-    channelSortingQueue.push(guildId)
+export function pushToChannelSortingQueue(context) {
+  const { guildId, bypassComparison } = context,
+    { guildId: _guildId, bypassComparison: _bypassComparison } =
+      channelSortingQueue.get(guildId) || {}
 
-    if (channelSortingQueue.length === 1) emptyChannelSortingQueue()
+  if (!_guildId || (_bypassComparison === false && bypassComparison)) {
+    channelSortingQueue.set(guildId, context)
+
+    if (channelSortingQueue.size === 1) emptyChannelSortingQueue()
   }
 }
 
@@ -77,7 +82,9 @@ export function createPositionArray(categoryBuckets) {
   return positions
 }
 
-export async function sortChannels(guildId, bypassComparison = false) {
+export async function sortChannels(context) {
+  const { guildId, bypassComparison } = context
+
   if (!(await getChannelSorting(guildId))) return
 
   const guild = getBot().guilds.cache.get(guildId),
@@ -109,7 +116,8 @@ export async function sortChannels(guildId, bypassComparison = false) {
 
   if (
     JSON.stringify(newChannelPositions) !==
-    JSON.stringify(comparableCurrentPositions)
+      JSON.stringify(comparableCurrentPositions) ||
+    bypassComparison
   ) {
     console.log(`sorted channels`)
 
@@ -197,7 +205,8 @@ export async function syncChannels(guild) {
     })
   )
 
-  if (positionHasChanged) pushToChannelSortingQueue(guild.id)
+  if (positionHasChanged)
+    pushToChannelSortingQueue({ guildId: guild.id, bypassComparison: true })
 }
 
 export async function addMemberToChannel(member, channelId) {
