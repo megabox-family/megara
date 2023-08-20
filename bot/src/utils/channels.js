@@ -34,7 +34,11 @@ const channelSortingQueue = new Collection()
 let sortCount = 0
 
 async function emptyChannelSortingQueue() {
-  if (channelSortingQueue.size === 0) return
+  if (channelSortingQueue.size === 0) {
+    console.log(`queue ended`)
+
+    return
+  }
 
   const context = channelSortingQueue.first(),
     { guildId } = context
