@@ -28,6 +28,7 @@ import {
 } from '../repositories/channels.js'
 import { queueApiCall } from '../api-queue.js'
 import { isPositiveNumber } from './validation.js'
+import moment from 'moment'
 
 const channelSortingQueue = new Collection()
 
@@ -39,9 +40,9 @@ async function emptyChannelSortingQueue() {
   const context = channelSortingQueue.first(),
     { guildId } = context
 
-  channelSortingQueue.delete(guildId)
-
   await sortChannels(context)
+
+  channelSortingQueue.delete(guildId)
 
   emptyChannelSortingQueue()
 }
@@ -52,7 +53,7 @@ export async function pushToChannelSortingQueue(context) {
       channelSortingQueue.get(guildId) || {}
 
   if (!_guildId || (_bypassComparison === false && bypassComparison)) {
-    // await new Promise(resolution => setTimeout(resolution, 2000))
+    context.timestamp = moment().unix()
 
     channelSortingQueue.set(guildId, context)
 
@@ -84,27 +85,14 @@ export function createPositionArray(categoryBuckets) {
   return positions
 }
 
-export async function sortChannels(context) {
-  const { guildId, bypassComparison } = context
-
-  if (!(await getChannelSorting(guildId))) return
-
-  const guild = getBot().guilds.cache.get(guildId),
-    newCategoryBuckets = await getCategoryBuckets(guild),
+async function getNewChannelPositions(guild) {
+  const newCategoryBuckets = await getCategoryBuckets(guild),
     newChannelPositions = createPositionArray(newCategoryBuckets)
 
-  if (bypassComparison) {
-    console.log(`sorted channels ${sortCount++}`)
+  return newChannelPositions
+}
 
-    await queueApiCall({
-      apiCall: `setPositions`,
-      djsObject: guild.channels,
-      parameters: newChannelPositions,
-    })
-
-    return
-  }
-
+async function getCurrentChannelPositions(guild, newChannelPositions) {
   const currentCategoryBuckets = await getCategoryBuckets(guild, false),
     currentChannelPositions = createPositionArray(currentCategoryBuckets),
     comparableCurrentPositions = newChannelPositions.map(newChannelPosition => {
@@ -114,20 +102,75 @@ export async function sortChannels(context) {
       )
     })
 
-  // console.log(newChannelPositions, currentChannelPositions)
+  return comparableCurrentPositions
+}
 
-  if (
-    JSON.stringify(newChannelPositions) !==
-      JSON.stringify(comparableCurrentPositions) ||
-    bypassComparison
-  ) {
-    console.log(`sorted channels ${sortCount++}`)
+export async function sortChannels(context) {
+  const { timestamp, guildId, bypassComparison } = context
+
+  if (!(await getChannelSorting(guildId))) return
+
+  const guild = getBot().guilds.cache.get(guildId),
+    sortMessage = () => `sorted channels in ${guild.name} (${sortCount++})`,
+    timeout = 2000
+
+  let newChannelPositions
+
+  if (bypassComparison) {
+    console.log(sortMessage())
+
+    newChannelPositions = await getNewChannelPositions(guild)
 
     await queueApiCall({
       apiCall: `setPositions`,
       djsObject: guild.channels,
       parameters: newChannelPositions,
     })
+
+    await new Promise(resolution => setTimeout(resolution, timeout))
+  }
+
+  let currentChannelPositions,
+    oldTimestamp = timestamp,
+    checkIfComparisonShouldBeBypassed = () => {
+      const { timestamp: newTimestamp, bypassComparison } =
+        channelSortingQueue.get(guildId)
+
+      if (newTimestamp > oldTimestamp) {
+        oldTimestamp = newTimestamp
+
+        return bypassComparison
+      }
+
+      return false
+    }
+
+  newChannelPositions = await getNewChannelPositions(guild)
+  currentChannelPositions = await getCurrentChannelPositions(
+    guild,
+    newChannelPositions
+  )
+
+  while (
+    JSON.stringify(newChannelPositions) !==
+      JSON.stringify(currentChannelPositions) ||
+    checkIfComparisonShouldBeBypassed()
+  ) {
+    console.log(sortMessage())
+
+    await queueApiCall({
+      apiCall: `setPositions`,
+      djsObject: guild.channels,
+      parameters: newChannelPositions,
+    })
+
+    await new Promise(resolution => setTimeout(resolution, timeout))
+
+    newChannelPositions = await getNewChannelPositions(guild)
+    currentChannelPositions = await getCurrentChannelPositions(
+      guild,
+      newChannelPositions
+    )
   }
 }
 
