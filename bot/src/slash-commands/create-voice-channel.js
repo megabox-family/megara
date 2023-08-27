@@ -147,7 +147,7 @@ export default async function (interaction, isPrivate = false) {
     parameters: { ephemeral: ephemeral },
   })
 
-  console.log(disableChat)
+  console.log(parentTextChannel, parentThread)
 
   const voiceChannelContext = await createVoiceCommandChannel(
     name,
