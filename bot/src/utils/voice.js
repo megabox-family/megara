@@ -111,6 +111,8 @@ export async function createVoiceCommandChannel(
   let permissions = new Collection(),
     maxBitrate
 
+  console.log(parentTextChannel?.name, parentTextChannel?.id)
+
   if (parentTextChannel) {
     const parentPermissionOverwrites =
       parentTextChannel.permissionOverwrites.cache
