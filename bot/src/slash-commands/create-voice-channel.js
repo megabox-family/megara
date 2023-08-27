@@ -118,7 +118,7 @@ export default async function (interaction, isPrivate = false) {
 
   const parentChannel = name ? null : channel,
     channelIsThread = parentChannel
-      ? checkIfChannelIsSuggestedType(channel, `Thread`)
+      ? checkIfChannelIsSuggestedType(channel, [`thread`, `forum`])
       : false,
     parentTextChannel = channelIsThread
       ? channels.cache.get(parentChannel.parentId)

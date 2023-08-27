@@ -196,7 +196,7 @@ export function checkIfChannelIsSuggestedType(channel, type) {
     alphaChannelType?.toLowerCase()?.match(type.toLowerCase())
   ) {
     return true
-  } else if (typeof type === `object` && type?.isArray()) {
+  } else if (Array.isArray(type)) {
     for (const _type of type) {
       const condition = alphaChannelType
         ?.toLowerCase()
