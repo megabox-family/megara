@@ -114,6 +114,8 @@ export async function createVoiceCommandChannel(
   let permissions = new Collection(),
     maxBitrate
 
+  console.log(parentPermissionOverwrites?.size)
+
   if (parentPermissionOverwrites?.size > 0) {
     parentPermissionOverwrites.forEach(permissionOverwrite => {
       const { id, type, allow, deny } = permissionOverwrite,
@@ -164,8 +166,6 @@ export async function createVoiceCommandChannel(
 
       // everyone overwrite, disable chat
       if (disableChat) {
-        everyoneOverwrite.id = everyoneRole.id
-        everyoneOverwrite.type = 0
         everyoneOverwrite.allow = new PermissionsBitField()
         everyoneOverwrite.deny = new PermissionsBitField([
           PermissionsBitField.Flags.SendMessages,
@@ -189,8 +189,6 @@ export async function createVoiceCommandChannel(
         permissions.set(memberOverwrite.id, memberOverwrite)
       }
     } else {
-      everyoneOverwrite.id = everyoneRole.id
-      everyoneOverwrite.type = 0
       everyoneOverwrite.allow = new PermissionsBitField()
       everyoneOverwrite.deny = new PermissionsBitField()
 
