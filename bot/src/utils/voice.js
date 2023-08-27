@@ -146,8 +146,6 @@ export async function createVoiceCommandChannel(
       ),
       everyoneOverwrite = new PermissionOverwrites()
 
-    console.log(everyoneRole?.id)
-
     everyoneOverwrite.id = everyoneRole.id
     everyoneOverwrite.type = 0
 
@@ -189,8 +187,17 @@ export async function createVoiceCommandChannel(
         permissions.set(memberOverwrite.id, memberOverwrite)
       }
     } else {
-      everyoneOverwrite.allow = new PermissionsBitField()
-      everyoneOverwrite.deny = new PermissionsBitField()
+      if (disableChat) {
+        everyoneOverwrite.allow = new PermissionsBitField()
+        everyoneOverwrite.deny = new PermissionsBitField([
+          PermissionsBitField.Flags.SendMessages,
+        ])
+
+        permissions.set(everyoneOverwrite.id, everyoneOverwrite)
+      } else {
+        everyoneOverwrite.allow = new PermissionsBitField()
+        everyoneOverwrite.deny = new PermissionsBitField()
+      }
 
       permissions.set(everyoneOverwrite.id, everyoneOverwrite)
     }
