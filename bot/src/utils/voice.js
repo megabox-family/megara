@@ -114,10 +114,7 @@ export async function createVoiceCommandChannel(
   let permissions = new Collection(),
     maxBitrate
 
-  if (parentPermissionOverwrites?.size !== 0) {
-    const parentPermissionOverwrites =
-      parentTextChannel.permissionOverwrites.cache
-
+  if (parentPermissionOverwrites?.size > 0) {
     parentPermissionOverwrites.forEach(permissionOverwrite => {
       const { id, type, allow, deny } = permissionOverwrite,
         allowPermissions = allow.serialize(),
