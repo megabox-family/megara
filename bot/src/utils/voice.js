@@ -111,11 +111,13 @@ export async function createVoiceCommandChannel(
   let permissions = new Collection(),
     maxBitrate
 
-  console.log(parentTextChannel?.name, parentTextChannel?.id)
-
   if (parentTextChannel) {
+    console.log(`made it`)
+
     const parentPermissionOverwrites =
       parentTextChannel.permissionOverwrites.cache
+
+    console.log(parentPermissionOverwrites)
 
     parentPermissionOverwrites.forEach(permissionOverwrite => {
       const { id, type, allow, deny } = permissionOverwrite,
@@ -132,8 +134,6 @@ export async function createVoiceCommandChannel(
           SendMessages: disableChat ? disableChat : false,
         },
         newPermissionOverwrite = new PermissionOverwrites()
-
-      console.log(newAllowPermissions, newDenyPermissions)
 
       newPermissionOverwrite.id = id
       newPermissionOverwrite.type = type
