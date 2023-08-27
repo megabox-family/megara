@@ -141,8 +141,6 @@ export async function createVoiceCommandChannel(
       permissions.set(newPermissionOverwrite.id, newPermissionOverwrite)
     })
   } else {
-    console.log(`made it here`)
-
     const everyoneRole = guild.roles.cache.find(
         role => role.name === `@everyone`
       ),
@@ -191,8 +189,6 @@ export async function createVoiceCommandChannel(
         permissions.set(memberOverwrite.id, memberOverwrite)
       }
     } else {
-      console.log(`made it here as well`)
-
       everyoneOverwrite.id = everyoneRole.id
       everyoneOverwrite.type = 0
       everyoneOverwrite.allow = new PermissionsBitField()
