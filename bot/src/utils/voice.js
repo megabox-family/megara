@@ -114,8 +114,6 @@ export async function createVoiceCommandChannel(
   let permissions = new Collection(),
     maxBitrate
 
-  console.log(parentPermissionOverwrites?.size)
-
   if (parentPermissionOverwrites?.size > 0) {
     parentPermissionOverwrites.forEach(permissionOverwrite => {
       const { id, type, allow, deny } = permissionOverwrite,
@@ -143,6 +141,8 @@ export async function createVoiceCommandChannel(
       permissions.set(newPermissionOverwrite.id, newPermissionOverwrite)
     })
   } else {
+    console.log(`made it`)
+
     const everyoneRole = guild.roles.cache.find(
         role => role.name === `@everyone`
       ),
