@@ -131,6 +131,8 @@ export async function createVoiceCommandChannel(
         },
         newPermissionOverwrite = new PermissionOverwrites()
 
+      console.log(newAllowPermissions, newDenyPermissions)
+
       newPermissionOverwrite.id = id
       newPermissionOverwrite.type = type
       newPermissionOverwrite.allow =

@@ -118,7 +118,7 @@ export default async function (interaction, isPrivate = false) {
 
   const parentChannel = name ? null : channel,
     channelIsThread = parentChannel
-      ? checkIfChannelIsSuggestedType(channel, [`thread`, `forum`])
+      ? checkIfChannelIsSuggestedType(channel, `thread`)
       : false,
     parentTextChannel = channelIsThread
       ? channels.cache.get(parentChannel.parentId)
@@ -146,8 +146,6 @@ export default async function (interaction, isPrivate = false) {
     djsObject: interaction,
     parameters: { ephemeral: ephemeral },
   })
-
-  console.log(parentThread.type)
 
   const voiceChannelContext = await createVoiceCommandChannel(
     name,
