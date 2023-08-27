@@ -147,6 +147,8 @@ export default async function (interaction, isPrivate = false) {
     parameters: { ephemeral: ephemeral },
   })
 
+  console.log(parentTextChannel?.name)
+
   const voiceChannelContext = await createVoiceCommandChannel(
     name,
     dynamic,
