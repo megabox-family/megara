@@ -141,6 +141,8 @@ export default async function (interaction, isPrivate = false) {
 
   alwaysActive = alwaysActive ? alwaysActive : false
 
+  console.log(channelIsThread)
+
   await queueApiCall({
     apiCall: `deferReply`,
     djsObject: interaction,
