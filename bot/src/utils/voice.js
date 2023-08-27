@@ -212,6 +212,8 @@ export async function createVoiceCommandChannel(
       maxBitrate = 96000
   }
 
+  console.log(permissions)
+
   const newVoiceChannel = await queueApiCall({
     apiCall: `create`,
     djsObject: activeVoiceCategory.children,
