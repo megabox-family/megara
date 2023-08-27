@@ -1,6 +1,7 @@
 import {
   ChannelType,
   Collection,
+  InteractionWebhook,
   PermissionOverwrites,
   PermissionsBitField,
 } from 'discord.js'
@@ -27,6 +28,7 @@ import { queueApiCall } from '../api-queue.js'
 import { collator } from './general.js'
 import { getVoiceChannelBasename } from './validation.js'
 import { getCommandByName } from './slash-commands.js'
+import { getBot } from '../cache-bot.js'
 
 const voiceNumberGate = new Collection()
 
@@ -482,7 +484,10 @@ export async function editCreateMessage(voiceChannel) {
 
   if (!createMessage) return
 
-  const voiceCommand = getCommandByName(`create-voice-channel`)
+  const voiceCommand = getCommandByName(`create-voice-channel`),
+    { Ephemeral: isEphemeral } = createMessage.flags.serialize()
+
+  if (isEphemeral) return
 
   await queueApiCall({
     apiCall: `edit`,
