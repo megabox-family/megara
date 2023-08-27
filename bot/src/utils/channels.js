@@ -188,10 +188,25 @@ export function getAlphaChannelType(channel) {
   return alphaChannelType
 }
 
-export function checkIfChannelIsSuggestedType(channel, alphaType) {
+export function checkIfChannelIsSuggestedType(channel, type) {
   const alphaChannelType = getAlphaChannelType(channel)
 
-  return alphaChannelType?.toLowerCase()?.match(alphaType.toLowerCase())
+  if (
+    typeof type === `string` &&
+    alphaChannelType?.toLowerCase()?.match(type.toLowerCase())
+  ) {
+    return true
+  } else if (typeof type === `object` && type?.isArray()) {
+    for (const _type of type) {
+      const condition = alphaChannelType
+        ?.toLowerCase()
+        ?.match(_type.toLowerCase())
+
+      if (condition) return true
+    }
+  }
+
+  return false
 }
 
 export async function syncChannels(guild) {
