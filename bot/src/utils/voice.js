@@ -108,16 +108,15 @@ export async function createVoiceCommandChannel(
     return { message: `non-permissible` }
   }
 
+  const parentPermissionOverwrites =
+    parentTextChannel?.permissionOverwrites?.cache
+
   let permissions = new Collection(),
     maxBitrate
 
-  if (parentTextChannel) {
-    console.log(`made it`)
-
+  if (parentPermissionOverwrites?.size !== 0) {
     const parentPermissionOverwrites =
       parentTextChannel.permissionOverwrites.cache
-
-    console.log(parentPermissionOverwrites)
 
     parentPermissionOverwrites.forEach(permissionOverwrite => {
       const { id, type, allow, deny } = permissionOverwrite,
@@ -215,8 +214,6 @@ export async function createVoiceCommandChannel(
     default:
       maxBitrate = 96000
   }
-
-  console.log(permissions)
 
   const newVoiceChannel = await queueApiCall({
     apiCall: `create`,
