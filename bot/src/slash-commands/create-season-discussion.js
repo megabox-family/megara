@@ -1,22 +1,19 @@
-import { ChannelType, ApplicationCommandOptionType } from 'discord.js'
-import { capitalCase } from 'change-case'
+import {
+  ChannelType,
+  ApplicationCommandOptionType,
+  ThreadAutoArchiveDuration,
+} from 'discord.js'
 import { getThreadByName } from '../utils/threads.js'
 import { queueApiCall } from '../api-queue.js'
+import { collator } from '../utils/general.js'
 
-export const description = `Generates a forum thread in relation to an episode in a series.`
+export const description = `Generates a forum post in relation to a season in a series.`
 export const dmPermission = false,
   defaultMemberPermissions = `0`,
   options = [
     {
       name: `season-number`,
-      description: `The seseaon number that the episode belongs to.`,
-      type: ApplicationCommandOptionType.Integer,
-      required: true,
-      minValue: 1,
-    },
-    {
-      name: `episode-number`,
-      description: `The episode number.`,
+      description: `The seseaon number.`,
       type: ApplicationCommandOptionType.Integer,
       required: true,
       minValue: 1,
@@ -27,12 +24,10 @@ export default async function (interaction) {
   const guild = interaction.guild,
     options = interaction.options,
     seasonNumber = options.getInteger(`season-number`),
-    episodeNumber = options.getInteger(`episode-number`),
     channel = interaction.channel,
     parentForum = guild.channels.cache.get(channel.parentId),
-    threadName = `${capitalCase(
-      parentForum.name
-    )} S${seasonNumber} E${episodeNumber}`
+    parentName = parentForum.name.replaceAll(`-`, ` `),
+    threadName = `${parentName} s${seasonNumber}`
 
   if (parentForum.type !== ChannelType.GuildForum) {
     return await queueApiCall({
@@ -46,10 +41,7 @@ export default async function (interaction) {
     })
   }
 
-  const episodeTag = parentForum.availableTags?.find(
-      tag => tag.name === 'episode'
-    ),
-    existingThread = await getThreadByName(parentForum, threadName)
+  const existingThread = await getThreadByName(parentForum, threadName)
 
   if (existingThread) {
     return await queueApiCall({
@@ -67,18 +59,25 @@ export default async function (interaction) {
     djsObject: interaction,
   })
 
+  const { availableTags } = parentForum,
+    appliedTagIds = []
+
+  let discussionTag = availableTags?.find(tag => tag.name === `discussion`),
+    seasonTag = availableTags?.find(tag => tag.name === `season`)
+
+  if (discussionTag) appliedTagIds.push(discussionTag.id)
+  if (seasonTag) appliedTagIds.push(seasonTag.id)
+
   const thread = await queueApiCall({
     apiCall: `create`,
     djsObject: parentForum.threads,
     parameters: {
       name: threadName,
       type: ChannelType.PublicThread,
-      reason: 'Needed a thread for an episode in a show',
-      message: `Discussion for ${capitalCase(
-        parentForum.name
-      )} Season ${seasonNumber} Episode ${episodeNumber}`,
-      autoArchiveDuration: 10080,
-      appliedTags: episodeTag ? [episodeTag] : [],
+      reason: `Needed a thread for discussion of a season in a series`,
+      message: `Discussion for ${threadName}.`,
+      autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
+      appliedTags: appliedTagIds,
     },
   }).catch(error =>
     console.log(`I was unable to create the thread, see error below:\n${error}`)
