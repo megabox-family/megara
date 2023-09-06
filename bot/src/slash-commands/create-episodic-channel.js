@@ -67,6 +67,7 @@ export default async function (interaction) {
           { name: `discussion` },
           { name: `episode` },
           { name: `season` },
+          { name: `spoilers`, emoji: { name: `❗` } },
         ],
         defaultReactionEmoji: { name: `🍿` },
         topic: `Please use the /create-episode-discussion & /create-season-discussion in the ${generalThreadName} post to created discussions for episodes & seasons.`,
@@ -81,14 +82,10 @@ export default async function (interaction) {
     },
   })
 
-  const createEpisodeDiscussionCommand = getCommandByName(
-      `create-episode-discussion`
-    ),
-    createSeasonDiscussionCommand = getCommandByName(
-      `create-season-discussion`
-    ),
-    episodeCommand = `</create-episode-discussion:${createEpisodeDiscussionCommand.id}>`,
-    seasonCommand = `</create-season-discussion:${createSeasonDiscussionCommand.id}>`,
+  const episodeCommand = getCommandByName(`create-episode-discussion`),
+    seasonCommand = getCommandByName(`create-season-discussion`),
+    episodeCommandTag = `</${episodeCommand.name}:${episodeCommand.id}>`,
+    seasonCommandTag = `</${seasonCommand.name}:${seasonCommand.id}>`,
     discussionTag = newChannel.availableTags.find(
       tag => tag.name === `discussion`
     ),
@@ -101,7 +98,7 @@ export default async function (interaction) {
         reason: `Needed a general thread for discussion of a series`,
         message:
           `General discussion for ${newChannel}, no spoilers!` +
-          `\n\nPlease use the ${episodeCommand} & ${seasonCommand} to create posts for discussing specific episodes & seasons.`,
+          `\n\nPlease use the ${episodeCommandTag} & ${seasonCommandTag} to create posts for discussing specific episodes & seasons.`,
         autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
         appliedTags: [discussionTag.id],
       },
