@@ -5,10 +5,8 @@ import {
   ButtonStyle,
   ChannelType,
 } from 'discord.js'
-import { getNicknameOrUsername } from '../utils/members.js'
 import { checkIfMemberIsPermissible } from '../utils/channels.js'
 import { queueApiCall } from '../api-queue.js'
-import { collator } from '../utils/general.js'
 
 const {
   AnnouncementThread,
@@ -87,7 +85,7 @@ export const dmPermission = false,
   ]
 
 function generateConfirmationMessage(members, channel) {
-  const memberNameArray = members.map(member => `<#${member.id}>`),
+  const memberNameArray = members.map(member => `<@${member.id}>`),
     memberDisplayString = memberNameArray.join(`\n- `)
 
   const confirmationMessage =
