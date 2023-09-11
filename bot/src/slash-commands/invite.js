@@ -123,7 +123,7 @@ async function handleVoiceChannel(channel, invitedMembers, member) {
           `${memberAndGuildContext()} the **${
             channel.name
           }** voice channel, click here to join it → ${channel} 😊` +
-          `\n\n${unknownMessage} Don't forget to add the channel to your channel list if you'd like to be a part of it permanently 👍`
+          `\n\n${unknownMessage} *Don't forget to add the channel to your channel list if you'd like to be a part of it permanently* 👍`
       } else {
         returnObject.message = {
           content:
@@ -173,9 +173,9 @@ async function handleThread(channel, invitedMembers, member) {
         }** ${channelType}, click here to jump to it → ${thread} 😊`
 
         if (parentIsForum)
-          message += `\n\n${unknownMessage} Don't forget to follow the post if you'd like to be a part of it permanently 👍`
+          message += `\n\n${unknownMessage} *Don't forget to follow the post if you'd like to be a part of it permanently* 👍`
         else
-          message += `\n\n${unknownMessage} Don't forget to join the thread if you'd like to be a part of it permanently 👍`
+          message += `\n\n${unknownMessage} *Don't forget to join the thread if you'd like to be a part of it permanently* 👍`
 
         returnObject.message = message
       } else {
@@ -236,7 +236,7 @@ async function handleTextChannel(channel, members, member) {
         `${memberAndGuildContext()} view the **#${
           channel.name
         }** text channel, click here to join it → ${channel} 😊` +
-        `\n\n${unknownMessage} Don't forget to add the channel to your channel list if you'd like to be a part of it permanently 👍`
+        `\n\n${unknownMessage} *Don't forget to add the channel to your channel list if you'd like to be a part of it permanently* 👍`
     else {
       const joinChannelButton = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
