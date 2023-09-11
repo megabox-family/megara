@@ -113,7 +113,9 @@ async function handleVoiceChannel(channel, invitedMembers, member) {
         returnObject = { member: invitedMember }
 
       if (memberIsPermissible === true) {
-        returnObject.message = `${member} has invited you to ${channel} ← click here to jump to it 😊`
+        returnObject.message =
+          `${member} has invited you to ${channel} ← click here to jump to it 😊` +
+          `\n\nDon't forget to add the channel to your channel list if you'd like to be a part of it permanently 👍`
       } else {
         returnObject.message = {
           content:
@@ -156,7 +158,9 @@ async function handleThread(channel, invitedMembers, member) {
             thread.type === ChannelType.PublicThread)
 
       if (memberIsPermissibleInThread)
-        returnObject.message = `${member} has invited you to view ${thread} ← click here to jump to it 😊`
+        returnObject.message =
+          `${member} has invited you to view ${thread} ← click here to jump to it 😊` +
+          `\n\nDon't forget to add the channel to your channel list if you'd like to be a part of it permanently 👍`
       else {
         const joinThreadButton = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
@@ -209,7 +213,9 @@ async function handleTextChannel(channel, members, member) {
       returnObject = { member: invitedMember }
 
     if (memberIsPermissible)
-      returnObject.message = `${member} has invited you to view ${channel} ← click here to jump to it 😊`
+      returnObject.message =
+        `${member} has invited you to view ${channel} ← click here to jump to it 😊` +
+        `\n\nDon't forget to add the channel to your channel list if you'd like to be a part of it permanently 👍`
     else {
       const joinChannelButton = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
