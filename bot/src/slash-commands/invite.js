@@ -146,6 +146,7 @@ async function handleThread(channel, invitedMembers, member) {
     { id, guild, name, parentId, members } = thread
 
   const parentChannel = guild.channels.cache.get(parentId),
+    parentIsForum = parentChannel.type === ChannelType.GuildForum,
     inviteMessageArray = invitedMembers.map(invitedMember => {
       const memberIsPermissibleInParent = checkIfMemberIsPermissible(
           parentChannel,
@@ -157,11 +158,16 @@ async function handleThread(channel, invitedMembers, member) {
           (memberIsPermissibleInParent &&
             thread.type === ChannelType.PublicThread)
 
-      if (memberIsPermissibleInThread)
-        returnObject.message =
-          `${member} has invited you to view ${thread} ← click here to jump to it 😊` +
-          `\n\nDon't forget to add the channel to your channel list if you'd like to be a part of it permanently 👍`
-      else {
+      if (memberIsPermissibleInThread) {
+        let message = `${member} has invited you to view ${thread} ← click here to jump to it 😊`
+
+        if (parentIsForum)
+          message += `\n\nDon't forget to follow the post if you'd like to be a part of it permanently 👍`
+        else
+          message += `\n\nDon't forget to join the thread if you'd like to be a part of it permanently 👍`
+
+        returnObject.message = message
+      } else {
         const joinThreadButton = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
               .setCustomId(
@@ -178,9 +184,11 @@ async function handleThread(channel, invitedMembers, member) {
             ? ` in the **${category.name}** category`
             : ``
 
+        let channelType = parentIsForum ? `post` : `thread`
+
         returnObject.message = {
           content:
-            `${member} from **${guild}** has invited you to the **#${name}** thread within the **#${parentChannel.name}** channel${categoryContext} 🙌` +
+            `${member} from **${guild}** has invited you to the **#${name}** ${channelType} within the **#${parentChannel.name}** channel${categoryContext} 🙌` +
             `\nIf you're interested in joining, click the button below:`,
           components: [joinThreadButton],
         }
