@@ -84,6 +84,10 @@ export const dmPermission = false,
     },
   ]
 
+const memberAndGuildContext = (member, guild) =>
+    `${member} from ${guild.name} has invited you to`,
+  unknownMessage = `The above link may show as "#unknown" momentarily, but the link should still work fine.`
+
 function generateConfirmationMessage(members, channel) {
   const memberNameArray = members.map(member => `<@${member.id}>`),
     memberDisplayString = memberNameArray.join(`\n- `)
@@ -110,13 +114,13 @@ async function handleVoiceChannel(channel, invitedMembers, member) {
           channel,
           invitedMember
         ),
-        returnObject = { member: invitedMember },
-        memberAndGuildContext = `${member} from ${guild.name} has invited you to`
-      unknownMessage = `The above link may show as "#unknown" momentarily, but the link should still work fine.`
+        returnObject = { member: invitedMember }
 
       if (memberIsPermissible === true) {
         returnObject.message =
-          `${memberAndGuildContext} the **${channel.name}** voice channel, click here to join it → ${channel} 😊` +
+          `${memberAndGuildContext(member, guild)} the **${
+            channel.name
+          }** voice channel, click here to join it → ${channel} 😊` +
           `\n\n${unknownMessage} Don't forget to add the channel to your channel list if you'd like to be a part of it permanently 👍`
       } else {
         returnObject.message = {
@@ -162,7 +166,9 @@ async function handleThread(channel, invitedMembers, member) {
         channelType = parentIsForum ? `post` : `thread`
 
       if (memberIsPermissibleInThread) {
-        let message = `${memberAndGuildContext} view the **#${thread.name}** ${channelType}, click here to jump to it → ${thread} 😊`
+        let message = `${memberAndGuildContext(member, guild)} view the **#${
+          thread.name
+        }** ${channelType}, click here to jump to it → ${thread} 😊`
 
         if (parentIsForum)
           message += `\n\n${unknownMessage} Don't forget to follow the post if you'd like to be a part of it permanently 👍`
@@ -223,7 +229,9 @@ async function handleTextChannel(channel, members, member) {
 
     if (memberIsPermissible)
       returnObject.message =
-        `${memberAndGuildContext} view the **#${channel.name}** text channel, click here to join it → ${channel} 😊` +
+        `${memberAndGuildContext(member, guild)} view the **#${
+          channel.name
+        }** text channel, click here to join it → ${channel} 😊` +
         `\n\n${unknownMessage} Don't forget to add the channel to your channel list if you'd like to be a part of it permanently 👍`
     else {
       const joinChannelButton = new ActionRowBuilder().addComponents(
