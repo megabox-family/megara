@@ -116,18 +116,17 @@ async function handleVoiceChannel(channel, invitedMembers, member) {
           channel,
           invitedMember
         ),
-        returnObject = { member: invitedMember }
+        returnObject = { member: invitedMember },
+        _memberAndGuildContext = memberAndGuildContext()
 
       if (memberIsPermissible === true) {
         returnObject.message =
-          `${memberAndGuildContext()} the **${
-            channel.name
-          }** voice channel, click here to join it → ${channel} 😊` +
+          `${_memberAndGuildContext} the **${channel.name}** voice channel, click here to join it → ${channel} 😊` +
           `\n\n${unknownMessage} *Don't forget to add the channel to your channel list if you'd like to be a part of it permanently* 👍`
       } else {
         returnObject.message = {
           content:
-            `${memberAndGuildContext()} the **#${channelName}** voice channel 🙌` +
+            `${_memberAndGuildContext} the **#${channelName}** voice channel 🙌` +
             `\n\nHowever, you don't currently have access. Press the button below to gain access.`,
           components: [joinChannelButton],
         }
@@ -165,12 +164,11 @@ async function handleThread(channel, invitedMembers, member) {
           members.cache.get(invitedMember?.id) ||
           (memberIsPermissibleInParent &&
             thread.type === ChannelType.PublicThread),
-        channelType = parentIsForum ? `post` : `thread`
+        channelType = parentIsForum ? `post` : `thread`,
+        _memberAndGuildContext = memberAndGuildContext()
 
       if (memberIsPermissibleInThread) {
-        let message = `${memberAndGuildContext()} view the **#${
-          thread.name
-        }** ${channelType}, click here to jump to it → ${thread} 😊`
+        let message = `${_memberAndGuildContext} view the **#${thread.name}** ${channelType}, click here to jump to it → ${thread} 😊`
 
         if (parentIsForum)
           message += `\n\n${unknownMessage} *Don't forget to follow the post if you'd like to be a part of it permanently* 👍`
@@ -193,13 +191,12 @@ async function handleThread(channel, invitedMembers, member) {
           category = guild.channels.cache.get(parentChannel.parentId),
           categoryContext = category
             ? ` in the **${category.name}** category`
-            : ``
+            : ``,
+          _memberAndGuildContext = memberAndGuildContext()
 
         returnObject.message = {
           content:
-            `${memberAndGuildContext()} the **#${name}** ${channelType} within the **#${
-              parentChannel.name
-            }** channel${categoryContext} 🙌` +
+            `${_memberAndGuildContext} the **#${name}** ${channelType} within the **#${parentChannel.name}** channel${categoryContext} 🙌` +
             `\nIf you're interested in joining, click the button below:`,
           components: [joinThreadButton],
         }
@@ -229,13 +226,12 @@ async function handleTextChannel(channel, members, member) {
         channel,
         invitedMember
       ),
-      returnObject = { member: invitedMember }
+      returnObject = { member: invitedMember },
+      _memberAndGuildContext = memberAndGuildContext()
 
     if (memberIsPermissible)
       returnObject.message =
-        `${memberAndGuildContext()} view the **#${
-          channel.name
-        }** text channel, click here to join it → ${channel} 😊` +
+        `${_memberAndGuildContext} view the **#${channel.name}** text channel, click here to join it → ${channel} 😊` +
         `\n\n${unknownMessage} *Don't forget to add the channel to your channel list if you'd like to be a part of it permanently* 👍`
     else {
       const joinChannelButton = new ActionRowBuilder().addComponents(
@@ -251,7 +247,7 @@ async function handleTextChannel(channel, members, member) {
 
       returnObject.message = {
         content:
-          `${memberAndGuildContext()} **#${name}**${categoryContext} 🙌` +
+          `${_memberAndGuildContext} **#${name}**${categoryContext} 🙌` +
           `\nIf you're interested in joining, click the button below:`,
         components: [joinChannelButton],
       }
