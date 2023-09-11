@@ -110,12 +110,14 @@ async function handleVoiceChannel(channel, invitedMembers, member) {
           channel,
           invitedMember
         ),
-        returnObject = { member: invitedMember }
+        returnObject = { member: invitedMember },
+        memberAndGuildContext = `${member} from ${guild.name} has invited you to`
+      unknownMessage = `The above link may show as "#unknown" momentarily, but the link should still work fine.`
 
       if (memberIsPermissible === true) {
         returnObject.message =
-          `${member} has invited you to ${channel} ← click here to jump to it 😊` +
-          `\n\nDon't forget to add the channel to your channel list if you'd like to be a part of it permanently 👍`
+          `${memberAndGuildContext} the **${channel.name}** voice channel, click here to join it → ${channel} 😊` +
+          `\n\n${unknownMessage} Don't forget to add the channel to your channel list if you'd like to be a part of it permanently 👍`
       } else {
         returnObject.message = {
           content:
@@ -156,15 +158,16 @@ async function handleThread(channel, invitedMembers, member) {
         memberIsPermissibleInThread =
           members.cache.get(invitedMember?.id) ||
           (memberIsPermissibleInParent &&
-            thread.type === ChannelType.PublicThread)
+            thread.type === ChannelType.PublicThread),
+        channelType = parentIsForum ? `post` : `thread`
 
       if (memberIsPermissibleInThread) {
-        let message = `${member} has invited you to view ${thread} ← click here to jump to it 😊`
+        let message = `${memberAndGuildContext} view the **#${thread.name}** ${channelType}, click here to jump to it → ${thread} 😊`
 
         if (parentIsForum)
-          message += `\n\nDon't forget to follow the post if you'd like to be a part of it permanently 👍`
+          message += `\n\n${unknownMessage} Don't forget to follow the post if you'd like to be a part of it permanently 👍`
         else
-          message += `\n\nDon't forget to join the thread if you'd like to be a part of it permanently 👍`
+          message += `\n\n${unknownMessage} Don't forget to join the thread if you'd like to be a part of it permanently 👍`
 
         returnObject.message = message
       } else {
@@ -183,8 +186,6 @@ async function handleThread(channel, invitedMembers, member) {
           categoryContext = category
             ? ` in the **${category.name}** category`
             : ``
-
-        let channelType = parentIsForum ? `post` : `thread`
 
         returnObject.message = {
           content:
@@ -222,8 +223,8 @@ async function handleTextChannel(channel, members, member) {
 
     if (memberIsPermissible)
       returnObject.message =
-        `${member} has invited you to view ${channel} ← click here to jump to it 😊` +
-        `\n\nDon't forget to add the channel to your channel list if you'd like to be a part of it permanently 👍`
+        `${memberAndGuildContext} view the **#${channel.name}** text channel, click here to join it → ${channel} 😊` +
+        `\n\n${unknownMessage} Don't forget to add the channel to your channel list if you'd like to be a part of it permanently 👍`
     else {
       const joinChannelButton = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
