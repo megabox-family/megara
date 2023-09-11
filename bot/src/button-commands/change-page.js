@@ -2,9 +2,13 @@ import { EmbedBuilder } from 'discord.js'
 import { directMessageError } from '../utils/error-logging.js'
 import { toggleListButtons } from '../utils/buttons.js'
 import { getGroupBy, getPageData } from '../repositories/lists.js'
+import { queueApiCall } from '../api-queue.js'
 
 export default async function (interaction) {
-  await interaction.deferUpdate()
+  await queueApiCall({
+    apiCall: `deferUpdate`,
+    djsObject: interaction,
+  })
 
   const guild = interaction.guild,
     member = interaction.member,
@@ -66,5 +70,9 @@ export default async function (interaction) {
 
   const newComponents = [paginationButtons]
 
-  await interaction.editReply({ embeds: [newEmbed], components: newComponents })
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: { embeds: [newEmbed], components: newComponents },
+  })
 }

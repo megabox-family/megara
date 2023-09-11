@@ -11,7 +11,7 @@ import {
 } from '../repositories/attendees.js'
 import { guestPicker } from '../utils/general-commands.js'
 import { getVenmoTag } from '../repositories/venmo.js'
-import { ButtonBuilder, ButtonStyle } from 'discord.js'
+import { ButtonBuilder, ButtonStyle, ChannelType } from 'discord.js'
 
 export async function logAttendance(context) {
   const {
@@ -22,16 +22,24 @@ export async function logAttendance(context) {
       prependMessage,
     } = context,
     { user } = interaction,
-    { id: messageId, thread } = message,
+    { id: messageId, thread: _thread } = message,
     attendeeRecord = getAttendeesRecord
       ? await getAttendeeRecord(user.id, messageId)
-      : { length: 0 },
-    threadMembers = thread?.members
+      : { length: 0 }
+
+  let thread
+
+  if (_thread) thread = _thread
+  else if (interaction.channel.type === ChannelType.PublicThread) {
+    thread = interaction.channel
+  }
+
+  const threadMembers = thread?.members
 
   if (attendeeRecord?.length === 0) {
     await addAttendee(user.id, messageId, guestCount)
 
-    if (!threadMembers.cache.has(user.id))
+    if (!threadMembers?.cache.has(user.id))
       await queueApiCall({
         apiCall: `add`,
         djsObject: threadMembers,

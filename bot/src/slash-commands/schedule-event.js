@@ -5,7 +5,9 @@ import {
   AttachmentBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ChannelType,
   EmbedBuilder,
+  ThreadAutoArchiveDuration,
 } from 'discord.js'
 import { srcPath } from '../utils/general.js'
 import { checkIfUrlContainsImage, getImdbMovieId } from '../utils/validation.js'
@@ -56,9 +58,9 @@ export const dmPermission = false,
     },
     {
       name: `thread-name`,
-      description: `Sets the name of the thread spawned under the event message.`,
+      description: `Sets the name of the thread/post spawned for this event.`,
       type: ApplicationCommandOptionType.String,
-      required: true,
+      required: false,
     },
     {
       name: `event-title-override`,
@@ -93,10 +95,14 @@ export const dmPermission = false,
   ]
 
 export default async function (interaction) {
-  const { options, channel, user } = interaction,
-    channelIsThread = isChannelThread(channel)
+  const { guild, options, channel, user } = interaction,
+    parent = guild.channels.cache.get(channel.parentId),
+    channelIsThread = isChannelThread(channel),
+    parentIsForum = parent.type === ChannelType.GuildForum,
+    parentIsText = parent.type === ChannelType.GuildText,
+    channelIsPinned = channel.flags.serialize().Pinned
 
-  if (channelIsThread) {
+  if (channelIsThread && !parentIsForum) {
     await queueApiCall({
       apiCall: `reply`,
       djsObject: interaction,
@@ -146,16 +152,33 @@ export default async function (interaction) {
     return
   }
 
+  const threadName = options.getString(`thread-name`)
+
+  if (!threadName && (channelIsPinned || parentIsText)) {
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: interaction,
+      parameters: {
+        content: `You can't schdule an event in a shceduler post / text channel without providing a thread name 🤔`,
+        ephemeral: true,
+      },
+    })
+
+    return
+  }
+
   await queueApiCall({
     apiCall: `deferReply`,
     djsObject: interaction,
+    parameters: {
+      ephemeral: parentIsForum && channelIsPinned,
+    },
   })
 
   const when = options.getString(`when`),
     where = options.getString(`where`),
     allowGuests = options.getBoolean(`allow-guests`),
     requestVenmo = options.getBoolean(`request-venmo`),
-    threadName = options.getString(`thread-name`),
     eventTitleOverride = options.getString(`event-title-override`),
     activities = options.getString(`activities`),
     notes = options.getString(`notes`)
@@ -216,6 +239,47 @@ export default async function (interaction) {
 
   const thumbnail = new AttachmentBuilder(`${srcPath}/media/${eventType}.jpg`)
 
+  if (parentIsForum && channelIsPinned) {
+    const tags = [],
+      discussionTag = parent.availableTags.find(tag => tag.name === `event`)
+
+    if (discussionTag) tags.push(discussionTag.id)
+
+    if (eventType === `cinema`) {
+      const spoilerTag = parent.availableTags.find(
+        tag => tag.name === `spoilers`
+      )
+
+      if (spoilerTag) tags.push(spoilerTag.id)
+    }
+
+    const thread = await queueApiCall({
+      apiCall: `create`,
+      djsObject: parent.threads,
+      parameters: {
+        name: threadName,
+        type: ChannelType.PublicThread,
+        message: {
+          embeds: [embed],
+          components: [actionRow],
+          files: [thumbnail],
+        },
+        autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
+        appliedTags: tags,
+      },
+    })
+
+    await addEvent(thread.id, user.id, allowGuests, requestVenmo)
+
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `The requested event has been scheduled → ${thread} 🙌`,
+    })
+
+    return
+  }
+
   const replyMessage = await queueApiCall({
     apiCall: `editReply`,
     djsObject: interaction,
@@ -228,9 +292,10 @@ export default async function (interaction) {
 
   await addEvent(replyMessage.id, user.id, allowGuests, requestVenmo)
 
-  await queueApiCall({
-    apiCall: `startThread`,
-    djsObject: replyMessage,
-    parameters: { name: threadName },
-  })
+  if (!parentIsForum)
+    await queueApiCall({
+      apiCall: `startThread`,
+      djsObject: replyMessage,
+      parameters: { name: threadName },
+    })
 }
