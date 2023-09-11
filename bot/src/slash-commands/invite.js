@@ -231,7 +231,7 @@ async function handleTextChannel(channel, members, member) {
 
     if (memberIsPermissible)
       returnObject.message =
-        `${_memberAndGuildContext} view the **#${channel.name}** text channel, click here to join it → ${channel} 😊` +
+        `${_memberAndGuildContext} view the **#${channel.name}** text channel, click here to jump to it → ${channel} 😊` +
         `\n\n${unknownMessage} *Don't forget to add the channel to your channel list if you'd like to be a part of it permanently* 👍`
     else {
       const joinChannelButton = new ActionRowBuilder().addComponents(
