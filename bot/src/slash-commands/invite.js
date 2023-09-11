@@ -87,7 +87,7 @@ export const dmPermission = false,
 let globalMember, globalGuild
 
 const memberAndGuildContext = () =>
-    `${globalMember} from ${globalGuild.name} has invited you to`,
+    `${globalMember} from **${globalGuild.name}** has invited you to`,
   unknownMessage = `The above link may show as "#unknown" momentarily, but the link should still work fine.`
 
 function generateConfirmationMessage(members, channel) {
