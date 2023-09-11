@@ -120,12 +120,14 @@ async function handleVoiceChannel(channel, invitedMembers, member) {
 
       if (memberIsPermissible === true) {
         returnObject.message =
-          `${memberAndGuildContext} the **${channel.name}** voice channel, click here to join it → ${channel} 😊` +
+          `${memberAndGuildContext()} the **${
+            channel.name
+          }** voice channel, click here to join it → ${channel} 😊` +
           `\n\n${unknownMessage} Don't forget to add the channel to your channel list if you'd like to be a part of it permanently 👍`
       } else {
         returnObject.message = {
           content:
-            `${member} from **${guild}** has invited you to the **#${channelName}** voice channel 🙌` +
+            `${memberAndGuildContext()} the **#${channelName}** voice channel 🙌` +
             `\n\nHowever, you don't currently have access. Press the button below to gain access.`,
           components: [joinChannelButton],
         }
@@ -166,7 +168,9 @@ async function handleThread(channel, invitedMembers, member) {
         channelType = parentIsForum ? `post` : `thread`
 
       if (memberIsPermissibleInThread) {
-        let message = `${memberAndGuildContext} view the **#${thread.name}** ${channelType}, click here to jump to it → ${thread} 😊`
+        let message = `${memberAndGuildContext()} view the **#${
+          thread.name
+        }** ${channelType}, click here to jump to it → ${thread} 😊`
 
         if (parentIsForum)
           message += `\n\n${unknownMessage} Don't forget to follow the post if you'd like to be a part of it permanently 👍`
@@ -193,7 +197,9 @@ async function handleThread(channel, invitedMembers, member) {
 
         returnObject.message = {
           content:
-            `${member} from **${guild}** has invited you to the **#${name}** ${channelType} within the **#${parentChannel.name}** channel${categoryContext} 🙌` +
+            `${memberAndGuildContext()} the **#${name}** ${channelType} within the **#${
+              parentChannel.name
+            }** channel${categoryContext} 🙌` +
             `\nIf you're interested in joining, click the button below:`,
           components: [joinThreadButton],
         }
@@ -227,7 +233,9 @@ async function handleTextChannel(channel, members, member) {
 
     if (memberIsPermissible)
       returnObject.message =
-        `${memberAndGuildContext} view the **#${channel.name}** text channel, click here to join it → ${channel} 😊` +
+        `${memberAndGuildContext()} view the **#${
+          channel.name
+        }** text channel, click here to join it → ${channel} 😊` +
         `\n\n${unknownMessage} Don't forget to add the channel to your channel list if you'd like to be a part of it permanently 👍`
     else {
       const joinChannelButton = new ActionRowBuilder().addComponents(
@@ -243,7 +251,7 @@ async function handleTextChannel(channel, members, member) {
 
       returnObject.message = {
         content:
-          `${member} from **${guild}** has invited you to **#${name}**${categoryContext} 🙌` +
+          `${memberAndGuildContext()} **#${name}**${categoryContext} 🙌` +
           `\nIf you're interested in joining, click the button below:`,
         components: [joinChannelButton],
       }
