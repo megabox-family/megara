@@ -98,8 +98,8 @@ export default async function (interaction) {
   const { guild, options, channel, user } = interaction,
     parent = guild.channels.cache.get(channel.parentId),
     channelIsThread = isChannelThread(channel),
-    parentIsForum = parent.type === ChannelType.GuildForum,
-    parentIsText = parent.type === ChannelType.GuildText,
+    parentIsForum = parent?.type === ChannelType.GuildForum,
+    parentIsText = parent?.type === ChannelType.GuildText,
     channelIsPinned = channel.flags.serialize().Pinned
 
   if (channelIsThread && !parentIsForum) {
