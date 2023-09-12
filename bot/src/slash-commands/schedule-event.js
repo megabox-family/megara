@@ -99,7 +99,7 @@ export default async function (interaction) {
     parent = guild.channels.cache.get(channel.parentId),
     channelIsThread = isChannelThread(channel),
     parentIsForum = parent?.type === ChannelType.GuildForum,
-    parentIsText = parent?.type === ChannelType.GuildText,
+    channelIsText = channel?.type === ChannelType.GuildText,
     channelIsPinned = channel.flags.serialize().Pinned
 
   if (channelIsThread && !parentIsForum) {
@@ -154,12 +154,12 @@ export default async function (interaction) {
 
   const threadName = options.getString(`thread-name`)
 
-  if (!threadName && (channelIsPinned || parentIsText)) {
+  if (!threadName && (channelIsPinned || channelIsText)) {
     await queueApiCall({
       apiCall: `reply`,
       djsObject: interaction,
       parameters: {
-        content: `You can't schdule an event in a shceduler post / text channel without providing a thread name 🤔`,
+        content: `You can't schdule an event in a scheduler post / text channel without providing a thread name 🤔`,
         ephemeral: true,
       },
     })
