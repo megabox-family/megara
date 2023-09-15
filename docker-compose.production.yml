@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   bot:
-    image: jordanfuzz/megara:${{ steps.vars.outputs.sha_short }}
+    image: jordanfuzz/megara:$${{ steps.vars.outputs.sha_short }}
     env_file: /home/megara/host-files/.env
     depends_on:
       - prod-db
