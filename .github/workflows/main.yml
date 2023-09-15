@@ -1,0 +1,32 @@
+on:
+  push:
+    branches:
+      - main
+jobs:
+  bot-push-to-registry:
+    name: push bot
+    runs-on: self-hosted
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: set variables
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      - name: docker login
+        run: echo ${{ secrets.REGISTRY_PASSWORD }} | base64 -d | docker login -u ${{ secrets.REGISTRY_USER }} --password-stdin
+      - name: build
+        run: |
+          docker build --tag megara:latest --tag megara:${{ steps.vars.outputs.sha_short }}
+          docker push jordanfuzz/megara:latest
+          docker push jordanfuzz/megara:${{ steps.vars.outputs.sha_short }}
+  deploy:
+    name: deploy
+    runs-on: self-hosted
+    steps:
+    - name: set variables
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+    - name: pull images
+      run: docker pull jordanfuzz/megara:${{ steps.vars.outputs.sha_short }}
+    - name: start megara
+      run: docker-compose -f docker-compose.production.yml up -d --force-recreate

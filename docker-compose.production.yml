@@ -2,51 +2,51 @@ version: '3.7'
 
 services:
   bot:
-    image: ${BOT_IMAGE}:${CI_COMMIT_SHORT_SHA}
+    image: jordanfuzz/megara:${{ steps.vars.outputs.sha_short }}
     env_file: /home/megara/host-files/.env
     depends_on:
-      - postgres
+      - prod-db
     deploy:
       restart_policy:
         condition: on-failure
         delay: 5s
         max_attempts: 10
         window: 60s
-  postgres:
+  prod-db:
     image: postgres:12.3-alpine
-    env_file: /home/megara/host-files/.env
-    ports:
-      - '5433:5432'
+    env_file: /home/ultrabox/host-files/.env
     volumes:
-      - /home/megara/host-files/postgres-data:/var/lib/postgresql/data
-    deploy:
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 10
-        window: 60s
-  ui:
-    image: ${CONTAINER_IMAGE}-ui:${CI_COMMIT_SHORT_SHA}
-    env_file: /home/megara/host-files/.env
-    depends_on:
-      - postgres
-      - api
+      - /home/ultrabox/host-files/postgres-data:/var/lib/postgresql/data
     ports:
-      - '80:80'
+      - '5432:5432'
     deploy:
       restart_policy:
         condition: on-failure
         delay: 5s
         max_attempts: 10
         window: 60s
-  api:
-    image: ${CONTAINER_IMAGE}-api:${CI_COMMIT_SHORT_SHA}
-    env_file: /home/megara/host-files/.env
-    ports:
-      - '3002:3002'
-    deploy:
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 10
-        window: 60s
+  # ui:
+  #   image: ${CONTAINER_IMAGE}-ui:${CI_COMMIT_SHORT_SHA}
+  #   env_file: /home/megara/host-files/.env
+  #   depends_on:
+  #     - prod-db
+  #     - api
+  #   ports:
+  #     - '80:80'
+  #   deploy:
+  #     restart_policy:
+  #       condition: on-failure
+  #       delay: 5s
+  #       max_attempts: 10
+  #       window: 60s
+  # api:
+  #   image: ${CONTAINER_IMAGE}-api:${CI_COMMIT_SHORT_SHA}
+  #   env_file: /home/megara/host-files/.env
+  #   ports:
+  #     - '3002:3002'
+  #   deploy:
+  #     restart_policy:
+  #       condition: on-failure
+  #       delay: 5s
+  #       max_attempts: 10
+  #       window: 60s
