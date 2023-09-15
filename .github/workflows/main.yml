@@ -17,7 +17,7 @@ jobs:
         run: echo ${{ secrets.REGISTRY_PASSWORD }} | base64 -d | docker login -u ${{ secrets.REGISTRY_USER }} --password-stdin
       - name: build
         run: |
-          docker build --tag megara:latest --tag megara:${{ steps.vars.outputs.sha_short }} ./bot
+          docker build --tag jordanfuzz/megara:latest --tag jordanfuzz/megara:${{ steps.vars.outputs.sha_short }} ./bot
           docker push jordanfuzz/megara:latest
           docker push jordanfuzz/megara:${{ steps.vars.outputs.sha_short }}
   deploy:
