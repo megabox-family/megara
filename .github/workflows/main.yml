@@ -5,6 +5,7 @@ on:
 jobs:
   bot-push-to-registry:
     name: push bot
+    environment: prod
     runs-on: self-hosted
     steps:
       - name: checkout
@@ -21,7 +22,10 @@ jobs:
           docker push jordanfuzz/megara:${{ steps.vars.outputs.sha_short }}
   deploy:
     name: deploy
+    environment: prod
     runs-on: self-hosted
+    needs:
+    - bot-push-to-registry
     steps:
     - name: set variables
       id: vars
