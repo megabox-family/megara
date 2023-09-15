@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   bot:
-    image: jordanfuzz/megara:latest
+    image: jordanfuzz/megara:${GITHUB_SHA}
     env_file: /home/ultrabox/host-files/.env
     depends_on:
       - prod-db

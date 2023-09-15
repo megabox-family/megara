@@ -30,6 +30,10 @@ jobs:
     - name: set variables
       id: vars
       run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+    - name: set variables to env
+      run: |
+        touch .env
+        echo GITHUB_SHA=${{ steps.vars.outputs.sha_short }} >> .env
     - name: pull images
       run: docker pull jordanfuzz/megara:${{ steps.vars.outputs.sha_short }}
     - name: start megara
