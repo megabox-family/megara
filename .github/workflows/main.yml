@@ -3,40 +3,37 @@ on:
     branches:
       - main
 jobs:
+  create-env:
+    name: create env file
+    environment: prod
+    runs-on: self-hosted
+    run: |
+      touch .env
+      echo GITHUB_SHA_SHORT=$(git rev-parse --short HEAD) >> .env
   bot-push-to-registry:
     name: push bot
     environment: prod
     runs-on: self-hosted
+    needs: 
+      - create-env
     steps:
       - name: checkout
         uses: actions/checkout@v3
-      - name: set variables
-        id: vars
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
       - name: docker login
         run: echo ${{ secrets.REGISTRY_PASSWORD }} | base64 -d | docker login -u ${{ secrets.REGISTRY_USER }} --password-stdin
       - name: build
         run: |
-          docker build --tag jordanfuzz/megara:latest --tag jordanfuzz/megara:${{ steps.vars.outputs.sha_short }} ./bot
+          docker build --tag jordanfuzz/megara:latest --tag jordanfuzz/megara:${{ GITHUB_SHA_SHORT }} ./bot
           docker push jordanfuzz/megara:latest
-          docker push jordanfuzz/megara:${{ steps.vars.outputs.sha_short }}
+          docker push jordanfuzz/megara:${{ GITHUB_SHA_SHORT }}
   deploy:
     name: deploy
     environment: prod
     runs-on: self-hosted
     needs:
-    - bot-push-to-registry
+      - bot-push-to-registry
     steps:
-    - name: set variables
-      id: vars
-      run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-    - name: set variables to env
-      run: |
-        touch .env
-        echo GITHUB_SHA_SHORT=${{ steps.vars.outputs.sha_short }} >> .env
-    - name: print env
-      run: env
-    - name: pull images
-      run: docker pull jordanfuzz/megara:${{ steps.vars.outputs.sha_short }}
-    - name: start megara
-      run: docker-compose -f docker-compose.production.yml up -d --force-recreate
+      - name: pull images
+        run: docker pull jordanfuzz/megara:${{ GITHUB_SHA_SHORT }}
+      - name: start megara
+        run: docker-compose -f docker-compose.production.yml up -d --force-recreate
