@@ -25,28 +25,28 @@ services:
         delay: 5s
         max_attempts: 10
         window: 60s
-  # ui:
-  #   image: ${CONTAINER_IMAGE}-ui:${CI_COMMIT_SHORT_SHA}
-  #   env_file: /home/megara/host-files/.env
-  #   depends_on:
-  #     - prod-db
-  #     - api
-  #   ports:
-  #     - '80:80'
-  #   deploy:
-  #     restart_policy:
-  #       condition: on-failure
-  #       delay: 5s
-  #       max_attempts: 10
-  #       window: 60s
-  # api:
-  #   image: ${CONTAINER_IMAGE}-api:${CI_COMMIT_SHORT_SHA}
-  #   env_file: /home/megara/host-files/.env
-  #   ports:
-  #     - '3002:3002'
-  #   deploy:
-  #     restart_policy:
-  #       condition: on-failure
-  #       delay: 5s
-  #       max_attempts: 10
-  #       window: 60s
+  ui:
+    image: jordanfuzz/megabox-ui:${GITHUB_SHA_SHORT}
+    env_file: /home/ultrabox/host-files/.env
+    depends_on:
+      - prod-db
+      - api
+    ports:
+      - '80:80'
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 10
+        window: 60s
+  api:
+    image: jordanfuzz/megabox-api:${GITHUB_SHA_SHORT}
+    env_file: /home/ultrabox/host-files/.env
+    ports:
+      - '3002:3002'
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 10
+        window: 60s

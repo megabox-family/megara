@@ -4,7 +4,7 @@ on:
       - main
 jobs:
   bot-push-to-registry:
-    name: push bot
+    name: build bot
     environment: prod
     runs-on: self-hosted
     steps:
@@ -21,7 +21,7 @@ jobs:
           docker push jordanfuzz/megara:latest
           docker push jordanfuzz/megara:${{ steps.vars.outputs.sha_short }}
   api-push-to-registry:
-    name: push api
+    name: build api
     environment: prod
     runs-on: self-hosted
     steps:
@@ -38,7 +38,7 @@ jobs:
           docker push jordanfuzz/megabox-api:latest
           docker push jordanfuzz/megabox-api:${{ steps.vars.outputs.sha_short }}
   ui-push-to-registry:
-    name: push ui
+    name: build ui
     environment: prod
     runs-on: self-hosted
     steps:
