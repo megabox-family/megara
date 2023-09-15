@@ -24,8 +24,8 @@ jobs:
     runs-on: self-hosted
     steps:
     - name: set variables
-        id: vars
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      id: vars
+      run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
     - name: pull images
       run: docker pull jordanfuzz/megara:${{ steps.vars.outputs.sha_short }}
     - name: start megara
