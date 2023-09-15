@@ -7,9 +7,11 @@ jobs:
     name: create env file
     environment: prod
     runs-on: self-hosted
-    run: |
-      touch .env
-      echo GITHUB_SHA_SHORT=$(git rev-parse --short HEAD) >> .env
+    steps:
+      - name: setup env
+        run: |
+          touch .env
+          echo GITHUB_SHA_SHORT=$(git rev-parse --short HEAD) >> .env
   bot-push-to-registry:
     name: push bot
     environment: prod
