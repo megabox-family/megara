@@ -1,33 +1,18 @@
---guilds
-drop table if exists guilds;
+-- attendees
+drop table if exists attendees;
 
-create table guilds (
-  id text not null primary key,
-  guild_name text not null,
-  channel_sorting boolean not null default false,
-  role_sorting boolean not null default false,
-  rules text,
-  admin_channel text,
-  announcement_channel text,
-  welcome_channel text,
-  active_world text,
-  pause_channel_notifications boolean not null,
-  vip_assign_message text,
-  vip_remove_message text,
-  server_subscription_button_text text,
-  active_voice_category_id text,
-  inactive_voice_category_id text
-  vip_role_id text,
-  admin_role_id text,
-  channel_notifications_role_id text
+create table attendees (
+  id uuid primary key,
+  user_id text not null,
+  event_id text not null,
+  guest_count int not null
 );
 
-
---channels
+-- channels
 drop table if exists channels;
 
 create table channels (
-  id text not null primary key,
+  id text primary key,
   name text not null,
   guild_id text not null,
   alpha_type text not null,
@@ -44,29 +29,11 @@ create table channels (
   create_message_id text
 );
 
--- vip-user-overrides
-drop table if exists vip_user_overrides;
-
-create table vip_user_overrides (
-  id uuid not null primary key,
-  user_id text not null,
-  guild_id text not null
-);
-
--- worlds
-drop table if exists worlds;
-
-create table worlds (
-  id uuid not null primary key,
-  name text not null,
-  guild_id text not null
-);
-
 -- coordinates
 drop table if exists coordinates;
 
 create table coordinates (
-  id uuid not null primary key,
+  id uuid primary key,
   name text not null,
   world_id uuid not null,
   created_by text not null,
@@ -76,11 +43,44 @@ create table coordinates (
   dimension text not null
 );
 
+-- events
+drop table if exists events;
+
+create table events (
+  id text primary key,
+  created_by text not null,
+  allow_guests boolean not null,
+  request_venmo boolean not null
+);
+
+-- guilds
+drop table if exists guilds;
+
+create table guilds (
+  id text primary key,
+  guild_name text not null,
+  channel_sorting boolean not null default false,
+  role_sorting boolean not null default false,
+  rules text,
+  admin_channel text,
+  announcement_channel text,
+  welcome_channel text,
+  active_world text,
+  vip_role_id text,
+  pause_channel_notifications boolean not null,
+  vip_assign_message text,
+  vip_remove_message text,
+  admin_role_id text,
+  channel_notifications_role_id text
+  active_voice_category_id text,
+  inactive_voice_category_id text
+);
+
 -- lists
 drop table if exists lists;
 
 create table lists (
-  id text not null primary key,
+  id text primary key,
   title text not null,
   description text,
   page_data text not null,
@@ -89,71 +89,80 @@ create table lists (
   filters text
 );
 
--- pins
+-- movie invites
+drop table if exists movie_invites;
+
+create table movie_invites (
+  id text primary key,
+  last_updated bigint not null
+);
+
+-- pinned messages
 drop table if exists pinned_messages;
 
 create table pinned_messages (
-  id text not null primary key,
+  id text primary key,
   pinned_by text not null
 );
 
--- users
-drop table if exists users;
+-- poll-data
+drop table if exists poll_data;
 
-create table users (
-  id uuid not null primary key,
-  discord_id text not null,
-  discord_username text,
-  last_seen_at timestamp without time zone
+create table poll_data (
+  id uuid primary key,
+  voter_id text not null,
+  poll_id text not null,
+  choices text not null
 );
 
 -- polls
 drop table if exists polls;
 
 create table polls (
-  id text not null primary key,
+  id text primary key,
   channel_id text not null,
   started_by text not null,
   start_time bigint not null,
   end_time bigint not null,
+  question text not null,
   candidates text not null,
   total_choices integer not null,
   required_choices integer not null,
   ranked_choice_voting boolean not null
 );
 
-drop table if exists poll_data;
+-- users
+drop table if exists users;
 
-create table poll_data (
-  id uuid not null primary key,
-  voter_id text not null,
-  poll_id text not null,
-  choices text not null
-);
-
--- events
-drop table if exists events;
-
-create table events (
-  id text not null primary key,
-  created_by text not null,
-  allow_guests boolean not null,
-  request_venmo boolean not null
-);
-
-drop table if exists attendees;
-
-create table attendees (
+create table users (
   id uuid primary key,
-  user_id text not null,
-  event_id text not null,
-  guest_count int not null
+  discord_id text not null,
+  discord_username text,
+  last_seen_at timestamp without time zone
 );
 
 -- venmo
 drop table if exists venmo;
 
 create table venmo (
-  id text not null primary key,
+  id text primary key,
   tag text not null
+);
+
+-- vip user overrides
+drop table if exists vip_user_overrides;
+
+create table vip_user_overrides (
+  id uuid primary key,
+  user_id text not null,
+  guild_id text not null
+);
+
+-- worlds
+drop table if exists worlds;
+
+create table worlds (
+  id uuid primary key,
+  name text not null,
+  guild_id text not null
 );
