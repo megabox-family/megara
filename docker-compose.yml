@@ -3,9 +3,6 @@ version: '3.7'
 services:
   bot:
     build: ./bot
-    ports:
-      - '5433:5433'
-      - '5434:5434'
     command: nodemon ./src
     volumes:
       - ./bot:/app
@@ -23,8 +20,6 @@ services:
     command: nodemon ./src
     ports:
       - '3002:3002'
-      - '5433:5433'
-      - '5434:5434'
     volumes:
       - ./api:/app
     env_file: .env

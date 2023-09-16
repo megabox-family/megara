@@ -2,6 +2,7 @@ import pgPool from '../pg-pool.js'
 import camelize from 'camelize'
 import SQL from 'sql-template-strings'
 import { deleteAllGuildChannels } from './channels.js'
+import { deleteNewRoles } from '../utils/roles.js'
 
 export async function createGuild(guild) {
   pgPool
@@ -56,7 +57,7 @@ export async function syncGuilds(guilds) {
     liveGuildIds.push(guild.id)
   })
 
-  pgPool
+  const guildTableRows = await pgPool
     .query(
       `
         select
@@ -65,35 +66,34 @@ export async function syncGuilds(guilds) {
         from guilds
       `
     )
-    .then(table => {
-      const rows = camelize(table.rows),
-        tabledGuildIds = rows.map(row => row.id),
-        allGuildIds = [...new Set([...liveGuildIds, ...tabledGuildIds])]
-
-      allGuildIds.forEach(async guildId => {
-        const guild = guilds.get(guildId)
-
-        if (
-          liveGuildIds.includes(guildId) &&
-          !tabledGuildIds.includes(guildId)
-        ) {
-          await deleteNewRoles(guild)
-          await createGuild(guild, true)
-        } else if (
-          !liveGuildIds.includes(guildId) &&
-          tabledGuildIds.includes(guildId)
-        ) {
-          await deleteGuild(guildId)
-          await deleteAllGuildChannels(guildId)
-        } else {
-          const guildRecord = rows.find(row => row.id === guildId)
-
-          if (guild.name !== guildRecord.name) {
-            await modifyGuild(guild)
-          }
-        }
-      })
+    .then(res => camelize(res.rows))
+    .catch(error => {
+      console.log(error)
     })
+
+  const tabledGuildIds = guildTableRows.map(row => row.id),
+    allGuildIds = [...new Set([...liveGuildIds, ...tabledGuildIds])]
+
+  allGuildIds.forEach(async guildId => {
+    const guild = guilds.get(guildId)
+
+    if (liveGuildIds.includes(guildId) && !tabledGuildIds.includes(guildId)) {
+      await deleteNewRoles(guild)
+      await createGuild(guild, true)
+    } else if (
+      !liveGuildIds.includes(guildId) &&
+      tabledGuildIds.includes(guildId)
+    ) {
+      await deleteGuild(guildId)
+      await deleteAllGuildChannels(guildId)
+    } else {
+      const guildRecord = guildTableRows.find(row => row.id === guildId)
+
+      if (guild.name !== guildRecord.name) {
+        await modifyGuild(guild)
+      }
+    }
+  })
 }
 
 export async function setAdminChannel(guildId, channelId) {

@@ -34,7 +34,7 @@ export default async function (interaction) {
     groupBy = `position-overrides`,
     pages = await getPages({ recordsPerPage, groupBy, guild })
 
-  if (pages.length === 0) {
+  if (pages?.length === 0 || !pages) {
     await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,

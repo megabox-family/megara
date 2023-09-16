@@ -67,7 +67,7 @@ create table guilds (
   welcome_channel text,
   active_world text,
   vip_role_id text,
-  pause_channel_notifications boolean not null,
+  pause_channel_notifications boolean not null default false,
   vip_assign_message text,
   vip_remove_message text,
   admin_role_id text,
