@@ -15,7 +15,7 @@ export default {
     user: e.POSTGRES_USER,
     database: e.POSTGRES_DB,
     password: e.POSTGRES_PASSWORD,
-    port: 5432,
+    port: e.POSTGRES_PORT,
   },
   botToken: e.DISCORD_BOT_TOKEN,
   isDevelopment,
