@@ -71,7 +71,7 @@ create table guilds (
   vip_assign_message text,
   vip_remove_message text,
   admin_role_id text,
-  channel_notifications_role_id text
+  channel_notifications_role_id text,
   active_voice_category_id text,
   inactive_voice_category_id text
 );
