@@ -7,6 +7,8 @@ services:
     volumes:
       - ./bot:/app
     env_file: .env
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
   ui:
     build: ./app
     ports:
@@ -15,6 +17,8 @@ services:
       - ./app:/app
       - ./app/node_modules:/app/node_modules
     env_file: .env
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
   api:
     build: ./api
     command: nodemon ./src
@@ -23,3 +27,5 @@ services:
     volumes:
       - ./api:/app
     env_file: .env
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
