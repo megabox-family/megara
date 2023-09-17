@@ -34,7 +34,9 @@ export default async function (interaction) {
     groupBy = `worlds-world`,
     pages = await getPages({ recordsPerPage, groupBy, guild })
 
-  if (pages.length === 0) {
+  // console.log(pages)
+
+  if (pages?.length === 0) {
     await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,

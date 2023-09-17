@@ -238,7 +238,7 @@ export async function getPages(context) {
       break
   }
 
-  if (!(query?.length > 0)) return
+  if (!(query?.length > 0)) return []
 
   if (activeWorldName)
     query.forEach(record => {

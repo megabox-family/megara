@@ -78,7 +78,7 @@ export default async function (interaction, isPrivate = false) {
     if (!inactiveVoiceCategory) await setInactiveVoiceCategoryId(guildId, null)
 
     await queueApiCall({
-      apiCall: `editReply`,
+      apiCall: `reply`,
       djsObject: interaction,
       parameters: {
         content: `It seems that the voice functionality in this server is misconfigured, please contact an admin 🤔`,

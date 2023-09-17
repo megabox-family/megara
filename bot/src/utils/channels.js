@@ -633,10 +633,12 @@ export async function getPositionOverrides(guild) {
     channelPositionOverrides = []
 
   categoryBuckets.forEach(categoryBucket => {
-    positionOverrides.push({
-      group: `categories`,
-      values: `<#${categoryBucket.id}>: ${categoryBucket.positionOverride}`,
-    })
+    if (categoryBucket?.positionOverride) {
+      positionOverrides.push({
+        group: `categories`,
+        values: `<#${categoryBucket.id}>: ${categoryBucket.positionOverride}`,
+      })
+    }
   })
 
   categoryBuckets.forEach(categoryBucket => {

@@ -61,7 +61,6 @@ create table guilds (
   guild_name text not null,
   channel_sorting boolean not null default false,
   role_sorting boolean not null default false,
-  rules text,
   admin_channel text,
   announcement_channel text,
   welcome_channel text,
