@@ -1,3 +1,3 @@
-# Megara
+# megara
 
-The Megabox discord bot
+a pink discord robot 😊
