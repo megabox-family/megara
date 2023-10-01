@@ -1,3 +1,5 @@
+// /schedule-event event-type:cinema start-datetime:10/04/23 19:35 where:Ogden Megaplex allow-guests:True request-venmo:True imdb-url:https://www.imdb.com/title/tt21807222/?ref_=nv_sr_srsg_1_tt_7_nm_0_q_saw image-url:https://dx35vtwkllhj9.cloudfront.net/lionsgateus/saw-x/images/regions/us/share.png
+
 import config from '../../config.js'
 import {
   ActionRowBuilder,
@@ -339,18 +341,20 @@ export default async function (interaction) {
   else if (eventType === `cinema`) eventTitle = `${eventType} event 🍿`
   else eventTitle = `${eventType} event 🆕`
 
-  const movieField = `[${title}](<${imdbUrl}>)`,
-    when = [`start - <t:${startUnix}:F> (<t:${startUnix}:R>)`]
+  const movieField = `[${title}](<${imdbUrl}>)`
+  //   when = [`start - <t:${startUnix}:F>\n(<t:${startUnix}:R>)`]
 
-  if (endUnix) {
-    when.push(`end - <t:${endUnix}:F>`)
-    when.push(`duration - ${durationString}`)
-  }
+  // if (endUnix) {
+  //   when.push(`end - <t:${endUnix}:F>`)
+  //   when.push(`duration - ${durationString}`)
+  // }
 
   const uriWhere = encodeURIComponent(where),
     _where = `[${where}](<https://www.google.com/search?q=${uriWhere}>)`,
     fields = [
-      { name: `when`, value: when.join(`\n`) },
+      { name: `start`, value: `<t:${startUnix}:F>\n(<t:${startUnix}:R>)` },
+      { name: `end`, value: `<t:${endUnix}:F>\n(<t:${startUnix}:R>)` },
+      { name: `duration`, value: durationString },
       { name: `where`, value: _where },
     ]
 
