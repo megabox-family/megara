@@ -14,6 +14,7 @@ import {
   selectCommands,
   slashCommands,
   srcPath,
+  startEventTimers,
   startPollTimers,
 } from '../utils/general.js'
 import {
@@ -36,7 +37,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
 import { addVoiceMemberToParentThread } from '../utils/threads.js'
 import { getChannelCustomFunction } from '../repositories/channels.js'
 
-export async function startup(bot) {
+export async function handleReady(bot) {
   console.log(`logged in as ${bot.user.tag} 😈`)
   console.log(`nodejs version - ${process.version}`)
 
@@ -60,8 +61,9 @@ export async function startup(bot) {
   }
 
   await startPollTimers()
+  await startEventTimers()
 
-  if (bot.user.username === `Omegara`) await test(bot)
+  if (bot.user.username !== `megara`) await test(bot)
 }
 
 export async function handleMessageCreate(message) {

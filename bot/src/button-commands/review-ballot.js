@@ -1,5 +1,5 @@
 import { ActionRowBuilder } from 'discord.js'
-import moment from 'moment/moment.js'
+import moment from 'moment-timezone'
 import { getVoterChoices } from '../repositories/poll-data.js'
 import { getPollEndTime } from '../repositories/polls.js'
 import { getRetractVoteButton } from '../utils/buttons.js'

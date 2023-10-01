@@ -6,6 +6,8 @@ services:
     command: nodemon ./src
     volumes:
       - ./bot:/app
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     env_file: .env
     extra_hosts:
       - 'host.docker.internal:host-gateway'
@@ -16,6 +18,8 @@ services:
     volumes:
       - ./app:/app
       - ./app/node_modules:/app/node_modules
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     env_file: .env
     extra_hosts:
       - 'host.docker.internal:host-gateway'
@@ -26,6 +30,8 @@ services:
       - '3002:3002'
     volumes:
       - ./api:/app
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     env_file: .env
     extra_hosts:
       - 'host.docker.internal:host-gateway'

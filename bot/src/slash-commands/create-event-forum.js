@@ -128,6 +128,7 @@ export default async function (interaction) {
         permissionOverwrites: permissions,
         availableTags: [
           { name: `bot commands`, emoji: { name: `🤖` } },
+          { name: `concluded`, emoji: { name: `🏁` } },
           { name: `event`, emoji: { name: `🆕` } },
           { name: `spoilers`, emoji: { name: `❗` } },
         ],

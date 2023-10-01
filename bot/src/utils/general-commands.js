@@ -6,7 +6,7 @@ import {
   StringSelectMenuBuilder,
   Collection,
 } from 'discord.js'
-import moment from 'moment/moment.js'
+import moment from 'moment-timezone'
 import {
   getAllVoterChoices,
   getVoterChoices,
@@ -26,7 +26,7 @@ import {
 import { getBot } from '../cache-bot.js'
 import { queueApiCall } from '../api-queue.js'
 
-export const pollTimeoutMap = new Map(),
+export const timoutMap = new Map(),
   guestPicker = new StringSelectMenuBuilder()
     .setCustomId(`event-guests`)
     .setPlaceholder(`How many guests are you bringing?`)
@@ -636,11 +636,11 @@ export async function printPollResults(channelId, messageId) {
     components: newComponents,
   })
 
-  const timeOutId = pollTimeoutMap.get(message.id)
+  const timeOutId = timoutMap.get(message.id)
 
   await setPollEndTime(message.id, currentTime)
 
   clearTimeout(timeOutId)
 
-  pollTimeoutMap.delete(message.id)
+  timoutMap.delete(message.id)
 }

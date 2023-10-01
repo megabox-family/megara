@@ -9,11 +9,19 @@ import {
   EmbedBuilder,
   ThreadAutoArchiveDuration,
 } from 'discord.js'
-import { srcPath } from '../utils/general.js'
-import { checkIfUrlContainsImage, getImdbMovieId } from '../utils/validation.js'
+import moment from 'moment-timezone'
+import { convertSecondsToDurationString, srcPath } from '../utils/general.js'
+import {
+  checkIfUrlContainsImage,
+  extractFirstNumber,
+  getImdbMovieId,
+  validateDatetime,
+} from '../utils/validation.js'
 import { isChannelThread } from '../utils/channels.js'
 import { queueApiCall } from '../api-queue.js'
-import { addEvent } from '../repositories/events.js'
+import { addEvent, setConcluded } from '../repositories/events.js'
+import { getThreadById } from '../utils/threads.js'
+import { getBot } from '../cache-bot.js'
 
 const { omdbKey } = config
 
@@ -33,8 +41,8 @@ export const dmPermission = false,
       ],
     },
     {
-      name: `when`,
-      description: `When the event will occur (single date/time, or a range).`,
+      name: `start-datetime`,
+      description: `The date and time at which the event will start (ie 9/29/23 7:30pm, 9/29/23 19:30).`,
       type: ApplicationCommandOptionType.String,
       required: true,
     },
@@ -55,6 +63,12 @@ export const dmPermission = false,
       description: `Determines if the attendee's venmo tag is requested when they mark as attending.`,
       type: ApplicationCommandOptionType.Boolean,
       required: true,
+    },
+    {
+      name: `end-datetime`,
+      description: `The date and time at which the event will end (ie 9/29/23 9:30pm, 9/29/23 21:30).`,
+      type: ApplicationCommandOptionType.String,
+      required: false,
     },
     {
       name: `thread-name`,
@@ -87,12 +101,48 @@ export const dmPermission = false,
       required: false,
     },
     {
+      name: `account-for-trailers`,
+      description: `Adds 20 minutes to the event duration to account for trailers. (default is true)`,
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    },
+    {
       name: `notes`,
       description: `Custom notes regarding this event.`,
       type: ApplicationCommandOptionType.String,
       required: false,
     },
   ]
+
+export async function concludeEvent(parentId, messageId) {
+  await setConcluded(messageId)
+
+  const bot = getBot(),
+    parent = bot.channels.cache.get(parentId),
+    isParentForum = parent?.type === ChannelType.GuildForum
+
+  if (!isParentForum) return
+
+  const thread = await getThreadById(parent, messageId)
+
+  if (!thread) return
+
+  const eventTag = parent.availableTags.find(tag => tag.name === `event`),
+    concludedTag = parent.availableTags.find(tag => tag.name === `concluded`),
+    tagIdSet = new Set(thread.appliedTags)
+
+  if (eventTag) tagIdSet.delete(eventTag.id)
+
+  const newTags = [...tagIdSet]
+
+  if (concludedTag) newTags.unshift(concludedTag.id)
+
+  await queueApiCall({
+    apiCall: `edit`,
+    djsObject: thread,
+    parameters: { appliedTags: newTags },
+  })
+}
 
 export default async function (interaction) {
   const { guild, options, channel, user } = interaction,
@@ -134,17 +184,21 @@ export default async function (interaction) {
   const eventType = options.getString(`event-type`),
     imdbUrl = options.getString(`imdb-url`),
     imdbId = getImdbMovieId(imdbUrl),
-    { Title: title, Poster: poster } =
-      (await fetch(`http://www.omdbapi.com/?i=${imdbId}&apikey=${omdbKey}`)
-        .then(response => response?.json())
-        .catch(error => null)) || {}
+    {
+      Title: title,
+      Poster: poster,
+      Runtime: runtime,
+    } = (await fetch(`http://www.omdbapi.com/?i=${imdbId}&apikey=${omdbKey}`)
+      .then(response => response?.json())
+      .catch(error => null)) || {}
 
   if (eventType === `cinema` && !title) {
     await queueApiCall({
       apiCall: `reply`,
       djsObject: interaction,
       parameters: {
-        content: 'You provided an invalid IMDb id/url 😡',
+        content:
+          'You either provided an invalid IMDb id/url or the movie has no title attribute 🤔',
         ephemeral: true,
       },
     })
@@ -152,20 +206,112 @@ export default async function (interaction) {
     return
   }
 
-  const threadName = options.getString(`thread-name`)
+  let threadName = options.getString(`thread-name`)
 
-  if (!threadName && (channelIsPinned || channelIsText)) {
+  if (!threadName && eventType !== `cinema`) {
     await queueApiCall({
       apiCall: `reply`,
       djsObject: interaction,
       parameters: {
-        content: `You can't schdule an event in a scheduler post / text channel without providing a thread name 🤔`,
+        content: `You can't schedule a non-cinema event in a scheduler post / text channel without providing a thread name 🤔`,
         ephemeral: true,
       },
     })
 
     return
   }
+
+  // time junk ---------------------------------------------------------------
+  const startDateTime = options.getString(`start-datetime`),
+    startDateValidationResponse = validateDatetime(startDateTime)
+
+  if (!startDateValidationResponse.isValid) {
+    await queueApiCall({
+      apiCall: `reply`,
+      djsObject: interaction,
+      parameters: {
+        content: `You provided an invalid **start datetime**, format must be \`mm/dd/yy hh:mm (24hr or am/pm)\` (ie \`9/29/23 7:30pm\`, \`9/29/23 19:30\`) 🤔`,
+        ephemeral: true,
+      },
+    })
+
+    return
+  }
+
+  const endDateTime = options.getString(`end-datetime`),
+    endDateValidationResponse = {}
+
+  if (endDateTime) {
+    const _endDateValidationResponse = validateDatetime(endDateTime)
+
+    Object.keys(_endDateValidationResponse).forEach(key => {
+      endDateValidationResponse[key] = _endDateValidationResponse[key]
+    })
+
+    if (!endDateValidationResponse.isValid) {
+      await queueApiCall({
+        apiCall: `reply`,
+        djsObject: interaction,
+        parameters: {
+          content: `You provided an invalid **end datetime**, format must be \`mm/dd/yy hh:mm (24hr or am/pm)\` (ie \`9/29/23 7:30pm\`, \`9/29/23 19:30\`) 🤔`,
+          ephemeral: true,
+        },
+      })
+
+      return
+    } else if (
+      endDateValidationResponse.datetime.isSameOrBefore(
+        startDateValidationResponse.datetime
+      )
+    ) {
+      await queueApiCall({
+        apiCall: `reply`,
+        djsObject: interaction,
+        parameters: {
+          content: `The **end datetime** must be after the **start datetime** 🤔`,
+          ephemeral: true,
+        },
+      })
+
+      return
+    }
+  } else {
+    if (eventType !== `cinema`) {
+      await queueApiCall({
+        apiCall: `reply`,
+        djsObject: interaction,
+        parameters: {
+          content: `You must provide an **end datetime** for non-cinema events 🤔`,
+          ephemeral: true,
+        },
+      })
+
+      return
+    }
+
+    const _runtime = extractFirstNumber(runtime)
+
+    if (_runtime) {
+      let accountForTrailers = options.getBoolean(`account-for-trailers`)
+
+      if (accountForTrailers === null) accountForTrailers = true
+
+      let _endDateTime = startDateValidationResponse.datetime.clone()
+
+      if (accountForTrailers)
+        _endDateTime = _endDateTime.add(_runtime * 1 + 20, `minutes`)
+      else _endDateTime = _endDateTime.add(_runtime * 1, `minutes`)
+
+      const roundedToNearest5Minutes =
+        Math.ceil(moment(_endDateTime).minute() / 5) * 5
+
+      _endDateTime.minute(roundedToNearest5Minutes).second(0).millisecond(0)
+
+      endDateValidationResponse.isValid = true
+      endDateValidationResponse.datetime = _endDateTime
+    }
+  }
+  // ---------------------------------------------------------------
 
   await queueApiCall({
     apiCall: `deferReply`,
@@ -175,7 +321,10 @@ export default async function (interaction) {
     },
   })
 
-  const when = options.getString(`when`),
+  const startUnix = startDateValidationResponse.datetime.unix(),
+    endUnix = endDateValidationResponse.datetime.unix(),
+    difference = endUnix - startUnix,
+    durationString = convertSecondsToDurationString(difference),
     where = options.getString(`where`),
     allowGuests = options.getBoolean(`allow-guests`),
     requestVenmo = options.getBoolean(`request-venmo`),
@@ -191,13 +340,19 @@ export default async function (interaction) {
   else eventTitle = `${eventType} event 🆕`
 
   const movieField = `[${title}](<${imdbUrl}>)`,
-    uriWhere = encodeURIComponent(where),
-    _where = `[${where}](<https://www.google.com/search?q=${uriWhere}>)`
+    when = [`start - <t:${startUnix}:F> (<t:${startUnix}:R>)`]
 
-  const fields = [
-    { name: `when`, value: when },
-    { name: `where`, value: _where },
-  ]
+  if (endUnix) {
+    when.push(`end - <t:${endUnix}:F>`)
+    when.push(`duration - ${durationString}`)
+  }
+
+  const uriWhere = encodeURIComponent(where),
+    _where = `[${where}](<https://www.google.com/search?q=${uriWhere}>)`,
+    fields = [
+      { name: `when`, value: when.join(`\n`) },
+      { name: `where`, value: _where },
+    ]
 
   if (activities) fields.unshift({ name: `activities`, value: activities })
   if (title) fields.unshift({ name: `movie`, value: movieField })
@@ -230,10 +385,12 @@ export default async function (interaction) {
       viewAttendees
     )
 
+  if (!threadName) threadName = title
+
   let image
 
-  if (poster) image = poster
-  else if (imageUrl) image = imageUrl
+  if (imageUrl) image = imageUrl
+  else if (poster) image = poster
 
   if (image) embed.setImage(image)
 
@@ -241,9 +398,9 @@ export default async function (interaction) {
 
   if (parentIsForum && channelIsPinned) {
     const tags = [],
-      discussionTag = parent.availableTags.find(tag => tag.name === `event`)
+      eventTag = parent.availableTags.find(tag => tag.name === `event`)
 
-    if (discussionTag) tags.push(discussionTag.id)
+    if (eventTag) tags.push(eventTag.id)
 
     if (eventType === `cinema`) {
       const spoilerTag = parent.availableTags.find(
@@ -269,13 +426,29 @@ export default async function (interaction) {
       },
     })
 
-    await addEvent(thread.id, user.id, allowGuests, requestVenmo)
+    await addEvent(
+      thread.id,
+      user.id,
+      allowGuests,
+      requestVenmo,
+      parent.id,
+      startUnix,
+      endUnix,
+      true
+    )
 
     await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,
       parameters: `The requested event has been scheduled → ${thread} 🙌`,
     })
+
+    const millisecondDifference = endUnix * 1000 - Date.now()
+
+    setTimeout(
+      concludeEvent.bind(null, parent.id, thread.id),
+      millisecondDifference
+    )
 
     return
   }
@@ -290,7 +463,15 @@ export default async function (interaction) {
     },
   })
 
-  await addEvent(replyMessage.id, user.id, allowGuests, requestVenmo)
+  await addEvent(
+    replyMessage.id,
+    user.id,
+    allowGuests,
+    requestVenmo,
+    parent.id,
+    startUnix,
+    endUnix
+  )
 
   if (!parentIsForum)
     await queueApiCall({
@@ -299,3 +480,5 @@ export default async function (interaction) {
       parameters: { name: threadName },
     })
 }
+
+// concluded

@@ -1,5 +1,5 @@
 import { ActionRowBuilder } from 'discord.js'
-import moment from 'moment/moment.js'
+import moment from 'moment-timezone'
 import { deletePollData } from '../repositories/poll-data.js'
 import { getPollEndTime } from '../repositories/polls.js'
 import { getPollSelectPicker } from '../utils/general-commands.js'

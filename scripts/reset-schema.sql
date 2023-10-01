@@ -50,7 +50,12 @@ create table events (
   id text primary key,
   created_by text not null,
   allow_guests boolean not null,
-  request_venmo boolean not null
+  request_venmo boolean not null,
+  parent_id text,
+  startUnix bigint not null,
+  endUnix bigint,
+  is_post boolean not null default false,
+  concluded boolean not null default false,
 );
 
 -- guilds
@@ -86,14 +91,6 @@ create table lists (
   records_per_page integer not null,
   group_by text not null,
   filters text
-);
-
--- movie invites
-drop table if exists movie_invites;
-
-create table movie_invites (
-  id text primary key,
-  last_updated bigint not null
 );
 
 -- pinned messages

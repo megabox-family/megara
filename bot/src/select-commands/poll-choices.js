@@ -1,5 +1,5 @@
 import { ActionRowBuilder } from 'discord.js'
-import moment from 'moment/moment.js'
+import moment from 'moment-timezone'
 import {
   checkIfUserHasVoted,
   createPollData,

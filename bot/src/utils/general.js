@@ -15,11 +15,13 @@ import {
 import { isNotificationRole } from './validation.js'
 import { registerContextCommands } from './context-commands.js'
 import { getCommands } from '../cache-commands.js'
-import { pollTimeoutMap, printPollResults } from './general-commands.js'
+import { timoutMap, printPollResults } from './general-commands.js'
 import { getPollStartTime, getRunningPolls } from '../repositories/polls.js'
-import moment from 'moment/moment.js'
+import moment from 'moment-timezone'
 import { syncRoles } from './roles.js'
 import { syncVipMembers } from './members.js'
+import { getUnconcludedPosts } from '../repositories/events.js'
+import { concludeEvent } from '../slash-commands/schedule-event.js'
 
 export const relativePath = dirname(fileURLToPath(import.meta.url)),
   srcPath = dirname(relativePath),
@@ -73,7 +75,26 @@ export async function startPollTimers() {
         millisecondDifference
       )
 
-    pollTimeoutMap.set(id, timeoutId)
+    timoutMap.set(id, timeoutId)
+  })
+}
+
+export async function startEventTimers() {
+  const currentTime = moment().unix(),
+    unconcludedPosts = await getUnconcludedPosts()
+
+  unconcludedPosts?.forEach(post => {
+    const { id, parentId, endUnix } = post
+
+    const millisecondDifference = (endUnix - currentTime) * 1000
+
+    if (millisecondDifference < 0) {
+      concludeEvent(parentId, id)
+
+      return
+    }
+
+    setTimeout(concludeEvent.bind(null, parentId, id), millisecondDifference)
   })
 }
 
@@ -192,4 +213,20 @@ export function extractElement(array, index) {
   array = [...firstHalf, ...secondHalf]
 
   return { array: array, element: element }
+}
+
+export function convertSecondsToDurationString(seconds) {
+  const days = Math.floor(seconds / 86400),
+    hours = Math.floor((seconds % 86400) / 3600),
+    minutes = Math.floor(((seconds % 86400) % 3600) / 60)
+
+  let timeString = ''
+
+  if (days > 0) timeString += `${days}d`
+
+  if (hours > 0) timeString += ` ${hours}h`
+
+  if (minutes > 0) timeString += ` ${minutes}m`
+
+  return timeString
 }

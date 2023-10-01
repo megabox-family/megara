@@ -17,6 +17,8 @@ services:
     env_file: /home/ultrabox/host-files/.env
     volumes:
       - /home/ultrabox/host-files/postgres-data:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     ports:
       - '5432:5432'
     deploy:
@@ -31,6 +33,9 @@ services:
     depends_on:
       - postgres
       - api
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     ports:
       - '80:80'
     deploy:
@@ -42,6 +47,9 @@ services:
   api:
     image: jordanfuzz/megabox-api:${GITHUB_SHA_SHORT}
     env_file: /home/ultrabox/host-files/.env
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     ports:
       - '3002:3002'
     deploy:

@@ -16,7 +16,7 @@ import {
   handleInteractionCreate,
   handleMessageCreate,
   handleVoiceStatusUpdate,
-  startup,
+  handleReady,
 } from './handlers/general.js'
 
 const bot = new Client({
@@ -36,7 +36,7 @@ const bot = new Client({
 
 bot.login(config.botToken)
 
-bot.on('ready', startup)
+bot.on('ready', handleReady)
 bot.on('guildCreate', handleGuildCreate)
 bot.on('guildUpdate', handleGuildUpdate)
 bot.on('guildDelete', handleGuildDelete)

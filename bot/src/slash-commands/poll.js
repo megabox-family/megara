@@ -4,9 +4,9 @@ import {
   ButtonBuilder,
   ButtonStyle,
 } from 'discord.js'
-import moment from 'moment/moment.js'
+import moment from 'moment-timezone'
 import {
-  pollTimeoutMap,
+  timoutMap,
   generatePollMessage,
   printPollResults,
 } from '../utils/general-commands.js'
@@ -216,5 +216,5 @@ export default async function (interaction) {
     millisecondDifference
   )
 
-  pollTimeoutMap.set(pollMessage.id, timeoutId)
+  timoutMap.set(pollMessage.id, timeoutId)
 }
