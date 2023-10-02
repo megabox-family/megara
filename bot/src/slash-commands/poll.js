@@ -212,7 +212,7 @@ export default async function (interaction) {
     currentUnix = moment().unix(),
     millisecondDifference = (endingUnix - currentUnix) * 1000
 
-  if (millisecondDifference < twentyFourHours) return
+  if (millisecondDifference > twentyFourHours) return
 
   const timeoutId = setTimeout(
     printPollResults.bind(null, pollMessage.channel.id, pollMessage.id),
