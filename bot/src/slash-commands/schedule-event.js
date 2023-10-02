@@ -24,6 +24,8 @@ import { queueApiCall } from '../api-queue.js'
 import { addEvent, setConcluded } from '../repositories/events.js'
 import { getThreadById } from '../utils/threads.js'
 import { getBot } from '../cache-bot.js'
+import { twentyFourHours } from '../handlers/general.js'
+import { timoutMap } from '../utils/general-commands.js'
 
 const { omdbKey } = config
 
@@ -449,10 +451,14 @@ export default async function (interaction) {
 
     const millisecondDifference = endUnix * 1000 - Date.now()
 
-    setTimeout(
+    if (millisecondDifference < twentyFourHours) return
+
+    const timeoutId = setTimeout(
       concludeEvent.bind(null, parent.id, thread.id),
       millisecondDifference
     )
+
+    timoutMap.set(thread.id, timeoutId)
 
     return
   }

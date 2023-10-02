@@ -17,6 +17,7 @@ import {
   validateTimeStamp,
 } from '../utils/validation.js'
 import { queueApiCall } from '../api-queue.js'
+import { twentyFourHours } from '../handlers/general.js'
 
 export const description = `Allows you to run a poll with various options.`
 export const dmPermission = false,
@@ -210,6 +211,8 @@ export default async function (interaction) {
     ),
     currentUnix = moment().unix(),
     millisecondDifference = (endingUnix - currentUnix) * 1000
+
+  if (millisecondDifference < twentyFourHours) return
 
   const timeoutId = setTimeout(
     printPollResults.bind(null, pollMessage.channel.id, pollMessage.id),

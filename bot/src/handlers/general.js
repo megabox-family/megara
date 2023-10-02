@@ -37,6 +37,18 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
 import { addVoiceMemberToParentThread } from '../utils/threads.js'
 import { getChannelCustomFunction } from '../repositories/channels.js'
 
+export const twelveHours = 43200000,
+  twentyFourHours = 86400000
+
+async function startTimers() {
+  startPollTimers()
+  startEventTimers()
+
+  await new Promise(resolution => setTimeout(resolution, twelveHours))
+
+  startTimers()
+}
+
 export async function handleReady(bot) {
   console.log(`logged in as ${bot.user.tag} 😈`)
   console.log(`nodejs version - ${process.version}`)
@@ -60,8 +72,7 @@ export async function handleReady(bot) {
     bot.application?.commands.set(commands)
   }
 
-  await startPollTimers()
-  await startEventTimers()
+  startTimers()
 
   if (bot.user.username !== `megara`) await test(bot)
 }

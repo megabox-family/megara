@@ -22,6 +22,7 @@ import { syncRoles } from './roles.js'
 import { syncVipMembers } from './members.js'
 import { getUnconcludedPosts } from '../repositories/events.js'
 import { concludeEvent } from '../slash-commands/schedule-event.js'
+import { twentyFourHours } from '../handlers/general.js'
 
 export const relativePath = dirname(fileURLToPath(import.meta.url)),
   srcPath = dirname(relativePath),
@@ -69,11 +70,14 @@ export async function startPollTimers() {
   runningPolls?.forEach(poll => {
     const { id, channelId, endTime } = poll
 
-    const millisecondDifference = (endTime - currentTime) * 1000,
-      timeoutId = setTimeout(
-        printPollResults.bind(null, channelId, id),
-        millisecondDifference
-      )
+    const millisecondDifference = (endTime - currentTime) * 1000
+
+    if (millisecondDifference > twentyFourHours || timoutMap.has(id)) return
+
+    const timeoutId = setTimeout(
+      printPollResults.bind(null, channelId, id),
+      millisecondDifference
+    )
 
     timoutMap.set(id, timeoutId)
   })
@@ -88,13 +92,20 @@ export async function startEventTimers() {
 
     const millisecondDifference = (endUnix - currentTime) * 1000
 
+    if (millisecondDifference > twentyFourHours || timoutMap.has(id)) return
+
     if (millisecondDifference < 0) {
       concludeEvent(parentId, id)
 
       return
     }
 
-    setTimeout(concludeEvent.bind(null, parentId, id), millisecondDifference)
+    const timeoutId = setTimeout(
+      concludeEvent.bind(null, parentId, id),
+      millisecondDifference
+    )
+
+    timoutMap.set(id, timeoutId)
   })
 }
 
