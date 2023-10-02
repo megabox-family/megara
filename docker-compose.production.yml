@@ -4,6 +4,9 @@ services:
   bot:
     image: jordanfuzz/megara:${GITHUB_SHA_SHORT}
     env_file: /home/ultrabox/host-files/.env
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     depends_on:
       - postgres
     deploy:
