@@ -451,7 +451,8 @@ export default async function (interaction) {
 
     const millisecondDifference = endUnix * 1000 - Date.now()
 
-    if (millisecondDifference > twentyFourHours) return
+    if (millisecondDifference > twentyFourHours || timoutMap.has(thread.id))
+      return
 
     const timeoutId = setTimeout(
       concludeEvent.bind(null, parent.id, thread.id),
