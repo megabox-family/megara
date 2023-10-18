@@ -1,7 +1,6 @@
-import { ActionRowBuilder } from 'discord.js'
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
 import { queueApiCall } from '../api-queue.js'
 import { checkIfGuestsAreAllowed } from '../repositories/events.js'
-import { guestPicker } from '../utils/general-commands.js'
 import { getCommandByName } from '../utils/slash-commands.js'
 import { logAttendance } from '../button-commands/attend.js'
 import { addVenmo } from '../repositories/venmo.js'
@@ -34,13 +33,24 @@ export default async function (interaction) {
       ` </set-venmo:${setVenmoCommand.id}>, </get-venmo:${getVenmoCommand.id}>, & </delete-venmo:${deleteVenmoCommand.id}> commands.\n\n`
 
   if (guestsAllowed) {
-    const actionRow = new ActionRowBuilder().addComponents(guestPicker)
+    const myselfButton = new ButtonBuilder()
+        .setCustomId(`!myself:`)
+        .setLabel(`just myself`)
+        .setStyle(ButtonStyle.Primary),
+      guestButton = new ButtonBuilder()
+        .setCustomId(`!myself-and-guests:`)
+        .setLabel(`myself & guest(s)`)
+        .setStyle(ButtonStyle.Primary),
+      actionRow = new ActionRowBuilder().addComponents(
+        myselfButton,
+        guestButton
+      )
 
     await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,
       parameters: {
-        content: messageContent,
+        content: `${messageContent}Who are you buying tickets for?`,
         components: [actionRow],
       },
     })

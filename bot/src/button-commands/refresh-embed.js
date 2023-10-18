@@ -2,7 +2,7 @@ import { getPages, generateListMessage } from '../utils/slash-commands.js'
 import { getListInfo, updateListPageData } from '../repositories/lists.js'
 import { getPollDetails, getPollPages } from '../utils/general-commands.js'
 import { queueApiCall } from '../api-queue.js'
-import { getButtonContext } from '../utils/validation.js'
+import { getCustomIdContext } from '../utils/validation.js'
 
 export default async function (interaction) {
   await queueApiCall({
@@ -12,7 +12,7 @@ export default async function (interaction) {
 
   const { guild, message, customId } = interaction,
     referenceMessageId = message.reference?.messageId,
-    buttonContextString = getButtonContext(customId),
+    buttonContextString = getCustomIdContext(customId),
     buttonContext = buttonContextString ? JSON.parse(buttonContextString) : ``,
     pagesMessageId = referenceMessageId
       ? referenceMessageId

@@ -1,7 +1,7 @@
 import { getBot } from '../cache-bot.js'
 import { addMemberToChannel } from '../utils/channels.js'
 import { queueApiCall } from '../api-queue.js'
-import { getButtonContext } from '../utils/validation.js'
+import { getCustomIdContext } from '../utils/validation.js'
 
 export default async function (interaction) {
   const { _guild, user, customId } = interaction,
@@ -23,7 +23,7 @@ export default async function (interaction) {
     })
   }
 
-  const channelId = getButtonContext(customId),
+  const channelId = getCustomIdContext(customId),
     channel = getBot().channels.cache.get(channelId)
 
   if (!channel) {

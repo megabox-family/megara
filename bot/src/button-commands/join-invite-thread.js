@@ -1,5 +1,5 @@
 import { getBot } from '../cache-bot.js'
-import { getButtonContext } from '../utils/validation.js'
+import { getCustomIdContext } from '../utils/validation.js'
 import { addMemberToChannel } from '../utils/channels.js'
 import { getThreadById, unarchiveThread } from '../utils/threads.js'
 import { queueApiCall } from '../api-queue.js'
@@ -25,7 +25,7 @@ export default async function (interaction) {
     })
   }
 
-  const { channelId, threadId } = JSON.parse(getButtonContext(customId)),
+  const { channelId, threadId } = JSON.parse(getCustomIdContext(customId)),
     channel = getBot().channels.cache.get(channelId),
     guild = channel.guild
 

@@ -28,7 +28,7 @@ export async function getAttendeeRecord(userId, messageId) {
           event_id = ${messageId}
       `
     )
-    .then(res => camelize(res?.rows))
+    .then(res => camelize(res?.rows?.[0]))
     .catch(error => {
       console.log(error)
     })

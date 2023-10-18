@@ -10,9 +10,7 @@ export default async function (interaction) {
     djsObject: interaction,
   })
 
-  const guild = interaction.guild,
-    member = interaction.member,
-    message = interaction.message,
+  const { member, message, customId } = interaction,
     pages = await getPageData(message.id)
 
   if (!pages) {
@@ -28,7 +26,7 @@ export default async function (interaction) {
 
   const totalPages = +pages.length
 
-  let ammountOfPages = interaction.customId.match(`(?<=:\\s)-?[0-9A-Za-z]+`)[0]
+  let ammountOfPages = customId.match(`(?<=:\\s)-?[0-9A-Za-z]+`)[0]
 
   switch (ammountOfPages) {
     case `first`:

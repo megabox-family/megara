@@ -343,15 +343,8 @@ export default async function (interaction) {
   else if (eventType === `cinema`) eventTitle = `${eventType} event 🍿`
   else eventTitle = `${eventType} event 🆕`
 
-  const movieField = `[${title}](<${imdbUrl}>)`
-  //   when = [`start - <t:${startUnix}:F>\n(<t:${startUnix}:R>)`]
-
-  // if (endUnix) {
-  //   when.push(`end - <t:${endUnix}:F>`)
-  //   when.push(`duration - ${durationString}`)
-  // }
-
-  const uriWhere = encodeURIComponent(where),
+  const movieField = `[${title}](<${imdbUrl}>)`,
+    uriWhere = encodeURIComponent(where),
     _where = `[${where}](<https://www.google.com/search?q=${uriWhere}>)`,
     fields = [
       { name: `start`, value: `<t:${startUnix}:F>\n(<t:${startUnix}:R>)` },
@@ -362,6 +355,7 @@ export default async function (interaction) {
 
   if (activities) fields.unshift({ name: `activities`, value: activities })
   if (title) fields.unshift({ name: `movie`, value: movieField })
+  if (eventType === `cinema`) fields.push({ name: `seats`, value: `tbd` })
   if (notes) fields.push({ name: `notes`, value: notes })
 
   const embed = new EmbedBuilder()
@@ -434,6 +428,9 @@ export default async function (interaction) {
 
     await addEvent(
       thread.id,
+      eventTitle,
+      threadName,
+      eventType,
       user.id,
       allowGuests,
       requestVenmo,
@@ -476,6 +473,9 @@ export default async function (interaction) {
 
   await addEvent(
     replyMessage.id,
+    eventTitle,
+    threadName,
+    eventType,
     user.id,
     allowGuests,
     requestVenmo,

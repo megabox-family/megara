@@ -6,6 +6,7 @@ import {
 } from 'discord.js'
 import { queueApiCall } from '../api-queue.js'
 import { deleteAttendee, getAttendeeRecord } from '../repositories/attendees.js'
+import { getMessageLinkContext } from './attend.js'
 
 export default async function (interaction) {
   await queueApiCall({
@@ -18,8 +19,6 @@ export default async function (interaction) {
 
   const { guild, user, channel, message } = interaction,
     { messageId } = message.reference
-
-  await deleteAttendee(user.id, messageId)
 
   const eventMessage = await queueApiCall({
     apiCall: `fetch`,
@@ -61,4 +60,22 @@ export default async function (interaction) {
           : [],
     },
   })
+
+  const { guestCount } = await getAttendeeRecord(user.id, messageId),
+    spots = 1 + guestCount,
+    { organizer, spotNomencalture, messageLink } = await getMessageLinkContext(
+      guild,
+      channel,
+      messageId
+    )
+
+  await queueApiCall({
+    apiCall: `send`,
+    djsObject: organizer,
+    parameters: {
+      content: `${user}, who originally requested **${spots} ${spotNomencalture}**, has unattended an event you organized → ${messageLink}`,
+    },
+  })
+
+  await deleteAttendee(user.id, messageId)
 }

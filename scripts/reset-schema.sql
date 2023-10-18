@@ -48,14 +48,17 @@ drop table if exists events;
 
 create table events (
   id text primary key,
+  event_title text not null, --new
+  thread_name text not null, --new
+  event_type text not null, --new
   created_by text not null,
   allow_guests boolean not null,
   request_venmo boolean not null,
   parent_id text,
-  startUnix bigint not null,
-  endUnix bigint,
+  start_unix bigint not null,
+  end_unix bigint,
   is_post boolean not null default false,
-  concluded boolean not null default false,
+  concluded boolean not null default false
 );
 
 -- guilds

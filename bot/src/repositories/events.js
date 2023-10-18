@@ -4,6 +4,9 @@ import SQL from 'sql-template-strings'
 
 export async function addEvent(
   messageId,
+  eventTitle,
+  threadName,
+  eventType,
   userId,
   allowGuests,
   requestVenmo,
@@ -15,8 +18,8 @@ export async function addEvent(
   return await pgPool
     .query(
       SQL`
-        insert into events (id, created_by, allow_guests, request_venmo, parent_id, start_unix, end_unix, is_post)
-        values(${messageId}, ${userId}, ${allowGuests}, ${requestVenmo}, ${parentId}, ${startUnix}, ${endUnix}, ${isPost});
+        insert into events (id, event_title, thread_name, event_type, created_by, allow_guests, request_venmo, parent_id, start_unix, end_unix, is_post)
+        values(${messageId}, ${eventTitle}, ${threadName}, ${eventType}, ${userId}, ${allowGuests}, ${requestVenmo}, ${parentId}, ${startUnix}, ${endUnix}, ${isPost});
       `
     )
     .catch(error => {

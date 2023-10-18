@@ -29,11 +29,11 @@ import { queueApiCall } from '../api-queue.js'
 export const timoutMap = new Map(),
   guestPicker = new StringSelectMenuBuilder()
     .setCustomId(`event-guests`)
-    .setPlaceholder(`How many guests are you bringing?`)
+    .setPlaceholder(`How many tickets do you need?`)
     .setMinValues(1)
     .setMaxValues(1)
     .addOptions(
-      [`0`, `1`, `2`, `3`, `4`, `5`].map(value => {
+      [`1`, `2`, `3`, `4`, `5`].map(value => {
         return { label: value, value }
       })
     )

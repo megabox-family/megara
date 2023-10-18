@@ -24,7 +24,7 @@ export default async function (interaction) {
 
   const eventRecord = await getEventRecord(targetId)
 
-  if (eventRecord?.length === 0) {
+  if (!eventRecord) {
     await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,
@@ -88,64 +88,5 @@ export default async function (interaction) {
     pages,
     recordsPerPage,
     groupBy,
-  })
-
-  return
-
-  const attendeeRecords = await getAttendeeRecords(targetId)
-
-  if (attendeeRecords?.length === 0) {
-    await queueApiCall({
-      apiCall: `editReply`,
-      djsObject: interaction,
-      parameters: {
-        content: `There are currently no attendees for this event 😔`,
-      },
-    })
-
-    return
-  }
-
-  const fields = []
-
-  let guests = 0,
-    totalHeadcount = 0
-
-  attendeeRecords.forEach(attendeeRecord => {
-    const { userId, guestCount } = attendeeRecord,
-      member = guild.members.cache.get(userId),
-      { nickname, user } = member,
-      userName = nickname ? nickname : user.username
-
-    fields.push({
-      name: userName,
-      value:
-        `guests - ${guestCount}\n` +
-        `headcount - ${guestCount + 1}\n` +
-        `venmo - `,
-    })
-
-    guests += guestCount
-    totalHeadcount += 1 + guestCount
-  })
-
-  fields.unshift(
-    { name: `total headcount`, value: `${totalHeadcount}` },
-    { name: `guests`, value: `${guests}` }
-  )
-
-  const embed = new EmbedBuilder()
-    .setColor(`#6725BC`)
-    .setTitle(`organizer view 👑`)
-    .addFields(fields)
-    .setTimestamp()
-
-  await queueApiCall({
-    apiCall: `editReply`,
-    djsObject: interaction,
-    parameters: {
-      content: `As you requested 🙇‍♀️`,
-      embeds: [embed],
-    },
   })
 }

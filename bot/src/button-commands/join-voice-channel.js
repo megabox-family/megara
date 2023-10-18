@@ -1,5 +1,5 @@
 import { getBot } from '../cache-bot.js'
-import { getButtonContext } from '../utils/validation.js'
+import { getCustomIdContext } from '../utils/validation.js'
 import { queueApiCall } from '../api-queue.js'
 import { checkIfMemberIsPermissible } from '../utils/channels.js'
 import {
@@ -27,7 +27,7 @@ export default async function (interaction) {
     })
   }
 
-  const voiceChannelId = getButtonContext(customId),
+  const voiceChannelId = getCustomIdContext(customId),
     voiceChannel = getBot().channels.cache.get(voiceChannelId)
 
   if (!voiceChannel) {

@@ -36,6 +36,7 @@ import test from '../utils/test.js'
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
 import { addVoiceMemberToParentThread } from '../utils/threads.js'
 import { getChannelCustomFunction } from '../repositories/channels.js'
+import { getInteractionCommandName } from '../utils/validation.js'
 
 export const twelveHours = 43200000,
   twentyFourHours = 86400000
@@ -124,10 +125,12 @@ export async function handleMessageCreate(message) {
 }
 
 export async function handleInteractionCreate(interaction) {
+  const { customId } = interaction,
+    _commandName = getInteractionCommandName(customId),
+    commandName = _commandName ? _commandName : customId
+
   if (interaction.isButton()) {
-    const buttonFunctionPath = `${srcPath}/button-commands/${
-      interaction.customId.match(`(?!!).+(?=:\\s|:$)`)[0]
-    }.js`
+    const buttonFunctionPath = `${srcPath}/button-commands/${commandName}.js`
 
     if (existsSync(buttonFunctionPath))
       await import(buttonFunctionPath).then(module =>
@@ -151,7 +154,7 @@ export async function handleInteractionCreate(interaction) {
     import(slashCommand.fullPath).then(module => module.default(interaction))
   } else if (interaction.isModalSubmit()) {
     const modalCommand = modalCommands.find(
-      modalCommand => modalCommand.baseName === interaction.customId
+      modalCommand => modalCommand.baseName === commandName
     )
 
     import(modalCommand.fullPath).then(module => module.default(interaction))
@@ -163,7 +166,7 @@ export async function handleInteractionCreate(interaction) {
     import(contextCommand.fullPath).then(module => module.default(interaction))
   } else if (interaction.isStringSelectMenu()) {
     const selectCommand = selectCommands.find(
-      selectCommand => selectCommand.baseName === interaction.customId
+      selectCommand => selectCommand.baseName === customId
     )
 
     import(selectCommand.fullPath).then(module => module.default(interaction))

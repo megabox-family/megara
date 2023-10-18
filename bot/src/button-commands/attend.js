@@ -3,15 +3,28 @@ import { queueApiCall } from '../api-queue.js'
 import {
   checkIfGuestsAreAllowed,
   checkIfVenmoIsRequired,
+  getEventRecord,
 } from '../repositories/events.js'
 import {
   addAttendee,
   getAttendeeRecord,
   updateAttendee,
 } from '../repositories/attendees.js'
-import { guestPicker } from '../utils/general-commands.js'
 import { getVenmoTag } from '../repositories/venmo.js'
 import { ButtonBuilder, ButtonStyle, ChannelType } from 'discord.js'
+
+export async function getMessageLinkContext(guild, channel, messageId) {
+  const eventRecord = await getEventRecord(messageId),
+    { createdBy, eventType } = eventRecord,
+    spotNomencalture = eventType === `cinema` ? `ticket(s)` : `spot(s)`,
+    organizer = guild.members.cache.get(createdBy),
+    channelTypeIsForum = channel.type === ChannelType.GuildForum,
+    messageLink = channelTypeIsForum
+      ? `https://discord.com/channels/${guild.id}/${messageId}`
+      : `https://discord.com/channels/${guild.id}/${channel.id}/${messageId}`
+
+  return { organizer, spotNomencalture, messageLink }
+}
 
 export async function logAttendance(context) {
   const {
@@ -21,23 +34,41 @@ export async function logAttendance(context) {
       guestCount,
       prependMessage,
     } = context,
-    { user } = interaction,
+    { guild, user, channel } = interaction,
     { id: messageId, thread: _thread } = message,
     attendeeRecord = getAttendeesRecord
       ? await getAttendeeRecord(user.id, messageId)
-      : { length: 0 }
+      : null
 
   let thread
 
   if (_thread) thread = _thread
-  else if (interaction.channel.type === ChannelType.PublicThread) {
-    thread = interaction.channel
+  else if (channel.type === ChannelType.PublicThread) {
+    thread = channel
   }
 
-  const threadMembers = thread?.members
+  const threadMembers = thread?.members,
+    newSpotCount = 1 + guestCount
 
-  if (attendeeRecord?.length === 0) {
+  if (!attendeeRecord) {
     await addAttendee(user.id, messageId, guestCount)
+
+    const { value: seats } = message.embeds[0].fields.find(
+      field => field.name === `seats`
+    )
+
+    if (seats && seats !== `tbd`) {
+      const { organizer, spotNomencalture, messageLink } =
+        await getMessageLinkContext(guild, channel, messageId)
+
+      await queueApiCall({
+        apiCall: `send`,
+        djsObject: organizer,
+        parameters: {
+          content: `*After you added seats*, ${user} has requested **${newSpotCount} ${spotNomencalture}** for an event you organized → ${messageLink}`,
+        },
+      })
+    }
 
     if (!threadMembers?.cache.has(user.id))
       await queueApiCall({
@@ -45,7 +76,24 @@ export async function logAttendance(context) {
         djsObject: threadMembers,
         parameters: user.id,
       })
-  } else await updateAttendee(user.id, messageId, guestCount)
+  } else {
+    await updateAttendee(user.id, messageId, guestCount)
+
+    const { guestCount: oldGuestCount } = attendeeRecord,
+      oldSpotCount = 1 + oldGuestCount,
+      { organizer, spotNomencalture, messageLink } =
+        await getMessageLinkContext(guild, channel, messageId)
+
+    await queueApiCall({
+      apiCall: `send`,
+      djsObject: organizer,
+      parameters: {
+        content:
+          `${user} changed the number of ${spotNomencalture} they requested **(${oldSpotCount} → ${newSpotCount})** ` +
+          `for an event you organized → ${messageLink}`,
+      },
+    })
+  }
 
   await queueApiCall({
     apiCall: `editReply`,
@@ -70,7 +118,7 @@ export default async function (interaction) {
     { id: messageId } = message,
     attendeeRecord = await getAttendeeRecord(user.id, messageId)
 
-  if (attendeeRecord?.length > 0) {
+  if (attendeeRecord) {
     await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,
@@ -116,12 +164,24 @@ export default async function (interaction) {
   const guestsAllowed = await checkIfGuestsAreAllowed(messageId)
 
   if (guestsAllowed) {
-    const actionRow = new ActionRowBuilder().addComponents(guestPicker)
+    const myselfButton = new ButtonBuilder()
+        .setCustomId(`!myself:`)
+        .setLabel(`just myself`)
+        .setStyle(ButtonStyle.Primary),
+      guestButton = new ButtonBuilder()
+        .setCustomId(`!myself-and-guests:`)
+        .setLabel(`myself & guest(s)`)
+        .setStyle(ButtonStyle.Primary),
+      actionRow = new ActionRowBuilder().addComponents(
+        myselfButton,
+        guestButton
+      )
 
     await queueApiCall({
       apiCall: `editReply`,
       djsObject: interaction,
       parameters: {
+        content: `Who are you buying tickets for?`,
         components: [actionRow],
       },
     })

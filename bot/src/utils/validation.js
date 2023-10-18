@@ -10,7 +10,7 @@ export function isFirstCharacterAtSymbol(string) {
   return string?.match(`^@`) ? true : false
 }
 
-export function getButtonContext(customId) {
+export function getCustomIdContext(customId) {
   return customId?.match(`(?<=:\\s).+`)?.[0]
 }
 
@@ -147,4 +147,8 @@ export function validateDatetime(datetimeString) {
 
 export function extractFirstNumber(string) {
   return string?.match(`\\d+`)?.[0]
+}
+
+export function getInteractionCommandName(interactionCommandCustomId) {
+  return interactionCommandCustomId?.match(`(?!!).+(?=:\\s|:$)`)?.[0]
 }
