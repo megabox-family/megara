@@ -26,19 +26,37 @@ export default async function (interaction) {
     return
   }
 
+  if (eventRecord.userId !== user.id) {
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `You can only update the seats on events you created 🤔`,
+    })
+
+    return
+  }
+
+  if (eventRecord.eventType !== `cinema`) {
+    await queueApiCall({
+      apiCall: `editReply`,
+      djsObject: interaction,
+      parameters: `Seats cannot be updated on a non-cinema event 🤔`,
+    })
+
+    return
+  }
+
   const seats = fields.getTextInputValue(`seats`),
     message = await queueApiCall({
       apiCall: `fetch`,
       djsObject: channel.messages,
       parameters: targetId,
     }),
-    embed = message.embeds[0]
+    embed = message.embeds[0],
+    seatsField = embed.fields.find(field => field.name === `seats`)
 
-  for (const field of embed.fields) {
-    if (field.name === `seats`) {
-      field.value = seats
-    }
-  }
+  if (seatsField?.value) seatsField.value = seats
+  else embed.fields.push({ name: `seats`, value: seats })
 
   await queueApiCall({
     apiCall: `edit`,
