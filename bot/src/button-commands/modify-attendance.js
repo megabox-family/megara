@@ -42,7 +42,7 @@ export default async function (interaction) {
     components.unshift(new ActionRowBuilder().addComponents(guestPicker))
   }
 
-  const spotNomencalture = eventType === `cinema` ? `tickets` : `spots`,
+  const spotNomencalture = eventType === `cinema` ? `ticket(s)` : `spot(s)`,
     spots = 1 + guests
 
   await queueApiCall({
