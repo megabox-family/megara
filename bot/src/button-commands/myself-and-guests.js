@@ -12,7 +12,7 @@ export default async function (interaction) {
   })
 
   const spotPicker = await getSpotPicker({
-      messageId: interaction.reference?.messageId,
+      messageId: interaction.message.reference?.messageId,
     }),
     actionRow = new ActionRowBuilder().addComponents(spotPicker)
 
