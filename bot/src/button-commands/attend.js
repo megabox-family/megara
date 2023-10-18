@@ -181,7 +181,7 @@ export default async function (interaction) {
       apiCall: `editReply`,
       djsObject: interaction,
       parameters: {
-        content: `Who is attending this event?`,
+        content: `Who are you marking as attending this event?`,
         components: [actionRow],
       },
     })
