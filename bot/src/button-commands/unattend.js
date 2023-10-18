@@ -69,13 +69,14 @@ export default async function (interaction) {
       messageId
     )
 
-  await queueApiCall({
-    apiCall: `send`,
-    djsObject: organizer,
-    parameters: {
-      content: `${user}, who originally requested **${spots} ${spotNomencalture}**, has unattended an event you organized → ${messageLink}`,
-    },
-  })
+  if (organizer.id !== user.id)
+    await queueApiCall({
+      apiCall: `send`,
+      djsObject: organizer,
+      parameters: {
+        content: `${user}, who originally requested **${spots} ${spotNomencalture}**, has unattended an event you organized → ${messageLink}`,
+      },
+    })
 
   await deleteAttendee(user.id, messageId)
 }

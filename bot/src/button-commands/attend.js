@@ -61,13 +61,14 @@ export async function logAttendance(context) {
       const { organizer, spotNomencalture, messageLink } =
         await getMessageLinkContext(guild, channel, messageId)
 
-      await queueApiCall({
-        apiCall: `send`,
-        djsObject: organizer,
-        parameters: {
-          content: `*After you added seats*, ${user} has requested **${newSpotCount} ${spotNomencalture}** for an event you organized → ${messageLink}`,
-        },
-      })
+      if (organizer.id !== user.id)
+        await queueApiCall({
+          apiCall: `send`,
+          djsObject: organizer,
+          parameters: {
+            content: `*After you added seats*, ${user} has requested **${newSpotCount} ${spotNomencalture}** for an event you organized → ${messageLink}`,
+          },
+        })
     }
 
     if (!threadMembers?.cache.has(user.id))
@@ -84,15 +85,16 @@ export async function logAttendance(context) {
       { organizer, spotNomencalture, messageLink } =
         await getMessageLinkContext(guild, channel, messageId)
 
-    await queueApiCall({
-      apiCall: `send`,
-      djsObject: organizer,
-      parameters: {
-        content:
-          `${user} changed the number of ${spotNomencalture} they requested **(${oldSpotCount} → ${newSpotCount})** ` +
-          `for an event you organized → ${messageLink}`,
-      },
-    })
+    if (organizer.id !== user.id)
+      await queueApiCall({
+        apiCall: `send`,
+        djsObject: organizer,
+        parameters: {
+          content:
+            `${user} changed the number of ${spotNomencalture} they requested **(${oldSpotCount} → ${newSpotCount})** ` +
+            `for an event you organized → ${messageLink}`,
+        },
+      })
   }
 
   await queueApiCall({

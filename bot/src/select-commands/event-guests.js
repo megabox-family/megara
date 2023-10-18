@@ -20,7 +20,8 @@ export default async function (interaction) {
     }),
     spots = values[0],
     guestCount = spots - 1,
-    { guestCount: oldGuestCount } = await getAttendeeRecord(user.id, messageId),
+    { guestCount: oldGuestCount } =
+      (await getAttendeeRecord(user.id, messageId)) || {},
     { eventType } = await getEventRecord(messageId),
     spotNomencalture = eventType === `cinema` ? `ticket(s)` : `spot(s)`
 
