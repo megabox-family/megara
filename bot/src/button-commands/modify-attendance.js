@@ -50,7 +50,7 @@ export default async function (interaction) {
     apiCall: `editReply`,
     djsObject: interaction,
     parameters: {
-      content: `You're currently marked as requesting **${spots} ${spotNomencalture}** for this event 😊`,
+      content: `You're currently marked as requesting **${spots} ${spotNomencalture}** for this event 🤓`,
       components: components,
     },
   })

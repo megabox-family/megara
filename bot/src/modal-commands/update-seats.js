@@ -32,6 +32,6 @@ export default async function (interaction) {
   queueApiCall({
     apiCall: `editReply`,
     djsObject: interaction,
-    parameters: `The seats on this event have been updated to **${seats}** 🎉`,
+    parameters: `The seats on this cinema event have been updated to **${seats}** 🎉`,
   })
 }

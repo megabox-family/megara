@@ -38,7 +38,7 @@ export default async function (interaction) {
       apiCall: `reply`,
       djsObject: interaction,
       parameters: {
-        content: `You can only update the seats on events you created 🤔`,
+        content: `You can only update the seats on cinema events you created 🤔`,
         ephemeral: true,
       },
     })
