@@ -1,6 +1,4 @@
 import { queueApiCall } from '../api-queue.js'
-import { getEventRecord } from '../repositories/events.js'
-import { getCommandByName } from '../utils/slash-commands.js'
 import { getCustomIdContext } from '../utils/validation.js'
 
 export default async function (interaction) {
@@ -10,41 +8,8 @@ export default async function (interaction) {
     parameters: { ephemeral: true },
   })
 
-  const { user, channel, customId, fields } = interaction,
-    targetId = getCustomIdContext(customId),
-    eventRecord = await getEventRecord(targetId)
-
-  if (!eventRecord) {
-    const { id: scheduleEventCommandId } = getCommandByName(`schedule-event`)
-
-    await queueApiCall({
-      apiCall: `editReply`,
-      djsObject: interaction,
-      parameters: `This is not a message created by the </schedule-event:${scheduleEventCommandId}> command, or the data for it no longer exists 🤔`,
-    })
-
-    return
-  }
-
-  if (eventRecord.userId !== user.id) {
-    await queueApiCall({
-      apiCall: `editReply`,
-      djsObject: interaction,
-      parameters: `You can only update the seats on events you created 🤔`,
-    })
-
-    return
-  }
-
-  if (eventRecord.eventType !== `cinema`) {
-    await queueApiCall({
-      apiCall: `editReply`,
-      djsObject: interaction,
-      parameters: `Seats cannot be updated on a non-cinema event 🤔`,
-    })
-
-    return
-  }
+  const { channel, customId, fields } = interaction,
+    targetId = getCustomIdContext(customId)
 
   const seats = fields.getTextInputValue(`seats`),
     message = await queueApiCall({

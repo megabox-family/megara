@@ -410,21 +410,23 @@ export default async function (interaction) {
       if (spoilerTag) tags.push(spoilerTag.id)
     }
 
-    const thread = await queueApiCall({
-      apiCall: `create`,
-      djsObject: parent.threads,
-      parameters: {
-        name: threadName,
-        type: ChannelType.PublicThread,
-        message: {
-          embeds: [embed],
-          components: [actionRow],
-          files: [thumbnail],
+    const indefiniteArticle = eventType === `cinema` ? `a` : `an`,
+      thread = await queueApiCall({
+        apiCall: `create`,
+        djsObject: parent.threads,
+        parameters: {
+          name: threadName,
+          type: ChannelType.PublicThread,
+          message: {
+            content: `${user} has scheduled ${indefiniteArticle} **${eventType}** event!`,
+            embeds: [embed],
+            components: [actionRow],
+            files: [thumbnail],
+          },
+          autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
+          appliedTags: tags,
         },
-        autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
-        appliedTags: tags,
-      },
-    })
+      })
 
     await addEvent(
       thread.id,
