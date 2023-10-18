@@ -25,18 +25,29 @@ import {
 } from './validation.js'
 import { getBot } from '../cache-bot.js'
 import { queueApiCall } from '../api-queue.js'
+import { getEventRecord } from '../repositories/events.js'
 
-export const timoutMap = new Map(),
-  guestPicker = new StringSelectMenuBuilder()
-    .setCustomId(`event-guests`)
-    .setPlaceholder(`How many tickets do you need?`)
-    .setMinValues(1)
-    .setMaxValues(1)
-    .addOptions(
-      [`1`, `2`, `3`, `4`, `5`].map(value => {
-        return { label: value, value }
-      })
-    )
+export const timoutMap = new Map()
+
+export async function getSpotPicker(context) {
+  const { eventType: _eventType, messageId } = context,
+    eventType = _eventType
+      ? _eventType
+      : (await getEventRecord(messageId)).eventType,
+    spotNomencalture = eventType === `cinema` ? `tickets` : `spots`,
+    spotPicker = new StringSelectMenuBuilder()
+      .setCustomId(`event-guests`)
+      .setPlaceholder(`How many ${spotNomencalture} do you need?`)
+      .setMinValues(1)
+      .setMaxValues(1)
+      .addOptions(
+        [`1`, `2`, `3`, `4`, `5`].map(value => {
+          return { label: value, value }
+        })
+      )
+
+  return spotPicker
+}
 
 export function getEndingUnix(timeStamp, currentUnix) {
   const timeArray = timeStamp.split(`:`),

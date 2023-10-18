@@ -1,6 +1,6 @@
 import { ActionRowBuilder } from 'discord.js'
 import { queueApiCall } from '../api-queue.js'
-import { guestPicker } from '../utils/general-commands.js'
+import { getSpotPicker } from '../utils/general-commands.js'
 
 export default async function (interaction) {
   await queueApiCall({
@@ -11,7 +11,10 @@ export default async function (interaction) {
     },
   })
 
-  const actionRow = new ActionRowBuilder().addComponents(guestPicker)
+  const spotPicker = await getSpotPicker({
+      messageId: interaction.reference?.messageId,
+    }),
+    actionRow = new ActionRowBuilder().addComponents(spotPicker)
 
   await queueApiCall({
     apiCall: `editReply`,

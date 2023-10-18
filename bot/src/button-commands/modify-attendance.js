@@ -1,6 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
 import { queueApiCall } from '../api-queue.js'
-import { guestPicker } from '../utils/general-commands.js'
+import { getSpotPicker } from '../utils/general-commands.js'
 import { getAttendeeRecord } from '../repositories/attendees.js'
 import { getEventRecord } from '../repositories/events.js'
 
@@ -36,10 +36,11 @@ export default async function (interaction) {
     components = [new ActionRowBuilder().addComponents(attendButton)],
     { eventType, allowGuests } = await getEventRecord(messageId),
     guests =
-      attendeeRecord?.guestCount === null ? 0 : attendeeRecord?.guestCount
+      attendeeRecord?.guestCount === null ? 0 : attendeeRecord?.guestCount,
+    spotPicker = await getSpotPicker({ eventType })
 
   if (allowGuests) {
-    components.unshift(new ActionRowBuilder().addComponents(guestPicker))
+    components.unshift(new ActionRowBuilder().addComponents(spotPicker))
   }
 
   const spotNomencalture = eventType === `cinema` ? `ticket(s)` : `spot(s)`,
