@@ -48,9 +48,9 @@ drop table if exists events;
 
 create table events (
   id text primary key,
-  event_title text not null, --new
-  thread_name text not null, --new
-  event_type text not null, --new
+  event_title text not null,
+  thread_name text not null,
+  event_type text not null,
   created_by text not null,
   allow_guests boolean not null,
   request_venmo boolean not null,
