@@ -144,7 +144,10 @@ export async function concludeEvent(parentId, messageId) {
   await queueApiCall({
     apiCall: `edit`,
     djsObject: thread,
-    parameters: { appliedTags: newTags },
+    parameters: {
+      appliedTags: newTags,
+      autoArchiveDuration: ThreadAutoArchiveDuration.OneDay,
+    },
   })
 }
 
