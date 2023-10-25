@@ -348,7 +348,7 @@ export default async function (interaction) {
     _where = `[${where}](<https://www.google.com/search?q=${uriWhere}>)`,
     fields = [
       { name: `start`, value: `<t:${startUnix}:F>\n(<t:${startUnix}:R>)` },
-      { name: `end`, value: `<t:${endUnix}:F>\n(<t:${startUnix}:R>)` },
+      { name: `end`, value: `<t:${endUnix}:F>\n(<t:${endUnix}:R>)` },
       { name: `duration`, value: durationString },
       { name: `where`, value: _where },
     ]
