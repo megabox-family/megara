@@ -24,16 +24,11 @@ import {
   deactivateOrDeleteVoiceChannel,
 } from '../utils/voice.js'
 import { deleteNewRoles, syncRoles } from '../utils/roles.js'
-import {
-  pushToChannelSortingQueue,
-  sortChannels,
-  syncChannels,
-} from '../utils/channels.js'
+import { pushToChannelSortingQueue, syncChannels } from '../utils/channels.js'
 import { syncVipMembers } from '../utils/members.js'
 import { registerSlashCommands } from '../utils/slash-commands.js'
 import { registerContextCommands } from '../utils/context-commands.js'
 import test from '../utils/test.js'
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js'
 import { addVoiceMemberToParentThread } from '../utils/threads.js'
 import { getChannelCustomFunction } from '../repositories/channels.js'
 import { getInteractionCommandName } from '../utils/validation.js'
