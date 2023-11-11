@@ -191,12 +191,19 @@ export default async function (interaction) {
   const eventType = options.getString(`event-type`),
     imdbUrl = options.getString(`imdb-url`),
     imdbId = getImdbMovieId(imdbUrl),
+    logOmdb = true,
     {
       Title: title,
       Poster: poster,
       Runtime: runtime,
     } = (await fetch(`http://www.omdbapi.com/?i=${imdbId}&apikey=${omdbKey}`)
-      .then(response => response?.json())
+      .then(async response => {
+        const _response = await response?.json()
+
+        if (logOmdb) console.log('res', _response)
+
+        return _response
+      })
       .catch(error => null)) || {}
 
   if (eventType === `cinema` && !title) {
@@ -248,6 +255,12 @@ export default async function (interaction) {
   const endDateTime = options.getString(`end-datetime`),
     endDateValidationResponse = {}
 
+  let accountForTrailers = options.getBoolean(`account-for-trailers`)
+
+  if (accountForTrailers === null) accountForTrailers = true
+
+  const _runtime = extractFirstNumber(runtime)
+
   if (endDateTime) {
     const _endDateValidationResponse = validateDatetime(endDateTime)
 
@@ -282,6 +295,16 @@ export default async function (interaction) {
 
       return
     }
+
+    let _endDateTime = endDateValidationResponse.datetime.clone()
+
+    if (accountForTrailers) _endDateTime = _endDateTime.add(20, `minutes`)
+
+    const roundedToNearest5Minutes =
+      Math.ceil(moment(_endDateTime).minute() / 5) * 5
+
+    _endDateTime.minute(roundedToNearest5Minutes).second(0).millisecond(0)
+    endDateValidationResponse.datetime = _endDateTime
   } else {
     if (eventType !== `cinema`) {
       await queueApiCall({
@@ -296,13 +319,20 @@ export default async function (interaction) {
       return
     }
 
-    const _runtime = extractFirstNumber(runtime)
+    if (runtime === `N/A`) {
+      await queueApiCall({
+        apiCall: `reply`,
+        djsObject: interaction,
+        parameters: {
+          content: `OMDb doesn't have a runtime for this movie, you must provide an **end datetime** 🤓`,
+          ephemeral: true,
+        },
+      })
+
+      return
+    }
 
     if (_runtime) {
-      let accountForTrailers = options.getBoolean(`account-for-trailers`)
-
-      if (accountForTrailers === null) accountForTrailers = true
-
       let _endDateTime = startDateValidationResponse.datetime.clone()
 
       if (accountForTrailers)
