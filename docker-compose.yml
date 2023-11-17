@@ -11,27 +11,27 @@ services:
     env_file: .env
     extra_hosts:
       - 'host.docker.internal:host-gateway'
-  ui:
-    build: ./app
-    ports:
-      - '3000:3000'
-    volumes:
-      - ./app:/app
-      - ./app/node_modules:/app/node_modules
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/timezone:/etc/timezone:ro
-    env_file: .env
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
-  api:
-    build: ./api
-    command: nodemon ./src
-    ports:
-      - '3002:3002'
-    volumes:
-      - ./api:/app
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/timezone:/etc/timezone:ro
-    env_file: .env
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
+  # ui:
+  #   build: ./app
+  #   ports:
+  #     - '3000:3000'
+  #   volumes:
+  #     - ./app:/app
+  #     - ./app/node_modules:/app/node_modules
+  #     - /etc/localtime:/etc/localtime:ro
+  #     - /etc/timezone:/etc/timezone:ro
+  #   env_file: .env
+  #   extra_hosts:
+  #     - 'host.docker.internal:host-gateway'
+  # api:
+  #   build: ./api
+  #   command: nodemon ./src
+  #   ports:
+  #     - '3002:3002'
+  #   volumes:
+  #     - ./api:/app
+  #     - /etc/localtime:/etc/localtime:ro
+  #     - /etc/timezone:/etc/timezone:ro
+  #   env_file: .env
+  #   extra_hosts:
+  #     - 'host.docker.internal:host-gateway'
