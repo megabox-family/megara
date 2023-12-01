@@ -5,8 +5,13 @@
   "main": "bot/src/index.js",
   "scripts": {
     "start": "docker-compose up -d --force-recreate",
-    "stop": "docker-compose down"
+    "stop": "docker-compose down",
+    "test": "jest"
   },
   "author": "jordan@cooperplanet.com",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^29.5.10",
+    "jest": "^29.7.0"
+  }
 }
