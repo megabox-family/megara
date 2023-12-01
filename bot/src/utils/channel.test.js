@@ -7,6 +7,7 @@ describe('channel sorting queue', () => {
     const channelSortingQueue = [{ guildId: 1, bypassComparison: true }]
     emptyChannelSortingQueue(channelSortingQueue)
     expect(channelSortingQueue).toEqual({})
+    // maybe need to do channel.channelSortingQueue equals empty?
   })
 })
 
