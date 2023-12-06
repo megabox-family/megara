@@ -5,8 +5,16 @@
   "main": "bot/src/index.js",
   "scripts": {
     "start": "docker-compose up -d --force-recreate",
-    "stop": "docker-compose down"
+    "stop": "docker-compose down",
+    "test": "NODE_OPTIONS=--experimental-vm-modules npm exec jest"
   },
   "author": "jordan@cooperplanet.com",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "dependencies": {
+    "@types/jest": "^29.5.10"
+  },
+  "type": "module"
 }

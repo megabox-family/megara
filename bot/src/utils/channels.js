@@ -34,7 +34,7 @@ const channelSortingQueue = new Collection()
 
 let sortCount = 0
 
-async function emptyChannelSortingQueue() {
+export async function emptyChannelSortingQueue() {
   if (channelSortingQueue.size === 0) return
 
   const context = channelSortingQueue.first(),
