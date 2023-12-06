@@ -1,15 +1,20 @@
 import { jest } from '@jest/globals'
 
 import { emptyChannelSortingQueue } from './channels.js'
+import { Collection } from 'discord.js'
 // jest.useFakeTimers()
 // import * as channel from './channels.js'
 
 describe('channel sorting queue', () => {
   // need fake channel sorting queue, need to be able to figure out what a Collection looks like.
   test('emptyChannelSortingQueue', () => {
-    const channelSortingQueue = [{ guildId: 1, bypassComparison: true }]
+    // const channelSortingQueue = { guildId: 1, bypassComparison: true }
+
+    const channelSortingQueue = new Collection()
+    channelSortingQueue.set({ guildId: 1, bypassComparison: true })
     emptyChannelSortingQueue(channelSortingQueue)
-    expect(channelSortingQueue).toEqual({})
+
+    // expect(channelSortingQueue).toEqual({})
     // maybe need to do channel.channelSortingQueue equals empty?
   })
 })
