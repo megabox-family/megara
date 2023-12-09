@@ -16,5 +16,6 @@
   "dependencies": {
     "@types/jest": "^29.5.10"
   },
-  "type": "module"
+  "type": "module",
+  "jest": {"transform": {}}
 }

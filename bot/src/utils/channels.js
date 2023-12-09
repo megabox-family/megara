@@ -30,7 +30,7 @@ import { queueApiCall } from '../api-queue.js'
 import { isPositiveNumber } from './validation.js'
 import moment from 'moment'
 
-const channelSortingQueue = new Collection()
+export const channelSortingQueue = new Collection()
 
 let sortCount = 0
 
