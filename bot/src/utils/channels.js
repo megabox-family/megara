@@ -35,9 +35,6 @@ const channelSortingQueue = new Collection()
 let sortCount = 0
 
 export async function emptyChannelSortingQueue() {
-  // console.log('lets see if this prints')
-  // console.log(channelSortingQueue.size)
-  console.log('channel before delete', channelSortingQueue)
   if (channelSortingQueue.size === 0) return
 
   const context = channelSortingQueue.first(),
@@ -46,7 +43,6 @@ export async function emptyChannelSortingQueue() {
   await sortChannels(context)
 
   channelSortingQueue.delete(guildId)
-  console.log('channel after delete', channelSortingQueue)
 
   emptyChannelSortingQueue()
 }

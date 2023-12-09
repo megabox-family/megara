@@ -1,21 +1,47 @@
 import { jest } from '@jest/globals'
 
-import { emptyChannelSortingQueue } from './channels.js'
+// import { emptyChannelSortingQueue } from './channels.js'
+import * as channel from './channels.js'
 import { Collection } from 'discord.js'
 // jest.useFakeTimers()
 // import * as channel from './channels.js'
 
 describe('channel sorting queue', () => {
-  // need fake channel sorting queue, need to be able to figure out what a Collection looks like.
-  test('emptyChannelSortingQueue', () => {
-    // const channelSortingQueue = { guildId: 1, bypassComparison: true }
+  // Mock the Discord.js Collection
+  const mockCollection = {
+    size: jest.fn(),
+    first: jest.fn(),
+    delete: jest.fn(),
+  }
+  jest.mock('discord.js', () => {
+    return {
+      Collection: mockCollection,
+    }
+  })
 
-    const channelSortingQueue = new Collection()
-    channelSortingQueue.set({ guildId: 1, bypassComparison: true })
-    emptyChannelSortingQueue(channelSortingQueue)
+  const mockSortChannels = jest.fn()
 
-    // expect(channelSortingQueue).toEqual({})
-    // maybe need to do channel.channelSortingQueue equals empty?
+  jest.mock('./channels.js', () => {
+    return {
+      sortChannels: mockSortChannels,
+    }
+  })
+
+  test('emptyChannelSortingQueue does not call sort channels', async () => {
+    Collection.prototype.size.mockReturnValue(0)
+    await channel.emptyChannelSortingQueue()
+    expect(sortChannels.not.toHaveBeenCalled())
+    expect(channelSortingQueue.size.toBe(0))
+  })
+
+  test('emptyChannelSortingQueue sorts and empties channels', async () => {
+    const mockContext = { guildId: 1, bypassComparison: true }
+    const mockFirst = { first: jest.fn(() => mockContext) }
+    Collection.prototype.size.mockReturnValue(1)
+    Collection.prototype.first.mockReturnValue(mockFirst)
+    await channel.emptyChannelSortingQueue(channelSortingQueue)
+    expect(mockSortChannels.toHaveBeenCalledWith(mockContext))
+    expect(channelSortingQueue).toEqual({})
   })
 })
 
