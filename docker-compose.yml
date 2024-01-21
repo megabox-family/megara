@@ -9,8 +9,6 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
     env_file: .env
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
   ui:
     build: ./app
     ports:
@@ -21,8 +19,6 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
     env_file: .env
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
   api:
     build: ./api
     command: nodemon ./src
@@ -33,5 +29,3 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
     env_file: .env
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
