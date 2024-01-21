@@ -39,6 +39,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
+    network_mode: host
     ports:
       - '8008:8008'
     deploy:
