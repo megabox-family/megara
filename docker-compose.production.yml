@@ -4,6 +4,7 @@ services:
   bot:
     image: jordanfuzz/megara:${GITHUB_SHA_SHORT}
     env_file: /home/ultrabox/host-files/megara/.env
+    network_mode: host
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
@@ -18,6 +19,7 @@ services:
   postgres:
     image: postgres:12.3-alpine
     env_file: /home/ultrabox/host-files/megara/.env
+    network_mode: host
     volumes:
       - /home/ultrabox/host-files/megara/postgres-data:/var/lib/postgresql/data
       - /etc/localtime:/etc/localtime:ro
@@ -54,6 +56,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
+    network_mode: host
     ports:
       - '3002:3002'
     deploy:
