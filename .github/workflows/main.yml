@@ -78,4 +78,4 @@ jobs:
           docker pull jordanfuzz/megabox-api:${{ steps.vars.outputs.sha_short }}
           docker pull jordanfuzz/megabox-ui:${{ steps.vars.outputs.sha_short }}
       - name: start megara
-        run: docker-compose -f docker-compose.production.yml up -d --force-recreate
+        run: docker compose -f docker-compose.production.yml up -d --force-recreate

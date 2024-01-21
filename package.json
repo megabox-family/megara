@@ -4,8 +4,8 @@
   "description": "Monorepo for Megabox, Megara, and their services",
   "main": "bot/src/index.js",
   "scripts": {
-    "start": "docker-compose up -d --force-recreate",
-    "stop": "docker-compose down"
+    "start": "docker compose up -d --force-recreate",
+    "stop": "docker compose down"
   },
   "author": "jordan@cooperplanet.com",
   "license": "ISC"
