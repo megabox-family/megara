@@ -9,12 +9,7 @@ services:
       - /etc/timezone:/etc/timezone:ro
     depends_on:
       - postgres
-    deploy:
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 10
-        window: 60s
+    restart: always
   postgres:
     image: postgres:12.3-alpine
     env_file: /home/ultrabox/host-files/megara/.env
@@ -24,12 +19,7 @@ services:
       - /etc/timezone:/etc/timezone:ro
     ports:
       - '5432:5432'
-    deploy:
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 10
-        window: 60s
+    restart: always
   ui:
     image: jordanfuzz/megabox-ui:${GITHUB_SHA_SHORT}
     env_file: /home/ultrabox/host-files/megara/.env
@@ -41,12 +31,7 @@ services:
       - /etc/timezone:/etc/timezone:ro
     ports:
       - '8008:8008'
-    deploy:
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 10
-        window: 60s
+    restart: always
   api:
     image: jordanfuzz/megabox-api:${GITHUB_SHA_SHORT}
     env_file: /home/ultrabox/host-files/megara/.env
@@ -55,9 +40,4 @@ services:
       - /etc/timezone:/etc/timezone:ro
     ports:
       - '3002:3002'
-    deploy:
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 10
-        window: 60s
+    restart: always
