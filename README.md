@@ -1,3 +1,3 @@
 # megara
 
-a pink discord robot 😊
+a pink discord robot 😎
