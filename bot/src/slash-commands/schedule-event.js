@@ -1,5 +1,3 @@
-// /schedule-event event-type:cinema start-datetime:10/04/23 19:35 where:Ogden Megaplex allow-guests:True request-venmo:True imdb-url:https://www.imdb.com/title/tt21807222/?ref_=nv_sr_srsg_1_tt_7_nm_0_q_saw image-url:https://dx35vtwkllhj9.cloudfront.net/lionsgateus/saw-x/images/regions/us/share.png
-
 import config from '../../config.js'
 import {
   ActionRowBuilder,
@@ -19,13 +17,13 @@ import {
   getImdbMovieId,
   validateDatetime,
 } from '../utils/validation.js'
-import { isChannelThread } from '../utils/channels.js'
 import { queueApiCall } from '../api-queue.js'
 import { addEvent, setConcluded } from '../repositories/events.js'
 import { getThreadById } from '../utils/threads.js'
 import { getBot } from '../cache-bot.js'
 import { twentyFourHours } from '../handlers/general.js'
 import { timoutMap } from '../utils/general-commands.js'
+import ScheduleEventGaurdClauses from '../guard-clauses/schedule-event.js'
 
 const { omdbKey } = config
 
@@ -152,25 +150,14 @@ export async function concludeEvent(parentId, messageId) {
 }
 
 export default async function (interaction) {
-  const { guild, options, channel, user } = interaction,
+  console.log(`made it!`)
+
+  const scheduleEventGaurdClauses = new ScheduleEventGaurdClauses(interaction),
+    { guild, options, channel, user } = scheduleEventGaurdClauses,
     parent = guild.channels.cache.get(channel.parentId),
-    channelIsThread = isChannelThread(channel),
-    parentIsForum = parent?.type === ChannelType.GuildForum,
-    channelIsText = channel?.type === ChannelType.GuildText,
     channelIsPinned = channel.flags.serialize().Pinned
 
-  if (channelIsThread && !parentIsForum) {
-    await queueApiCall({
-      apiCall: `reply`,
-      djsObject: interaction,
-      parameters: {
-        content: '`/schedule-event` cannot be used in a thread 🤔',
-        ephemeral: true,
-      },
-    })
-
-    return
-  }
+  if (!scheduleEventGaurdClauses.CheckIfChannelIsCompatible()) return
 
   const imageUrl = options.getString(`image-url`),
     urlContainsImage = await checkIfUrlContainsImage(imageUrl)
