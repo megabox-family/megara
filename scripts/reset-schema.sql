@@ -51,14 +51,21 @@ create table events (
   event_title text not null,
   thread_name text not null,
   event_type text not null,
-  created_by text not null,
+  start_unix bigint not null,
+  end_unix bigint not null,
+  location text not null,
   allow_guests boolean not null,
   request_venmo boolean not null,
-  parent_id text,
-  start_unix bigint not null,
-  end_unix bigint,
-  is_post boolean not null default false,
-  concluded boolean not null default false
+  event_title_override text,
+  activities text,
+  image_url text,
+  imdb_url text,
+  account_for_trailers boolean not null,
+  channel_id text not null,
+  parent_channel_id text not null,
+  channel_is_post boolean not null,
+  created_by text not null,
+  concluded boolean not null
 );
 
 -- guilds

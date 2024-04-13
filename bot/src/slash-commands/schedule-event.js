@@ -1,4 +1,3 @@
-import config from '../../config.js'
 import {
   ActionRowBuilder,
   ApplicationCommandOptionType,
@@ -9,14 +8,7 @@ import {
   EmbedBuilder,
   ThreadAutoArchiveDuration,
 } from 'discord.js'
-import moment from 'moment-timezone'
 import { convertSecondsToDurationString, srcPath } from '../utils/general.js'
-import {
-  checkIfUrlContainsImage,
-  extractFirstNumber,
-  getImdbMovieId,
-  validateDatetime,
-} from '../utils/validation.js'
 import { queueApiCall } from '../api-queue.js'
 import { addEvent, setConcluded } from '../repositories/events.js'
 import { getThreadById } from '../utils/threads.js'
@@ -24,8 +16,6 @@ import { getBot } from '../cache-bot.js'
 import { twentyFourHours } from '../handlers/general.js'
 import { timoutMap } from '../utils/general-commands.js'
 import ScheduleEventGaurdClauses from '../guard-clauses/schedule-event.js'
-
-const { omdbKey } = config
 
 export const description = `Creates an event message w/ a thread, allowing users to opt-into attendance, among other things.`
 export const dmPermission = false,
@@ -49,8 +39,8 @@ export const dmPermission = false,
       required: true,
     },
     {
-      name: `where`,
-      description: `The location that best locates where the event will take place.`,
+      name: `location`,
+      description: `The location at which the event will take place.`,
       type: ApplicationCommandOptionType.String,
       required: true,
     },
@@ -104,9 +94,29 @@ export const dmPermission = false,
     },
     {
       name: `account-for-trailers`,
-      description: `Adds 20 minutes to the event duration to account for trailers. (default is true)`,
+      description: `Adds 20 minutes to the event duration to account for trailers. (default = true for cinema events)`,
       type: ApplicationCommandOptionType.Boolean,
       required: false,
+    },
+    {
+      name: `screen`,
+      description: `The screen number at which the event will take place. (default = tbd`,
+      type: ApplicationCommandOptionType.String,
+    },
+    {
+      name: `seats`,
+      description: `The range of seats you have reserved for this event. (default = tbd)`,
+      type: ApplicationCommandOptionType.String,
+    },
+    {
+      name: `hide-screen`,
+      description: `Hides the screen field (default = false for cinema events).`,
+      type: ApplicationCommandOptionType.Boolean,
+    },
+    {
+      name: `hide-seats`,
+      description: `Hides the seats field (default = false for cinema events).`,
+      type: ApplicationCommandOptionType.Boolean,
     },
     {
       name: `notes`,
@@ -115,6 +125,100 @@ export const dmPermission = false,
       required: false,
     },
   ]
+
+export function getEventTitle({ eventType, eventTitleOverride }) {
+  let eventTitle
+
+  if (eventTitleOverride) eventTitle = eventTitleOverride
+  else if (eventType === `adventure`) eventTitle = `${eventType} event 🏕️`
+  else if (eventType === `cinema`) eventTitle = `${eventType} event 🍿`
+  else eventTitle = `${eventType} event 🆕`
+
+  return eventTitle
+}
+
+export function buildEventEmbed({ 
+  eventTitle, 
+  startUnix, 
+  endUnix, 
+  eventType, 
+  imdbUrl, 
+  title, 
+  location, 
+  activities,
+  screen,
+  seats,
+  hideScreen,
+  hideSeats,
+  notes,
+  imageUrl,
+  poster
+}) {
+    const difference = endUnix - startUnix,
+    durationString = convertSecondsToDurationString(difference)
+
+  const movieField = `[${title}](<${imdbUrl}>)`,
+    uriLocation = encodeURIComponent(location),
+    _location = `[${location}](<https://www.google.com/search?q=${uriLocation}>)`,
+    fields = [
+      { name: `start`, value: `<t:${startUnix}:F>\n(<t:${startUnix}:R>)`},
+      { name: `end`, value: `<t:${endUnix}:F>\n(<t:${endUnix}:R>)`},
+      { name: `duration`, value: durationString},
+      { name: `location`, value: _location, inline: true},
+    ]
+
+  if (activities) fields.unshift({ name: `activities`, value: activities })
+  if (title) fields.unshift({ name: `movie`, value: movieField })
+
+  if (!hideScreen) fields.push({ name: `screen`, value: screen, inline: true })
+  if (!hideSeats) fields.push({ name: `seats`, value: seats, inline: true})
+  if (notes) fields.push({ name: `notes`, value: notes })
+
+  const embed = new EmbedBuilder()
+      .setColor(`#6725BC`)
+      .setThumbnail(`attachment://${eventType}.jpg`)
+      .setTitle(eventTitle)
+      .setDescription(
+        `Press the attend button below to let us know you're attending!`
+      )
+      .addFields(fields)
+      .setTimestamp()
+
+  let image
+
+  if (imageUrl) image = imageUrl
+  else if (poster) image = poster
+
+  if (image) embed.setImage(image)
+
+  return embed
+}
+
+export function getEventActionRow(){
+  const attendButton = new ButtonBuilder()
+  .setCustomId(`!attend:`)
+  .setLabel(`attend`)
+  .setStyle(ButtonStyle.Primary),
+  modifyAttendanceButton = new ButtonBuilder()
+    .setCustomId(`!modify-attendance:`)
+    .setLabel(`modify attendance`)
+    .setStyle(ButtonStyle.Primary),
+  viewAttendees = new ButtonBuilder()
+    .setCustomId(`!view-attendees:`)
+    .setLabel(`view attendees`)
+    .setStyle(ButtonStyle.Secondary),
+  actionRow = new ActionRowBuilder().addComponents(
+    attendButton,
+    modifyAttendanceButton,
+    viewAttendees
+  )
+
+  return actionRow
+}
+
+export function getThumbnail(eventType) {
+  return new AttachmentBuilder(`${srcPath}/media/${eventType}.jpg`)
+}
 
 export async function concludeEvent(parentId, messageId) {
   await setConcluded(messageId)
@@ -149,193 +253,165 @@ export async function concludeEvent(parentId, messageId) {
   })
 }
 
+export async function getMessageContent({ eventType, user }) {
+  const indefiniteArticle = eventType === `cinema` ? `a` : `an`,
+  messageContent = `${user} has scheduled ${indefiniteArticle} **${eventType}** event!`
+
+  return messageContent
+}
+
+async function generateForumPost({ interaction, parent, eventType, messageContent, embed, actionRow, thumbnail, threadName, endUnix }) {
+  const tags = [],
+    eventTag = parent.availableTags.find(tag => tag.name === `event`)
+
+  if (eventTag) tags.push(eventTag.id)
+
+  if (eventType === `cinema`) {
+    const spoilerTag = parent.availableTags.find(
+      tag => tag.name === `spoilers`
+    )
+
+    if (spoilerTag) tags.push(spoilerTag.id)
+  }
+
+  const forumPost = await queueApiCall({
+    apiCall: `create`,
+    djsObject: parent.threads,
+    parameters: {
+      name: threadName,
+      type: ChannelType.PublicThread,
+      message: {
+        content: messageContent,
+        embeds: [embed],
+        components: [actionRow],
+        files: [thumbnail],
+      },
+      autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
+      appliedTags: tags,
+    },
+  })
+
+  await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: `The requested event has been scheduled → ${forumPost} 🙌`,
+  })
+
+  const millisecondDifference = endUnix * 1000 - Date.now()
+
+  if (millisecondDifference > twentyFourHours || timoutMap.has(forumPost.id))
+    return
+
+  const timeoutId = setTimeout(
+    concludeEvent.bind(null, parent.id, forumPost.id),
+    millisecondDifference
+  )
+
+  timoutMap.set(forumPost.id, timeoutId)
+
+  return forumPost
+}
+
+async function generateMessage({ interaction, messageContent, embed, actionRow, thumbnail }) {
+  const replyMessage = await queueApiCall({
+    apiCall: `editReply`,
+    djsObject: interaction,
+    parameters: {
+      content: messageContent,
+      embeds: [embed],
+      components: [actionRow],
+      files: [thumbnail],
+    },
+  })
+
+  return replyMessage
+}
+
+async function startThread({ message, parentIsForum, threadName }) {
+  if (parentIsForum) return
+
+  await queueApiCall({
+    apiCall: `startThread`,
+    djsObject: message,
+    parameters: { name: threadName },
+  })
+}
+
+async function generateEventMessage({ 
+  messageContent,
+  interaction, 
+  parent, 
+  eventType, 
+  parentIsForum, 
+  channelIsPinned, 
+  embed,
+  actionRow, 
+  thumbnail, 
+  threadName, 
+  endUnix 
+}) {
+  let message
+
+  if (parentIsForum && channelIsPinned) 
+    message = await generateForumPost({ 
+      interaction, 
+      parent, 
+      eventType, 
+      messageContent, 
+      embed, 
+      actionRow, 
+      thumbnail, 
+      threadName, 
+      endUnix 
+    })
+  else message = await generateMessage({ interaction, messageContent, embed, actionRow, thumbnail })
+
+  await startThread({ message, parentIsForum, threadName })
+
+  return message
+}
+
 export default async function (interaction) {
-  console.log(`made it!`)
-
   const scheduleEventGaurdClauses = new ScheduleEventGaurdClauses(interaction),
-    { guild, options, channel, user } = scheduleEventGaurdClauses,
-    parent = guild.channels.cache.get(channel.parentId),
+    { user, channel, parent } = scheduleEventGaurdClauses
+
+  if (!(await scheduleEventGaurdClauses.checkIfChannelIsCompatible())) return
+  if (!(await scheduleEventGaurdClauses.checkIfImageUrlIsValid())) return
+
+  const { 
+    parentIsForum,
+    eventType, 
+    startDatetime,
+    location,
+    allowGuests,
+    requestVenmo,
+    endDatetime,
+    eventTitleOverride,
+    activities,
+    imageUrl, 
+    imdbUrl, 
+    accountForTrailers,
+    screen,
+    seats,
+    hideScreen,
+    hideSeats,
+    notes
+  } = scheduleEventGaurdClauses
+
+  if (imdbUrl) {
+    const imdbUrlIsValid = await scheduleEventGaurdClauses.checkIfImbdUrlIsValidAndStoreDetails()
+
+    if (!imdbUrlIsValid) return
+  }
+
+  const { imdbDetails, threadName } = scheduleEventGaurdClauses
+
+  if (!(await scheduleEventGaurdClauses.verifyThatThreadNameIsSetIfEventTypeIsNotCinema())) return 
+  if (!(await scheduleEventGaurdClauses.checkIfStartDateTimeIsValidAndComputeStartDatetime())) return 
+  if (!(await scheduleEventGaurdClauses.checkIfEndDateTimeIsValidAndComputeEndDatetime())) return
+
+  const { computedStartDatetime, computedEndDatetime } = scheduleEventGaurdClauses,
     channelIsPinned = channel.flags.serialize().Pinned
-
-  if (!scheduleEventGaurdClauses.CheckIfChannelIsCompatible()) return
-
-  const imageUrl = options.getString(`image-url`),
-    urlContainsImage = await checkIfUrlContainsImage(imageUrl)
-
-  if (!urlContainsImage && imageUrl) {
-    await queueApiCall({
-      apiCall: `reply`,
-      djsObject: interaction,
-      parameters: {
-        content: `You provided an invalid image url, or I don't have access to the image 🤔`,
-        ephemeral: true,
-      },
-    })
-
-    return
-  }
-
-  const eventType = options.getString(`event-type`),
-    imdbUrl = options.getString(`imdb-url`),
-    imdbId = getImdbMovieId(imdbUrl),
-    logOmdb = true,
-    {
-      Title: title,
-      Poster: poster,
-      Runtime: runtime,
-    } = (await fetch(`http://www.omdbapi.com/?i=${imdbId}&apikey=${omdbKey}`)
-      .then(async response => {
-        const _response = await response?.json()
-
-        if (logOmdb) console.log('res', _response)
-
-        return _response
-      })
-      .catch(error => null)) || {}
-
-  if (eventType === `cinema` && !title) {
-    await queueApiCall({
-      apiCall: `reply`,
-      djsObject: interaction,
-      parameters: {
-        content:
-          'You either provided an invalid IMDb id/url or the movie has no title attribute 🤔',
-        ephemeral: true,
-      },
-    })
-
-    return
-  }
-
-  let threadName = options.getString(`thread-name`)
-
-  if (!threadName && eventType !== `cinema`) {
-    await queueApiCall({
-      apiCall: `reply`,
-      djsObject: interaction,
-      parameters: {
-        content: `You can't schedule a non-cinema event in a scheduler post / text channel without providing a thread name 🤔`,
-        ephemeral: true,
-      },
-    })
-
-    return
-  }
-
-  // time junk ---------------------------------------------------------------
-  const startDateTime = options.getString(`start-datetime`),
-    startDateValidationResponse = validateDatetime(startDateTime)
-
-  if (!startDateValidationResponse.isValid) {
-    await queueApiCall({
-      apiCall: `reply`,
-      djsObject: interaction,
-      parameters: {
-        content: `You provided an invalid **start datetime**, format must be \`mm/dd/yy hh:mm (24hr or am/pm)\` (ie \`9/29/23 7:30pm\`, \`9/29/23 19:30\`) 🤔`,
-        ephemeral: true,
-      },
-    })
-
-    return
-  }
-
-  const endDateTime = options.getString(`end-datetime`),
-    endDateValidationResponse = {}
-
-  let accountForTrailers = options.getBoolean(`account-for-trailers`)
-
-  if (accountForTrailers === null) accountForTrailers = true
-
-  const _runtime = extractFirstNumber(runtime)
-
-  if (endDateTime) {
-    const _endDateValidationResponse = validateDatetime(endDateTime)
-
-    Object.keys(_endDateValidationResponse).forEach(key => {
-      endDateValidationResponse[key] = _endDateValidationResponse[key]
-    })
-
-    if (!endDateValidationResponse.isValid) {
-      await queueApiCall({
-        apiCall: `reply`,
-        djsObject: interaction,
-        parameters: {
-          content: `You provided an invalid **end datetime**, format must be \`mm/dd/yy hh:mm (24hr or am/pm)\` (ie \`9/29/23 7:30pm\`, \`9/29/23 19:30\`) 🤔`,
-          ephemeral: true,
-        },
-      })
-
-      return
-    } else if (
-      endDateValidationResponse.datetime.isSameOrBefore(
-        startDateValidationResponse.datetime
-      )
-    ) {
-      await queueApiCall({
-        apiCall: `reply`,
-        djsObject: interaction,
-        parameters: {
-          content: `The **end datetime** must be after the **start datetime** 🤔`,
-          ephemeral: true,
-        },
-      })
-
-      return
-    }
-
-    let _endDateTime = endDateValidationResponse.datetime.clone()
-
-    if (accountForTrailers) _endDateTime = _endDateTime.add(20, `minutes`)
-
-    const roundedToNearest5Minutes =
-      Math.ceil(moment(_endDateTime).minute() / 5) * 5
-
-    _endDateTime.minute(roundedToNearest5Minutes).second(0).millisecond(0)
-    endDateValidationResponse.datetime = _endDateTime
-  } else {
-    if (eventType !== `cinema`) {
-      await queueApiCall({
-        apiCall: `reply`,
-        djsObject: interaction,
-        parameters: {
-          content: `You must provide an **end datetime** for non-cinema events 🤔`,
-          ephemeral: true,
-        },
-      })
-
-      return
-    }
-
-    if (runtime === `N/A`) {
-      await queueApiCall({
-        apiCall: `reply`,
-        djsObject: interaction,
-        parameters: {
-          content: `OMDb doesn't have a runtime for this movie, you must provide an **end datetime** 🤓`,
-          ephemeral: true,
-        },
-      })
-
-      return
-    }
-
-    if (_runtime) {
-      let _endDateTime = startDateValidationResponse.datetime.clone()
-
-      if (accountForTrailers)
-        _endDateTime = _endDateTime.add(_runtime * 1 + 20, `minutes`)
-      else _endDateTime = _endDateTime.add(_runtime * 1, `minutes`)
-
-      const roundedToNearest5Minutes =
-        Math.ceil(moment(_endDateTime).minute() / 5) * 5
-
-      _endDateTime.minute(roundedToNearest5Minutes).second(0).millisecond(0)
-
-      endDateValidationResponse.isValid = true
-      endDateValidationResponse.datetime = _endDateTime
-    }
-  }
-  // ---------------------------------------------------------------
 
   await queueApiCall({
     apiCall: `deferReply`,
@@ -345,173 +421,68 @@ export default async function (interaction) {
     },
   })
 
-  const startUnix = startDateValidationResponse.datetime.unix(),
-    endUnix = endDateValidationResponse.datetime.unix(),
-    difference = endUnix - startUnix,
-    durationString = convertSecondsToDurationString(difference),
-    where = options.getString(`where`),
-    allowGuests = options.getBoolean(`allow-guests`),
-    requestVenmo = options.getBoolean(`request-venmo`),
-    eventTitleOverride = options.getString(`event-title-override`),
-    activities = options.getString(`activities`),
-    notes = options.getString(`notes`)
-
-  let eventTitle
-
-  if (eventTitleOverride) eventTitle = eventTitleOverride
-  else if (eventType === `adventure`) eventTitle = `${eventType} event 🏕️`
-  else if (eventType === `cinema`) eventTitle = `${eventType} event 🍿`
-  else eventTitle = `${eventType} event 🆕`
-
-  const movieField = `[${title}](<${imdbUrl}>)`,
-    uriWhere = encodeURIComponent(where),
-    _where = `[${where}](<https://www.google.com/search?q=${uriWhere}>)`,
-    fields = [
-      { name: `start`, value: `<t:${startUnix}:F>\n(<t:${startUnix}:R>)` },
-      { name: `end`, value: `<t:${endUnix}:F>\n(<t:${endUnix}:R>)` },
-      { name: `duration`, value: durationString },
-      { name: `where`, value: _where },
-    ]
-
-  if (activities) fields.unshift({ name: `activities`, value: activities })
-  if (title) fields.unshift({ name: `movie`, value: movieField })
-  if (eventType === `cinema`) fields.push({ name: `seats`, value: `tbd` })
-  if (notes) fields.push({ name: `notes`, value: notes })
-
-  const embed = new EmbedBuilder()
-      .setColor(`#6725BC`)
-      .setThumbnail(`attachment://${eventType}.jpg`)
-      .setTitle(eventTitle)
-      .setDescription(
-        `Press the attend button below to let us know you're attending!`
-      )
-      .addFields(fields)
-      .setTimestamp(),
-    attendButton = new ButtonBuilder()
-      .setCustomId(`!attend:`)
-      .setLabel(`attend`)
-      .setStyle(ButtonStyle.Primary),
-    modifyAttendanceButton = new ButtonBuilder()
-      .setCustomId(`!modify-attendance:`)
-      .setLabel(`modify attendance`)
-      .setStyle(ButtonStyle.Primary),
-    viewAttendees = new ButtonBuilder()
-      .setCustomId(`!view-attendees:`)
-      .setLabel(`view attendees`)
-      .setStyle(ButtonStyle.Secondary),
-    actionRow = new ActionRowBuilder().addComponents(
-      attendButton,
-      modifyAttendanceButton,
-      viewAttendees
-    )
-
-  if (!threadName) threadName = title
-
-  let image
-
-  if (imageUrl) image = imageUrl
-  else if (poster) image = poster
-
-  if (image) embed.setImage(image)
-
-  const thumbnail = new AttachmentBuilder(`${srcPath}/media/${eventType}.jpg`)
-
-  if (parentIsForum && channelIsPinned) {
-    const tags = [],
-      eventTag = parent.availableTags.find(tag => tag.name === `event`)
-
-    if (eventTag) tags.push(eventTag.id)
-
-    if (eventType === `cinema`) {
-      const spoilerTag = parent.availableTags.find(
-        tag => tag.name === `spoilers`
-      )
-
-      if (spoilerTag) tags.push(spoilerTag.id)
-    }
-
-    const indefiniteArticle = eventType === `cinema` ? `a` : `an`,
-      thread = await queueApiCall({
-        apiCall: `create`,
-        djsObject: parent.threads,
-        parameters: {
-          name: threadName,
-          type: ChannelType.PublicThread,
-          message: {
-            content: `${user} has scheduled ${indefiniteArticle} **${eventType}** event!`,
-            embeds: [embed],
-            components: [actionRow],
-            files: [thumbnail],
-          },
-          autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
-          appliedTags: tags,
-        },
-      })
-
-    await addEvent(
-      thread.id,
+  const messageContent = await getMessageContent({ eventType, user }),
+    eventTitle = getEventTitle({ eventType, eventTitleOverride }),
+    startUnix = computedStartDatetime.unix(),
+    endUnix = computedEndDatetime.unix(),
+    embed = buildEventEmbed({
       eventTitle,
-      threadName,
-      eventType,
-      user.id,
-      allowGuests,
-      requestVenmo,
-      parent.id,
       startUnix,
       endUnix,
-      true
-    )
+      eventType,
+      eventTitleOverride,
+      imdbUrl,
+      title: imdbDetails.title,
+      location,
+      activities,
+      notes,
+      screen,
+      seats,
+      hideScreen,
+      hideSeats,
+      imageUrl,
+      poster: imdbDetails.poster,
+    }),
+    actionRow = getEventActionRow(),
+    thumbnail = getThumbnail(eventType),
+    message = await generateEventMessage({ 
+      messageContent,
+      interaction, 
+      parent,
+      eventType, 
+      parentIsForum, 
+      channelIsPinned, 
+      embed, 
+      actionRow, 
+      thumbnail, 
+      threadName, 
+      endUnix 
+    }) 
 
-    await queueApiCall({
-      apiCall: `editReply`,
-      djsObject: interaction,
-      parameters: `The requested event has been scheduled → ${thread} 🙌`,
-    })
-
-    const millisecondDifference = endUnix * 1000 - Date.now()
-
-    if (millisecondDifference > twentyFourHours || timoutMap.has(thread.id))
-      return
-
-    const timeoutId = setTimeout(
-      concludeEvent.bind(null, parent.id, thread.id),
-      millisecondDifference
-    )
-
-    timoutMap.set(thread.id, timeoutId)
-
-    return
-  }
-
-  const replyMessage = await queueApiCall({
-    apiCall: `editReply`,
-    djsObject: interaction,
-    parameters: {
-      embeds: [embed],
-      components: [actionRow],
-      files: [thumbnail],
-    },
-  })
-
-  await addEvent(
-    replyMessage.id,
+  await addEvent({
+    messageId: message.id,
     eventTitle,
     threadName,
     eventType,
-    user.id,
+    startDatetime,
+    endDatetime,
+    startUnix,
+    endUnix,
+    location,
     allowGuests,
     requestVenmo,
-    parent.id,
-    startUnix,
-    endUnix
-  )
-
-  if (!parentIsForum)
-    await queueApiCall({
-      apiCall: `startThread`,
-      djsObject: replyMessage,
-      parameters: { name: threadName },
-    })
+    eventTitleOverride,
+    activities,
+    imageUrl,
+    imdbUrl,
+    accountForTrailers,
+    channelId: channel.id,
+    parentChannelId: parent.id,
+    channelIsPost: parentIsForum,
+    screen: screen,
+    seats: seats,
+    hideScreen,
+    hideSeats,
+    createdById: user.id
+  })
 }
-
-// concluded
