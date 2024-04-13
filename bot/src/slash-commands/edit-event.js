@@ -4,7 +4,7 @@ import { buildEventEmbed, getEventTitle, getMessageContent, getThumbnail } from 
 import { queueApiCall } from "../api-queue.js"
 import { editEvent } from "../repositories/events.js"
 
-export const description = `Edit the details of an existing event, details not selected will remain the same.`
+export const description = `Edit the details of an existing event, details not selected/edited will remain the same.`
 export const dmPermission = false,
   defaultMemberPermissions = `0`,
   options = [
