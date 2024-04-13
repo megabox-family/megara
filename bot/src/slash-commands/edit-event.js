@@ -4,7 +4,7 @@ import { buildEventEmbed, getEventTitle, getMessageContent, getThumbnail } from 
 import { queueApiCall } from "../api-queue.js"
 import { editEvent } from "../repositories/events.js"
 
-export const description = `Edit the details of an existing event.`
+export const description = `Edit the details of an existing event, details not selected will remain the same.`
 export const dmPermission = false,
   defaultMemberPermissions = `0`,
   options = [
@@ -87,28 +87,28 @@ export const dmPermission = false,
     },
     {
       name: `account-for-trailers`,
-      description: `Adds 20 minutes to the event duration to account for trailers. (default is true)`,
+      description: `Adds 20 minutes to the event duration to account for trailers.`,
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     },
     {
       name: `screen`,
-      description: `The screen number at which the event will take place. (default = tbd)`,
+      description: `The screen number at which the event will take place.`,
       type: ApplicationCommandOptionType.String,
     },
     {
       name: `seats`,
-      description: `The range of seats you have reserved for this event. (default = tbd)`,
+      description: `The range of seats you have reserved for this event.`,
       type: ApplicationCommandOptionType.String,
     },
     {
       name: `hide-screen`,
-      description: `Hides the screen field. (default = false for cinema events)`,
+      description: `Hides the screen field.`,
       type: ApplicationCommandOptionType.Boolean,
     },
     {
       name: `hide-seats`,
-      description: `Hides the seats field. (default = false for cinema events)`,
+      description: `Hides the seats field.`,
       type: ApplicationCommandOptionType.Boolean,
     },
     {
