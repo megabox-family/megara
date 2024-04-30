@@ -88,20 +88,20 @@ export async function startEventTimers() {
     unconcludedPosts = await getUnconcludedPosts()
 
   unconcludedPosts?.forEach(post => {
-    const { id, parentId, endUnix } = post
+    const { id, parentChannelId, endUnix } = post
 
     const millisecondDifference = (endUnix - currentTime) * 1000
 
     if (millisecondDifference > twentyFourHours || timoutMap.has(id)) return
 
     if (millisecondDifference < 0) {
-      concludeEvent(parentId, id)
+      concludeEvent(parentChannelId, id)
 
       return
     }
 
     const timeoutId = setTimeout(
-      concludeEvent.bind(null, parentId, id),
+      concludeEvent.bind(null, parentChannelId, id),
       millisecondDifference
     )
 
