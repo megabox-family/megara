@@ -10,22 +10,17 @@ export default class ScheduleEventGaurdClauses {
     const { guild, options, channel, user, command } = interaction,
     accountForTrailers = options.getBoolean(`account-for-trailers`),
     eventType = options.getString(`event-type`)
-    
-    let screen = options.getString(`screen`),
-      seats = options.getString(`seats`),
-      hideScreen = options.getBoolean(`hide-screen`),
-      hideSeats = options.getBoolean(`hide-seats`)
 
-    screen = screen ? screen : `tbd`
-    seats = seats ? seats : `tbd`
+    this._screen = options.getString(`screen`)
+    this._seats = options.getString(`seats`)
+    this._hideScreen = options.getBoolean(`hide-screen`)
+    this._hideSeats = options.getBoolean(`hide-seats`)
 
-    if (eventType !== `cinema`) {
-      if (!screen) hideScreen = true
-      if (!seats) hideSeats = true
-    } else {
-      hideScreen = false
-      hideSeats = false
-    }
+    let hideScreen = this._hideScreen, 
+      hideSeats = this._hideSeats
+
+    if(hideScreen === null) hideScreen = eventType !== `cinema` ? true : false
+    if(hideSeats === null) hideSeats = eventType !== `cinema` ? true : false
     
     this.parentIsForum = channel.parent?.type === ChannelType.GuildForum
     this.interaction = interaction
@@ -49,8 +44,8 @@ export default class ScheduleEventGaurdClauses {
     this.imageUrl = options.getString(`image-url`)
     this.imdbUrl = options.getString(`imdb-url`)
     this.accountForTrailers = accountForTrailers ? accountForTrailers : true
-    this.screen = screen
-    this.seats = seats
+    this.screen = this._screen ? this._screen : `tbd`
+    this.seats = this._seats ? this._seats : `tbd`
     this.hideScreen = hideScreen
     this.hideSeats = hideSeats
     this.notes = options.getString(`notes`)

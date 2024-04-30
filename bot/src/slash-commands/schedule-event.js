@@ -299,15 +299,14 @@ async function generateForumPost({ interaction, parent, eventType, messageConten
 
   const millisecondDifference = endUnix * 1000 - Date.now()
 
-  if (millisecondDifference > twentyFourHours || timoutMap.has(forumPost.id))
-    return
-
-  const timeoutId = setTimeout(
-    concludeEvent.bind(null, parent.id, forumPost.id),
-    millisecondDifference
-  )
-
-  timoutMap.set(forumPost.id, timeoutId)
+  if (millisecondDifference <= twentyFourHours && !timoutMap.has(forumPost.id)) {
+    const timeoutId = setTimeout(
+      concludeEvent.bind(null, parent.id, forumPost.id),
+      millisecondDifference
+    )
+  
+    timoutMap.set(forumPost.id, timeoutId)
+  }
 
   return forumPost
 }

@@ -140,15 +140,14 @@ export default async function (interaction) {
   scheduleEventGaurdClauses.imageUrl = scheduleEventGaurdClauses.imageUrl ? scheduleEventGaurdClauses.imageUrl : eventRecord.imageUrl
   scheduleEventGaurdClauses.imdbUrl = scheduleEventGaurdClauses.imdbUrl ? scheduleEventGaurdClauses.imdbUrl : eventRecord.imdbUrl
   scheduleEventGaurdClauses.accountForTrailers = scheduleEventGaurdClauses.accountForTrailers ? scheduleEventGaurdClauses.accountForTrailers : eventRecord.accountForTrailers
-  scheduleEventGaurdClauses.screen = scheduleEventGaurdClauses.screen ? scheduleEventGaurdClauses.screen : eventRecord.screen
-  scheduleEventGaurdClauses.seats = scheduleEventGaurdClauses.seats ? scheduleEventGaurdClauses.seats : eventRecord.seats
-  scheduleEventGaurdClauses.hideScreen = scheduleEventGaurdClauses.hideScreen ? scheduleEventGaurdClauses.hideScreen : eventRecord.hideScreen
-  scheduleEventGaurdClauses.hideSeats = scheduleEventGaurdClauses.hideSeats ? scheduleEventGaurdClauses.hideSeats : eventRecord.hideSeats
+  scheduleEventGaurdClauses.screen = scheduleEventGaurdClauses._screen ? scheduleEventGaurdClauses.screen : eventRecord.screen
+  scheduleEventGaurdClauses.seats = scheduleEventGaurdClauses._seats ? scheduleEventGaurdClauses.seats : eventRecord.seats
+  scheduleEventGaurdClauses.hideScreen = scheduleEventGaurdClauses._hideScreen ? scheduleEventGaurdClauses.hideScreen : eventRecord.hideScreen
+  scheduleEventGaurdClauses.hideSeats = scheduleEventGaurdClauses._hideSeats ? scheduleEventGaurdClauses.hideSeats : eventRecord.hideSeats
   scheduleEventGaurdClauses.notes = scheduleEventGaurdClauses.notes ? scheduleEventGaurdClauses.notes : eventRecord.notes
   
   const { 
     user,
-    channel,
     eventMessage,
     eventId,
     eventType, 
@@ -170,8 +169,6 @@ export default async function (interaction) {
     notes
   } = scheduleEventGaurdClauses
 
-  console.log(imdbUrl)
-
   if (imdbUrl){
     const imdbUrlIsValid = await scheduleEventGaurdClauses.checkIfImbdUrlIsValidAndStoreDetails()
 
@@ -184,8 +181,7 @@ export default async function (interaction) {
   if (!(await scheduleEventGaurdClauses.checkIfStartDateTimeIsValidAndComputeStartDatetime())) return 
   if (!(await scheduleEventGaurdClauses.checkIfEndDateTimeIsValidAndComputeEndDatetime())) return
 
-  const { computedStartDatetime, computedEndDatetime } = scheduleEventGaurdClauses,
-    channelIsPinned = channel.flags.serialize().Pinned
+  const { computedStartDatetime, computedEndDatetime } = scheduleEventGaurdClauses
 
   await queueApiCall({
     apiCall: `deferReply`,
