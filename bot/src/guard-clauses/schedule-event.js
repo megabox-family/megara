@@ -7,7 +7,7 @@ import { getEventRecord } from "../repositories/events.js"
 
 export default class ScheduleEventGaurdClauses {
   constructor(interaction) {
-    const { guild, options, channel, user, command } = interaction,
+    const { guild, options, channel, user, commandName, commandId, } = interaction,
     accountForTrailers = options.getBoolean(`account-for-trailers`),
     eventType = options.getString(`event-type`)
 
@@ -29,7 +29,7 @@ export default class ScheduleEventGaurdClauses {
     this.channel = channel
     this.user = user
     this.parent = guild.channels.cache.get(channel.parentId)
-    this.commandTag = `</${command.name}:${command.id}>`
+    this.commandTag = `</${commandName}:${commandId}>`
 
     this.eventId = options.getString(`event-id`)
     this.eventType = eventType,
@@ -256,6 +256,14 @@ export default class ScheduleEventGaurdClauses {
       if (this?.imdbDetails?.runtime) {
         const runtime = extractFirstNumber(this.imdbDetails.runtime),
           endDatetime = this.computedStartDatetime.clone()
+
+        if (!runtime) {
+          await this.sendReply({
+            content: `The Omdb api didn't return a runtime for this movie, so you'll have to provide your own end-datetime 😬`
+          })
+
+          return false
+        }
 
         if (this.accountForTrailers) endDatetime.add(runtime * 1 + 20, `minutes`)
         else endDatetime.add(runtime * 1, `minutes`) 
