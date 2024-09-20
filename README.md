@@ -1,3 +1,3 @@
 # megara
 
-a pink discord robot 😎
+bruh, a pink discord robot 😎
